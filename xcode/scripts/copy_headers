@@ -1,0 +1,120 @@
+#!/bin/sh
+
+argv0=$0
+
+echo "Running $argv0"
+
+### Set up some utility functions. ###
+
+function runcmd() {
+  cmd=$1
+  echo "Running \"$cmd\""
+  if $cmd; then
+    echo "Successfully ran \"$cmd\""
+  else
+    echo "Failed: \"$cmd\""
+    exit 1
+  fi
+}
+
+function expect_dir_var() {
+  var=$1
+  msg=$2
+  val=${!var}
+  if test -z "$val"; then
+    echo "$argv0: Expected $var to be nonempty. $msg Aborting"
+    exit 1
+  fi
+  if test ! -d "$val"; then
+    echo "$argv0: Expected $var (=\"$val\") to be a directory. $msg Aborting"
+    exit 1
+  fi
+}
+
+function expect_var() {
+  var=$1
+  msg=$2
+  val=${!var}
+  if test -z "$val"; then
+    echo "$argv0: Expected $var to be nonempty. $msg Aborting"
+    exit 1
+  fi
+}
+
+function expect_file() {
+  val=$1
+  msg=$2
+  if test ! -f "$val"; then
+    echo "$argv0: Expected \"$val\" to be a file. $msg Aborting"
+    exit 1
+  fi
+}
+
+function do_copy_headers() {
+  srcdir=$1
+  headerloc=$2
+  cd $srcdir || exit 1
+  if test -f "$headerloc"; then
+    headers=$headerloc
+  elif test -d "$headerloc"; then
+    headers=`find $headerloc -name "*.h"`
+  else
+    echo bad header location
+    exit 1
+  fi
+  for i in $headers; do
+    dname=`dirname $i`
+    bname=`basename $i`
+    src=$PWD/$i
+    dsttopdir=$BUILT_PRODUCTS_DIR/$PUBLIC_HEADERS_FOLDER_PATH
+    dst=$dsttopdir/$i
+    echo Copying $src to $dst
+    mkdir -p $dsttopdir/$dname || exit 1
+    cp -a $src $dst || exit 1
+  done
+}
+
+### Perform a series of checks to make sure eveything is set up correctly ###
+
+expect_dir_var SRCROOT \
+               "This variable is assigned by Xcode."
+
+expect_file    $SRCROOT/../bootstrap.sh \
+               "SRCROOT does not appear to be set correctly."
+
+expect_var     ARCHS \
+               "This variable is assigned by Xcode."
+
+expect_var     BUILD_STYLE \
+               "This variable is assigned by Xcode."
+
+expect_dir_var BUILT_PRODUCTS_DIR \
+               "This variable is assigned by Xcode."
+
+expect_var     PUBLIC_HEADERS_FOLDER_PATH \
+               "This variable is assigned by Xcode."
+
+if test -z "$CURRENT_ARCH"; then
+  if test "$ARCHS" != x86_64 -a "$ARCHS" != i386; then
+    echo "Unexpected value for ARCHS: \"$ARCHS\""
+    exit 1
+  fi
+  CURRENT_ARCH=$ARCHS
+fi
+
+### Finished checks. Now copy header files. ###
+
+PATH=/opt/local/bin:$PATH
+
+runcmd "mkdir -p $BUILT_PRODUCTS_DIR/$PUBLIC_HEADERS_FOLDER_PATH"
+
+runcmd "cd $BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME"
+if test ! -L Headers; then
+  runcmd "ln -s Versions/Current/Headers"
+fi
+
+#do_copy_headers $SRCROOT/.. dumpi/dumpiconfig.h
+#do_copy_headers $SRCROOT/.. dumpi/libundumpi
+#do_copy_headers $SRCROOT/.. dumpi/common
+do_copy_headers $SRCROOT/build/$CURRENT_ARCH/$BUILD_STYLE/dumpi dumpiconfig-generated.h
+

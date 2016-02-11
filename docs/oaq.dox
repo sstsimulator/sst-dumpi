@@ -1,0 +1,59 @@
+/**
+
+\page oaq Occasionally asked questions (OAQ)
+
+<ol>
+    <li>  Why are we not using OTF?
+        <ul>
+	  <li> We originally intended to use OTF if at all possible. 
+      	  <li> The major issue we ran into was how to represent OTF event
+      	       record types with variable length records (as an example,
+      	       consider the receivecount and displacement arrays in
+      	       MPI_Gatherv -- these are valid only at root (and may be unsafe
+      	       to read from on other nodes), and on root they have the length
+      	       of the communicator given as the last argument.
+      	  <li> A secondary issue was the potential performance impact of
+               using OTF, both from converting data to ASCII and from the
+    	       more frequent file writes that would be required.
+        </ul>
+    <li> Why are we not using XML?
+      <ul>
+        <li> We may eventually move to using XML for the metafile, although
+      	     my personal opinion is that XML files are notably less readable
+    	     than simple key/value configuration files.  
+      	<li> For the same reason, the dumpi.conf preference file for
+      	     libdumpi will probably never be converted to xml.
+      </ul>
+    <li> Why are we not compressing the trace files?
+      <ul>
+        <li> We tried this as well.
+      	<li> Using zlib compression added an unacceptable overhead to some
+      	     MPI trace runs (in particular an unnamed application that does
+      	     very frequent calls to MPI_Iprobe).
+      	<li> Compressing the files provides less than two-fold space
+             savings at the cost of making random access reads intractable.
+      </ul>
+    <li>  Why does common/types.h define all these weird compact integer
+    	  types for our versions of all the MPI datatypes in common/types.h
+     	  (e.g. dumpi_comm, dumpi_errcode, etc.)?  How about if I really
+     	  need to create more than 32 thousand communicators?
+      <ul>
+        <li>We are trying to keep the trace file size down and minimize
+        file IO; most of these sizes were chosen to exceed the maximum
+    	number of MPI data objects that we expect to encounter in any
+    	actual application.
+      </ul>
+    <li> Won't it be a problem that our biased time (cpu time and wall
+    time) only have a 16-bit value to hold the seconds?
+      <ul>
+        <li> Possibly.  This means that our clock rolls over every 18
+             hours.  Realistically, this is only a serious problem if we go
+             18 hours without profiling any calls (since the profiled
+             stream is in chronological order).  For current applications
+             of interest, however, it is almost certain that we will run
+             out of disk space to hold the trace files long before the
+             18-hour time limit is reached.
+      </ul>
+</ol>
+
+*/

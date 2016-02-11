@@ -1,0 +1,36 @@
+/**
+
+\page compiling Problems compiling and running DUMPI
+
+<ul>
+ <li> \ref mpich_fortran
+ <li> \ref papi_not_supported
+ <li> \ref papi_failure
+</ul>
+
+<hr>
+
+\section mpich_fortran My FORTRAN program compiles but produces no DUMPI output.
+
+There is a problem in mpif77 for (some versions of) mpich2
+which prevents DUMPI (or any other PMPI library) from grabbing the
+MPI_* calls.  You can frequently work around the problem by
+specifying the mpich libraries directly on the link line:
+
+\section papi_not_supported My program generates a bunch of "PAPI event ... not supported"
+
+Your dumpi.conf file specifies PAPI labels that are not supported on
+your system.  This is not a fatal error -- these performance counters
+will be ignored.
+
+\section papi_failure  My program dies because no PAPI counters are found
+
+You can compile DUMPI with PAPI support even if your kernel or
+hardware does not provide any performance counters (this is essential
+to allow cross-compiling for various HPC systems).  The error message
+from DUMPI is a (misleading):
+<p><tt>ERROR MESSAGE HERE<p>
+You can test whether your system supports performance counters
+using </tt>
+
+*/

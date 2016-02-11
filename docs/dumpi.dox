@@ -1,0 +1,39 @@
+/** \mainpage DUMPI:  The MPI profiler from the SST simulator suite
+
+DUMPI was created to facilitate more detailed tracing of MPI calls
+than was available from other trace programs we had access to.  In
+particular, the design goals were to:
+
+<ol>
+  <li> Differentiate between related MPI calls (e.g. MPI_Send,
+       MPI_Ssend, MPI_Bsend, MPI_Rsend, ...).
+  <li> Provide full input and output argument listings (other than
+       payload data) for MPI calls.  In particular:
+       <ul>
+         <li> Record vector arguments for MPI_*v and MPI_*w collectives
+      	 <li> Detailed tracking of requests, including which request(s)
+              were matched by MPI_{Wait,Test}{some,any}.
+      	 <li> Provide the ability to turn on and off profiling of specific
+              functions and the amount of data profiled.
+      	 <li> Minimize collection overhead, in particular reduce file I/O to
+              the extent possible (many large parallel platforms have poor
+	      performance for small writes, which may result in large errors
+	      in profiled timings).
+      	 <li> Correctly record the special identities of predefined MPI
+              objects (communicators, constants, datatypes, combiners,
+	      comparisons, and a whole host of others).
+	</ul>
+   <li> Provide a low-overhead API for reading trace files into a
+      simulator (many of our current traces have millions of MPI calls
+      recorded on each of hundreds of nodes).
+</ol>
+
+<ul>
+  <li> \ref using
+  <li> \ref tools
+  <li> \ref oaq
+  <li> \ref known_issues
+  <li> \ref traceformat
+</ul>
+
+*/

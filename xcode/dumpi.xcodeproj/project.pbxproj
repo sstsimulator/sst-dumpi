@@ -1,0 +1,975 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		377BAEAA135B846A001BC5B9 /* dumpiconfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 37D9DD0A13576D6100EEC0E6 /* dumpiconfig.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		377BAEAC135B84A6001BC5B9 /* argtypes.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCEE13576D6100EEC0E6 /* argtypes.h */; };
+		377BAEAD135B84A6001BC5B9 /* constants.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCF013576D6100EEC0E6 /* constants.h */; };
+		377BAEAE135B84A6001BC5B9 /* debugflags.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCF213576D6100EEC0E6 /* debugflags.h */; };
+		377BAEAF135B84A6001BC5B9 /* dumpiio.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCF413576D6100EEC0E6 /* dumpiio.h */; };
+		377BAEB0135B84A6001BC5B9 /* funclabels.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCF613576D6100EEC0E6 /* funclabels.h */; };
+		377BAEB1135B84A6001BC5B9 /* funcs.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCF813576D6100EEC0E6 /* funcs.h */; };
+		377BAEB2135B84A6001BC5B9 /* gettime.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCFA13576D6100EEC0E6 /* gettime.h */; };
+		377BAEB3135B84A6001BC5B9 /* hashmap.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCFB13576D6100EEC0E6 /* hashmap.h */; };
+		377BAEB4135B84A6001BC5B9 /* io.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCFD13576D6100EEC0E6 /* io.h */; };
+		377BAEB5135B84A6001BC5B9 /* iodefs.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DCFF13576D6100EEC0E6 /* iodefs.h */; };
+		377BAEB6135B84A6001BC5B9 /* perfctrs.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DD0313576D6100EEC0E6 /* perfctrs.h */; };
+		377BAEB7135B84A6001BC5B9 /* perfctrtags.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DD0513576D6100EEC0E6 /* perfctrtags.h */; };
+		377BAEB8135B84A6001BC5B9 /* settings.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DD0613576D6100EEC0E6 /* settings.h */; };
+		377BAEB9135B84A6001BC5B9 /* types.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9DD0813576D6100EEC0E6 /* types.h */; };
+		377BAEBB135B84D0001BC5B9 /* bindings.h in Copy Headers (libundumpi) */ = {isa = PBXBuildFile; fileRef = 37D9DD2413576D6100EEC0E6 /* bindings.h */; };
+		377BAEBC135B84D0001BC5B9 /* callbacks.h in Copy Headers (libundumpi) */ = {isa = PBXBuildFile; fileRef = 37D9DD2613576D6100EEC0E6 /* callbacks.h */; };
+		377BAEBD135B84D0001BC5B9 /* dumpistate.h in Copy Headers (libundumpi) */ = {isa = PBXBuildFile; fileRef = 37D9DD2813576D6100EEC0E6 /* dumpistate.h */; };
+		377BAEBE135B84D0001BC5B9 /* freedefs.h in Copy Headers (libundumpi) */ = {isa = PBXBuildFile; fileRef = 37D9DD2913576D6100EEC0E6 /* freedefs.h */; };
+		377BAEBF135B84D0001BC5B9 /* libundumpi.h in Copy Headers (libundumpi) */ = {isa = PBXBuildFile; fileRef = 37D9DD2B13576D6100EEC0E6 /* libundumpi.h */; };
+		377BAED3135B93A3001BC5B9 /* libundumpi.dylib in Resources */ = {isa = PBXBuildFile; fileRef = 377BAECF135B9397001BC5B9 /* libundumpi.dylib */; };
+		377BAED4135B93FE001BC5B9 /* constants.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCEF13576D6100EEC0E6 /* constants.c */; };
+		377BAED5135B93FE001BC5B9 /* debugflags.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCF113576D6100EEC0E6 /* debugflags.c */; };
+		377BAED6135B93FE001BC5B9 /* dumpiio.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCF313576D6100EEC0E6 /* dumpiio.c */; };
+		377BAED7135B93FE001BC5B9 /* funclabels.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCF513576D6100EEC0E6 /* funclabels.c */; };
+		377BAED8135B93FE001BC5B9 /* funcs.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCF713576D6100EEC0E6 /* funcs.c */; };
+		377BAED9135B93FE001BC5B9 /* gettime.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCF913576D6100EEC0E6 /* gettime.c */; };
+		377BAEDA135B93FE001BC5B9 /* io.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCFC13576D6100EEC0E6 /* io.c */; };
+		377BAEDB135B93FE001BC5B9 /* iodefs.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCFE13576D6100EEC0E6 /* iodefs.c */; };
+		377BAEDC135B93FE001BC5B9 /* perfctrs.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD0213576D6100EEC0E6 /* perfctrs.c */; };
+		377BAEDD135B93FE001BC5B9 /* perfctrtags.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD0413576D6100EEC0E6 /* perfctrtags.c */; };
+		377BAEDE135B93FE001BC5B9 /* types.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD0713576D6100EEC0E6 /* types.c */; };
+		377BAEDF135B9412001BC5B9 /* bindings.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD2313576D6100EEC0E6 /* bindings.c */; };
+		377BAEE0135B9412001BC5B9 /* callbacks.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD2513576D6100EEC0E6 /* callbacks.c */; };
+		377BAEE1135B9412001BC5B9 /* libundumpi.c in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DD2A13576D6100EEC0E6 /* libundumpi.c */; };
+		377BAEFB135BB1D1001BC5B9 /* dumpistats-callbacks.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCD513576D6100EEC0E6 /* dumpistats-callbacks.cc */; };
+		377BAEFC135BB1D1001BC5B9 /* dumpistats-handlers.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCD713576D6100EEC0E6 /* dumpistats-handlers.cc */; };
+		377BAEFD135BB1D1001BC5B9 /* dumpistats.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCD913576D6100EEC0E6 /* dumpistats.cc */; };
+		377BAEFE135BB310001BC5B9 /* dumpistats in Resources */ = {isa = PBXBuildFile; fileRef = 377BAEEF135BB18D001BC5B9 /* dumpistats */; };
+		377BAF07135BB5FE001BC5B9 /* metadata.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCDD13576D6100EEC0E6 /* metadata.cc */; };
+		377BAF08135BB5FE001BC5B9 /* sharedstate-commconstruct.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCE313576D6100EEC0E6 /* sharedstate-commconstruct.cc */; };
+		377BAF09135BB5FE001BC5B9 /* sharedstate.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCE513576D6100EEC0E6 /* sharedstate.cc */; };
+		377BAF0A135BB5FE001BC5B9 /* trace.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37D9DCEA13576D6100EEC0E6 /* trace.cc */; };
+		37B039BC1366204F00731919 /* dumpistats-gatherbin.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37B039B71366204F00731919 /* dumpistats-gatherbin.cc */; };
+		37B039BD1366204F00731919 /* dumpistats-timebin.cc in Sources */ = {isa = PBXBuildFile; fileRef = 37B039B91366204F00731919 /* dumpistats-timebin.cc */; };
+		37D9BE9713666D5900DC87C1 /* byteswap.h in Headers */ = {isa = PBXBuildFile; fileRef = 37D9BE9613666D5900DC87C1 /* byteswap.h */; };
+		37D9BE9D13666E1800DC87C1 /* byteswap.h in Copy Headers (common) */ = {isa = PBXBuildFile; fileRef = 37D9BE9613666D5900DC87C1 /* byteswap.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		377BAEE8135B984C001BC5B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 37F5A94F1357660400DB7EA5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 377BAEE4135B9789001BC5B9;
+			remoteInfo = dumpiconfig;
+		};
+		377BAF01135BB356001BC5B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 37F5A94F1357660400DB7EA5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 377BAECE135B9397001BC5B9;
+			remoteInfo = undumpi;
+		};
+		377BAF03135BB363001BC5B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 37F5A94F1357660400DB7EA5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 377BAEEE135BB18D001BC5B9;
+			remoteInfo = dumpistats;
+		};
+		377BAF05135BB376001BC5B9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 37F5A94F1357660400DB7EA5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 377BAECE135B9397001BC5B9;
+			remoteInfo = undumpi;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		377BAEAB135B8478001BC5B9 /* Copy Headers (common) */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Headers/common;
+			dstSubfolderSpec = 6;
+			files = (
+				377BAEAC135B84A6001BC5B9 /* argtypes.h in Copy Headers (common) */,
+				37D9BE9D13666E1800DC87C1 /* byteswap.h in Copy Headers (common) */,
+				377BAEAD135B84A6001BC5B9 /* constants.h in Copy Headers (common) */,
+				377BAEAE135B84A6001BC5B9 /* debugflags.h in Copy Headers (common) */,
+				377BAEAF135B84A6001BC5B9 /* dumpiio.h in Copy Headers (common) */,
+				377BAEB0135B84A6001BC5B9 /* funclabels.h in Copy Headers (common) */,
+				377BAEB1135B84A6001BC5B9 /* funcs.h in Copy Headers (common) */,
+				377BAEB2135B84A6001BC5B9 /* gettime.h in Copy Headers (common) */,
+				377BAEB3135B84A6001BC5B9 /* hashmap.h in Copy Headers (common) */,
+				377BAEB4135B84A6001BC5B9 /* io.h in Copy Headers (common) */,
+				377BAEB5135B84A6001BC5B9 /* iodefs.h in Copy Headers (common) */,
+				377BAEB6135B84A6001BC5B9 /* perfctrs.h in Copy Headers (common) */,
+				377BAEB7135B84A6001BC5B9 /* perfctrtags.h in Copy Headers (common) */,
+				377BAEB8135B84A6001BC5B9 /* settings.h in Copy Headers (common) */,
+				377BAEB9135B84A6001BC5B9 /* types.h in Copy Headers (common) */,
+			);
+			name = "Copy Headers (common)";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		377BAEBA135B84C2001BC5B9 /* Copy Headers (libundumpi) */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Headers/libundumpi;
+			dstSubfolderSpec = 6;
+			files = (
+				377BAEBB135B84D0001BC5B9 /* bindings.h in Copy Headers (libundumpi) */,
+				377BAEBC135B84D0001BC5B9 /* callbacks.h in Copy Headers (libundumpi) */,
+				377BAEBD135B84D0001BC5B9 /* dumpistate.h in Copy Headers (libundumpi) */,
+				377BAEBE135B84D0001BC5B9 /* freedefs.h in Copy Headers (libundumpi) */,
+				377BAEBF135B84D0001BC5B9 /* libundumpi.h in Copy Headers (libundumpi) */,
+			);
+			name = "Copy Headers (libundumpi)";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		377BAEED135BB18D001BC5B9 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		377BAECF135B9397001BC5B9 /* libundumpi.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libundumpi.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		377BAEEF135BB18D001BC5B9 /* dumpistats */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dumpistats; sourceTree = BUILT_PRODUCTS_DIR; };
+		377BAF0B135BB965001BC5B9 /* dumpi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = dumpi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		37B039B61366204F00731919 /* dumpistats-binbase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "dumpistats-binbase.h"; sourceTree = "<group>"; };
+		37B039B71366204F00731919 /* dumpistats-gatherbin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "dumpistats-gatherbin.cc"; sourceTree = "<group>"; };
+		37B039B81366204F00731919 /* dumpistats-gatherbin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "dumpistats-gatherbin.h"; sourceTree = "<group>"; };
+		37B039B91366204F00731919 /* dumpistats-timebin.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "dumpistats-timebin.cc"; sourceTree = "<group>"; };
+		37B039BA1366204F00731919 /* dumpistats-timebin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "dumpistats-timebin.h"; sourceTree = "<group>"; };
+		37D9BE9613666D5900DC87C1 /* byteswap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = byteswap.h; sourceTree = "<group>"; };
+		37D9DCC713576D6100EEC0E6 /* comm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comm.h; sourceTree = "<group>"; };
+		37D9DCC813576D6100EEC0E6 /* dumpi2ascii-callbacks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "dumpi2ascii-callbacks.c"; sourceTree = "<group>"; };
+		37D9DCC913576D6100EEC0E6 /* dumpi2ascii-callbacks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "dumpi2ascii-callbacks.h"; sourceTree = "<group>"; };
+		37D9DCCA13576D6100EEC0E6 /* dumpi2ascii-defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "dumpi2ascii-defs.h"; sourceTree = "<group>"; };
+		37D9DCCB13576D6100EEC0E6 /* dumpi2ascii.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dumpi2ascii.c; sourceTree = "<group>"; };
+		37D9DCCC13576D6100EEC0E6 /* dumpi2dumpi-callbacks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "dumpi2dumpi-callbacks.c"; sourceTree = "<group>"; };
+		37D9DCCD13576D6100EEC0E6 /* dumpi2dumpi-help.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "dumpi2dumpi-help.c"; sourceTree = "<group>"; };
+		37D9DCCE13576D6100EEC0E6 /* dumpi2dumpi-meta.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "dumpi2dumpi-meta.c"; sourceTree = "<group>"; };
+		37D9DCCF13576D6100EEC0E6 /* dumpi2dumpi-opts.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "dumpi2dumpi-opts.c"; sourceTree = "<group>"; };
+		37D9DCD013576D6100EEC0E6 /* dumpi2dumpi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dumpi2dumpi.c; sourceTree = "<group>"; };
+		37D9DCD113576D6100EEC0E6 /* dumpi2dumpi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dumpi2dumpi.h; sourceTree = "<group>"; };
+		37D9DCD213576D6100EEC0E6 /* dumpi2otf.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dumpi2otf.cc; sourceTree = "<group>"; };
+		37D9DCD513576D6100EEC0E6 /* dumpistats-callbacks.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "dumpistats-callbacks.cc"; sourceTree = "<group>"; };
+		37D9DCD613576D6100EEC0E6 /* dumpistats-callbacks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "dumpistats-callbacks.h"; sourceTree = "<group>"; };
+		37D9DCD713576D6100EEC0E6 /* dumpistats-handlers.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "dumpistats-handlers.cc"; sourceTree = "<group>"; };
+		37D9DCD813576D6100EEC0E6 /* dumpistats-handlers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "dumpistats-handlers.h"; sourceTree = "<group>"; };
+		37D9DCD913576D6100EEC0E6 /* dumpistats.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dumpistats.cc; sourceTree = "<group>"; };
+		37D9DCDA13576D6100EEC0E6 /* group.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = group.h; sourceTree = "<group>"; };
+		37D9DCDB13576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DCDC13576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DCDD13576D6100EEC0E6 /* metadata.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = metadata.cc; sourceTree = "<group>"; };
+		37D9DCDE13576D6100EEC0E6 /* metadata.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = metadata.h; sourceTree = "<group>"; };
+		37D9DCDF13576D6100EEC0E6 /* otfcomplete.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = otfcomplete.cc; sourceTree = "<group>"; };
+		37D9DCE013576D6100EEC0E6 /* otfcomplete.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = otfcomplete.h; sourceTree = "<group>"; };
+		37D9DCE113576D6100EEC0E6 /* otfwriter.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = otfwriter.cc; sourceTree = "<group>"; };
+		37D9DCE213576D6100EEC0E6 /* otfwriter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = otfwriter.h; sourceTree = "<group>"; };
+		37D9DCE313576D6100EEC0E6 /* sharedstate-commconstruct.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "sharedstate-commconstruct.cc"; sourceTree = "<group>"; };
+		37D9DCE413576D6100EEC0E6 /* sharedstate-commconstruct.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "sharedstate-commconstruct.h"; sourceTree = "<group>"; };
+		37D9DCE513576D6100EEC0E6 /* sharedstate.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = sharedstate.cc; sourceTree = "<group>"; };
+		37D9DCE613576D6100EEC0E6 /* sharedstate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sharedstate.h; sourceTree = "<group>"; };
+		37D9DCE713576D6100EEC0E6 /* test_dumpi2ascii.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = test_dumpi2ascii.sh; sourceTree = "<group>"; };
+		37D9DCE813576D6100EEC0E6 /* test_dumpi2dumpi.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = test_dumpi2dumpi.sh; sourceTree = "<group>"; };
+		37D9DCE913576D6100EEC0E6 /* timeutils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = timeutils.h; sourceTree = "<group>"; };
+		37D9DCEA13576D6100EEC0E6 /* trace.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = trace.cc; sourceTree = "<group>"; };
+		37D9DCEB13576D6100EEC0E6 /* trace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = trace.h; sourceTree = "<group>"; };
+		37D9DCEC13576D6100EEC0E6 /* type.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = type.h; sourceTree = "<group>"; };
+		37D9DCEE13576D6100EEC0E6 /* argtypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = argtypes.h; sourceTree = "<group>"; };
+		37D9DCEF13576D6100EEC0E6 /* constants.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = constants.c; sourceTree = "<group>"; };
+		37D9DCF013576D6100EEC0E6 /* constants.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
+		37D9DCF113576D6100EEC0E6 /* debugflags.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = debugflags.c; sourceTree = "<group>"; };
+		37D9DCF213576D6100EEC0E6 /* debugflags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = debugflags.h; sourceTree = "<group>"; };
+		37D9DCF313576D6100EEC0E6 /* dumpiio.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dumpiio.c; sourceTree = "<group>"; };
+		37D9DCF413576D6100EEC0E6 /* dumpiio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dumpiio.h; sourceTree = "<group>"; };
+		37D9DCF513576D6100EEC0E6 /* funclabels.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = funclabels.c; sourceTree = "<group>"; };
+		37D9DCF613576D6100EEC0E6 /* funclabels.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = funclabels.h; sourceTree = "<group>"; };
+		37D9DCF713576D6100EEC0E6 /* funcs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = funcs.c; sourceTree = "<group>"; };
+		37D9DCF813576D6100EEC0E6 /* funcs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = funcs.h; sourceTree = "<group>"; };
+		37D9DCF913576D6100EEC0E6 /* gettime.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = gettime.c; sourceTree = "<group>"; };
+		37D9DCFA13576D6100EEC0E6 /* gettime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gettime.h; sourceTree = "<group>"; };
+		37D9DCFB13576D6100EEC0E6 /* hashmap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hashmap.h; sourceTree = "<group>"; };
+		37D9DCFC13576D6100EEC0E6 /* io.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = io.c; sourceTree = "<group>"; };
+		37D9DCFD13576D6100EEC0E6 /* io.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = io.h; sourceTree = "<group>"; };
+		37D9DCFE13576D6100EEC0E6 /* iodefs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iodefs.c; sourceTree = "<group>"; };
+		37D9DCFF13576D6100EEC0E6 /* iodefs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iodefs.h; sourceTree = "<group>"; };
+		37D9DD0013576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DD0113576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DD0213576D6100EEC0E6 /* perfctrs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = perfctrs.c; sourceTree = "<group>"; };
+		37D9DD0313576D6100EEC0E6 /* perfctrs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = perfctrs.h; sourceTree = "<group>"; };
+		37D9DD0413576D6100EEC0E6 /* perfctrtags.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = perfctrtags.c; sourceTree = "<group>"; };
+		37D9DD0513576D6100EEC0E6 /* perfctrtags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = perfctrtags.h; sourceTree = "<group>"; };
+		37D9DD0613576D6100EEC0E6 /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
+		37D9DD0713576D6100EEC0E6 /* types.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = types.c; sourceTree = "<group>"; };
+		37D9DD0813576D6100EEC0E6 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		37D9DD0913576D6100EEC0E6 /* dumpiconfig-generated.h.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = "dumpiconfig-generated.h.in"; sourceTree = "<group>"; };
+		37D9DD0A13576D6100EEC0E6 /* dumpiconfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dumpiconfig.h; sourceTree = "<group>"; };
+		37D9DD0C13576D6100EEC0E6 /* callprofile-addrset.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "callprofile-addrset.h"; sourceTree = "<group>"; };
+		37D9DD0D13576D6100EEC0E6 /* callprofile.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = callprofile.c; sourceTree = "<group>"; };
+		37D9DD0E13576D6100EEC0E6 /* callprofile.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = callprofile.h; sourceTree = "<group>"; };
+		37D9DD0F13576D6100EEC0E6 /* data.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = data.c; sourceTree = "<group>"; };
+		37D9DD1013576D6100EEC0E6 /* data.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = data.h; sourceTree = "<group>"; };
+		37D9DD1113576D6100EEC0E6 /* fromf77.f */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.fortran; path = fromf77.f; sourceTree = "<group>"; };
+		37D9DD1213576D6100EEC0E6 /* fromf90.f90 */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.fortran.f90; path = fromf90.f90; sourceTree = "<group>"; };
+		37D9DD1313576D6100EEC0E6 /* fused-bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "fused-bindings.h"; sourceTree = "<group>"; };
+		37D9DD1413576D6100EEC0E6 /* init.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = init.c; sourceTree = "<group>"; };
+		37D9DD1513576D6100EEC0E6 /* init.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = init.h; sourceTree = "<group>"; };
+		37D9DD1613576D6100EEC0E6 /* libdumpi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libdumpi.c; sourceTree = "<group>"; };
+		37D9DD1713576D6100EEC0E6 /* libdumpi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libdumpi.h; sourceTree = "<group>"; };
+		37D9DD1813576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DD1913576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DD1A13576D6100EEC0E6 /* mpibindings-maps.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "mpibindings-maps.c"; sourceTree = "<group>"; };
+		37D9DD1B13576D6100EEC0E6 /* mpibindings-maps.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "mpibindings-maps.h"; sourceTree = "<group>"; };
+		37D9DD1C13576D6100EEC0E6 /* mpibindings-utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "mpibindings-utils.c"; sourceTree = "<group>"; };
+		37D9DD1D13576D6100EEC0E6 /* mpibindings-utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "mpibindings-utils.h"; sourceTree = "<group>"; };
+		37D9DD1E13576D6100EEC0E6 /* mpibindings.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mpibindings.c; sourceTree = "<group>"; };
+		37D9DD1F13576D6100EEC0E6 /* mpibindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mpibindings.h; sourceTree = "<group>"; };
+		37D9DD2013576D6100EEC0E6 /* tof77.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = tof77.c; sourceTree = "<group>"; };
+		37D9DD2113576D6100EEC0E6 /* tof77.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tof77.h; sourceTree = "<group>"; };
+		37D9DD2313576D6100EEC0E6 /* bindings.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = bindings.c; sourceTree = "<group>"; };
+		37D9DD2413576D6100EEC0E6 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		37D9DD2513576D6100EEC0E6 /* callbacks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = callbacks.c; sourceTree = "<group>"; };
+		37D9DD2613576D6100EEC0E6 /* callbacks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = callbacks.h; sourceTree = "<group>"; };
+		37D9DD2813576D6100EEC0E6 /* dumpistate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dumpistate.h; sourceTree = "<group>"; };
+		37D9DD2913576D6100EEC0E6 /* freedefs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = freedefs.h; sourceTree = "<group>"; };
+		37D9DD2A13576D6100EEC0E6 /* libundumpi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = libundumpi.c; sourceTree = "<group>"; };
+		37D9DD2B13576D6100EEC0E6 /* libundumpi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libundumpi.h; sourceTree = "<group>"; };
+		37D9DD2C13576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DD2D13576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DD2E13576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DD2F13576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DD3113576D6100EEC0E6 /* coll.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = coll.c; sourceTree = "<group>"; };
+		37D9DD3213576D6100EEC0E6 /* coll.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = coll.h; sourceTree = "<group>"; };
+		37D9DD3313576D6100EEC0E6 /* Makefile.am */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		37D9DD3413576D6100EEC0E6 /* Makefile.in */ = {isa = PBXFileReference; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		37D9DD3513576D6100EEC0E6 /* manip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = manip.c; sourceTree = "<group>"; };
+		37D9DD3613576D6100EEC0E6 /* manip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = manip.h; sourceTree = "<group>"; };
+		37D9DD3713576D6100EEC0E6 /* p2p.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = p2p.c; sourceTree = "<group>"; };
+		37D9DD3813576D6100EEC0E6 /* p2p.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = p2p.h; sourceTree = "<group>"; };
+		37D9DD3913576D6100EEC0E6 /* probe.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = probe.h; sourceTree = "<group>"; };
+		37D9DD3A13576D6100EEC0E6 /* run_testf77.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = run_testf77.sh; sourceTree = "<group>"; };
+		37D9DD3B13576D6100EEC0E6 /* run_testf90.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = run_testf90.sh; sourceTree = "<group>"; };
+		37D9DD3C13576D6100EEC0E6 /* run_testmpi.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = run_testmpi.sh; sourceTree = "<group>"; };
+		37D9DD3D13576D6100EEC0E6 /* testf77.f */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.fortran; path = testf77.f; sourceTree = "<group>"; };
+		37D9DD3E13576D6100EEC0E6 /* testf90.f90 */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.fortran.f90; path = testf90.f90; sourceTree = "<group>"; };
+		37D9DD3F13576D6100EEC0E6 /* testmpi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testmpi.c; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		377BAECC135B9397001BC5B9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		377BAEEC135BB18D001BC5B9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37D9DCAD13576BDC00EEC0E6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		37D9DCB213576BDC00EEC0E6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				377BAECF135B9397001BC5B9 /* libundumpi.dylib */,
+				377BAEEF135BB18D001BC5B9 /* dumpistats */,
+				377BAF0B135BB965001BC5B9 /* dumpi.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		37D9DCB313576BDC00EEC0E6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		37D9DCC513576D6100EEC0E6 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				37D9DCC613576D6100EEC0E6 /* bin */,
+				37D9DCED13576D6100EEC0E6 /* common */,
+				37D9DD0913576D6100EEC0E6 /* dumpiconfig-generated.h.in */,
+				37D9DD0A13576D6100EEC0E6 /* dumpiconfig.h */,
+				37D9DD0B13576D6100EEC0E6 /* libdumpi */,
+				37D9DD2213576D6100EEC0E6 /* libundumpi */,
+				37D9DD2E13576D6100EEC0E6 /* Makefile.am */,
+				37D9DD2F13576D6100EEC0E6 /* Makefile.in */,
+				37D9DD3013576D6100EEC0E6 /* test */,
+			);
+			name = Source;
+			path = ../dumpi;
+			sourceTree = "<group>";
+		};
+		37D9DCC613576D6100EEC0E6 /* bin */ = {
+			isa = PBXGroup;
+			children = (
+				37B039B61366204F00731919 /* dumpistats-binbase.h */,
+				37B039B71366204F00731919 /* dumpistats-gatherbin.cc */,
+				37B039B81366204F00731919 /* dumpistats-gatherbin.h */,
+				37B039B91366204F00731919 /* dumpistats-timebin.cc */,
+				37B039BA1366204F00731919 /* dumpistats-timebin.h */,
+				37D9DCC713576D6100EEC0E6 /* comm.h */,
+				37D9DCC813576D6100EEC0E6 /* dumpi2ascii-callbacks.c */,
+				37D9DCC913576D6100EEC0E6 /* dumpi2ascii-callbacks.h */,
+				37D9DCCA13576D6100EEC0E6 /* dumpi2ascii-defs.h */,
+				37D9DCCB13576D6100EEC0E6 /* dumpi2ascii.c */,
+				37D9DCCC13576D6100EEC0E6 /* dumpi2dumpi-callbacks.c */,
+				37D9DCCD13576D6100EEC0E6 /* dumpi2dumpi-help.c */,
+				37D9DCCE13576D6100EEC0E6 /* dumpi2dumpi-meta.c */,
+				37D9DCCF13576D6100EEC0E6 /* dumpi2dumpi-opts.c */,
+				37D9DCD013576D6100EEC0E6 /* dumpi2dumpi.c */,
+				37D9DCD113576D6100EEC0E6 /* dumpi2dumpi.h */,
+				37D9DCD213576D6100EEC0E6 /* dumpi2otf.cc */,
+				37D9DCD513576D6100EEC0E6 /* dumpistats-callbacks.cc */,
+				37D9DCD613576D6100EEC0E6 /* dumpistats-callbacks.h */,
+				37D9DCD713576D6100EEC0E6 /* dumpistats-handlers.cc */,
+				37D9DCD813576D6100EEC0E6 /* dumpistats-handlers.h */,
+				37D9DCD913576D6100EEC0E6 /* dumpistats.cc */,
+				37D9DCDA13576D6100EEC0E6 /* group.h */,
+				37D9DCDB13576D6100EEC0E6 /* Makefile.am */,
+				37D9DCDC13576D6100EEC0E6 /* Makefile.in */,
+				37D9DCDD13576D6100EEC0E6 /* metadata.cc */,
+				37D9DCDE13576D6100EEC0E6 /* metadata.h */,
+				37D9DCDF13576D6100EEC0E6 /* otfcomplete.cc */,
+				37D9DCE013576D6100EEC0E6 /* otfcomplete.h */,
+				37D9DCE113576D6100EEC0E6 /* otfwriter.cc */,
+				37D9DCE213576D6100EEC0E6 /* otfwriter.h */,
+				37D9DCE313576D6100EEC0E6 /* sharedstate-commconstruct.cc */,
+				37D9DCE413576D6100EEC0E6 /* sharedstate-commconstruct.h */,
+				37D9DCE513576D6100EEC0E6 /* sharedstate.cc */,
+				37D9DCE613576D6100EEC0E6 /* sharedstate.h */,
+				37D9DCE713576D6100EEC0E6 /* test_dumpi2ascii.sh */,
+				37D9DCE813576D6100EEC0E6 /* test_dumpi2dumpi.sh */,
+				37D9DCE913576D6100EEC0E6 /* timeutils.h */,
+				37D9DCEA13576D6100EEC0E6 /* trace.cc */,
+				37D9DCEB13576D6100EEC0E6 /* trace.h */,
+				37D9DCEC13576D6100EEC0E6 /* type.h */,
+			);
+			path = bin;
+			sourceTree = "<group>";
+		};
+		37D9DCED13576D6100EEC0E6 /* common */ = {
+			isa = PBXGroup;
+			children = (
+				37D9DCEE13576D6100EEC0E6 /* argtypes.h */,
+				37D9BE9613666D5900DC87C1 /* byteswap.h */,
+				37D9DCEF13576D6100EEC0E6 /* constants.c */,
+				37D9DCF013576D6100EEC0E6 /* constants.h */,
+				37D9DCF113576D6100EEC0E6 /* debugflags.c */,
+				37D9DCF213576D6100EEC0E6 /* debugflags.h */,
+				37D9DCF313576D6100EEC0E6 /* dumpiio.c */,
+				37D9DCF413576D6100EEC0E6 /* dumpiio.h */,
+				37D9DCF513576D6100EEC0E6 /* funclabels.c */,
+				37D9DCF613576D6100EEC0E6 /* funclabels.h */,
+				37D9DCF713576D6100EEC0E6 /* funcs.c */,
+				37D9DCF813576D6100EEC0E6 /* funcs.h */,
+				37D9DCF913576D6100EEC0E6 /* gettime.c */,
+				37D9DCFA13576D6100EEC0E6 /* gettime.h */,
+				37D9DCFB13576D6100EEC0E6 /* hashmap.h */,
+				37D9DCFC13576D6100EEC0E6 /* io.c */,
+				37D9DCFD13576D6100EEC0E6 /* io.h */,
+				37D9DCFE13576D6100EEC0E6 /* iodefs.c */,
+				37D9DCFF13576D6100EEC0E6 /* iodefs.h */,
+				37D9DD0013576D6100EEC0E6 /* Makefile.am */,
+				37D9DD0113576D6100EEC0E6 /* Makefile.in */,
+				37D9DD0213576D6100EEC0E6 /* perfctrs.c */,
+				37D9DD0313576D6100EEC0E6 /* perfctrs.h */,
+				37D9DD0413576D6100EEC0E6 /* perfctrtags.c */,
+				37D9DD0513576D6100EEC0E6 /* perfctrtags.h */,
+				37D9DD0613576D6100EEC0E6 /* settings.h */,
+				37D9DD0713576D6100EEC0E6 /* types.c */,
+				37D9DD0813576D6100EEC0E6 /* types.h */,
+			);
+			path = common;
+			sourceTree = "<group>";
+		};
+		37D9DD0B13576D6100EEC0E6 /* libdumpi */ = {
+			isa = PBXGroup;
+			children = (
+				37D9DD0C13576D6100EEC0E6 /* callprofile-addrset.h */,
+				37D9DD0D13576D6100EEC0E6 /* callprofile.c */,
+				37D9DD0E13576D6100EEC0E6 /* callprofile.h */,
+				37D9DD0F13576D6100EEC0E6 /* data.c */,
+				37D9DD1013576D6100EEC0E6 /* data.h */,
+				37D9DD1113576D6100EEC0E6 /* fromf77.f */,
+				37D9DD1213576D6100EEC0E6 /* fromf90.f90 */,
+				37D9DD1313576D6100EEC0E6 /* fused-bindings.h */,
+				37D9DD1413576D6100EEC0E6 /* init.c */,
+				37D9DD1513576D6100EEC0E6 /* init.h */,
+				37D9DD1613576D6100EEC0E6 /* libdumpi.c */,
+				37D9DD1713576D6100EEC0E6 /* libdumpi.h */,
+				37D9DD1813576D6100EEC0E6 /* Makefile.am */,
+				37D9DD1913576D6100EEC0E6 /* Makefile.in */,
+				37D9DD1A13576D6100EEC0E6 /* mpibindings-maps.c */,
+				37D9DD1B13576D6100EEC0E6 /* mpibindings-maps.h */,
+				37D9DD1C13576D6100EEC0E6 /* mpibindings-utils.c */,
+				37D9DD1D13576D6100EEC0E6 /* mpibindings-utils.h */,
+				37D9DD1E13576D6100EEC0E6 /* mpibindings.c */,
+				37D9DD1F13576D6100EEC0E6 /* mpibindings.h */,
+				37D9DD2013576D6100EEC0E6 /* tof77.c */,
+				37D9DD2113576D6100EEC0E6 /* tof77.h */,
+			);
+			path = libdumpi;
+			sourceTree = "<group>";
+		};
+		37D9DD2213576D6100EEC0E6 /* libundumpi */ = {
+			isa = PBXGroup;
+			children = (
+				37D9DD2313576D6100EEC0E6 /* bindings.c */,
+				37D9DD2413576D6100EEC0E6 /* bindings.h */,
+				37D9DD2513576D6100EEC0E6 /* callbacks.c */,
+				37D9DD2613576D6100EEC0E6 /* callbacks.h */,
+				37D9DD2813576D6100EEC0E6 /* dumpistate.h */,
+				37D9DD2913576D6100EEC0E6 /* freedefs.h */,
+				37D9DD2A13576D6100EEC0E6 /* libundumpi.c */,
+				37D9DD2B13576D6100EEC0E6 /* libundumpi.h */,
+				37D9DD2C13576D6100EEC0E6 /* Makefile.am */,
+				37D9DD2D13576D6100EEC0E6 /* Makefile.in */,
+			);
+			path = libundumpi;
+			sourceTree = "<group>";
+		};
+		37D9DD3013576D6100EEC0E6 /* test */ = {
+			isa = PBXGroup;
+			children = (
+				37D9DD3113576D6100EEC0E6 /* coll.c */,
+				37D9DD3213576D6100EEC0E6 /* coll.h */,
+				37D9DD3313576D6100EEC0E6 /* Makefile.am */,
+				37D9DD3413576D6100EEC0E6 /* Makefile.in */,
+				37D9DD3513576D6100EEC0E6 /* manip.c */,
+				37D9DD3613576D6100EEC0E6 /* manip.h */,
+				37D9DD3713576D6100EEC0E6 /* p2p.c */,
+				37D9DD3813576D6100EEC0E6 /* p2p.h */,
+				37D9DD3913576D6100EEC0E6 /* probe.h */,
+				37D9DD3A13576D6100EEC0E6 /* run_testf77.sh */,
+				37D9DD3B13576D6100EEC0E6 /* run_testf90.sh */,
+				37D9DD3C13576D6100EEC0E6 /* run_testmpi.sh */,
+				37D9DD3D13576D6100EEC0E6 /* testf77.f */,
+				37D9DD3E13576D6100EEC0E6 /* testf90.f90 */,
+				37D9DD3F13576D6100EEC0E6 /* testmpi.c */,
+			);
+			path = test;
+			sourceTree = "<group>";
+		};
+		37F5A94D1357660400DB7EA5 = {
+			isa = PBXGroup;
+			children = (
+				37D9DCC513576D6100EEC0E6 /* Source */,
+				37D9DCB313576BDC00EEC0E6 /* Frameworks */,
+				37D9DCB213576BDC00EEC0E6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		377BAECD135B9397001BC5B9 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37D9DCAE13576BDC00EEC0E6 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				377BAEAA135B846A001BC5B9 /* dumpiconfig.h in Headers */,
+				37D9BE9713666D5900DC87C1 /* byteswap.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXLegacyTarget section */
+		377BAEE4135B9789001BC5B9 /* dumpiconfig */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "dumpi/dumpiconfig-generated.h";
+			buildConfigurationList = 377BAEE5135B9789001BC5B9 /* Build configuration list for PBXLegacyTarget "dumpiconfig" */;
+			buildPhases = (
+			);
+			buildToolPath = ./scripts/build;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = dumpiconfig;
+			passBuildSettingsInEnvironment = 1;
+			productName = dumpiconfig;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		377BAECE135B9397001BC5B9 /* undumpi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 377BAED0135B9397001BC5B9 /* Build configuration list for PBXNativeTarget "undumpi" */;
+			buildPhases = (
+				377BAECB135B9397001BC5B9 /* Sources */,
+				377BAECC135B9397001BC5B9 /* Frameworks */,
+				377BAECD135B9397001BC5B9 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				377BAEE9135B984C001BC5B9 /* PBXTargetDependency */,
+			);
+			name = undumpi;
+			productName = undumpi;
+			productReference = 377BAECF135B9397001BC5B9 /* libundumpi.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		377BAEEE135BB18D001BC5B9 /* dumpistats */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 377BAEF5135BB18D001BC5B9 /* Build configuration list for PBXNativeTarget "dumpistats" */;
+			buildPhases = (
+				377BAEEB135BB18D001BC5B9 /* Sources */,
+				377BAEEC135BB18D001BC5B9 /* Frameworks */,
+				377BAEED135BB18D001BC5B9 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				377BAF06135BB376001BC5B9 /* PBXTargetDependency */,
+			);
+			name = dumpistats;
+			productName = dumpistats;
+			productReference = 377BAEEF135BB18D001BC5B9 /* dumpistats */;
+			productType = "com.apple.product-type.tool";
+		};
+		37D9DCB013576BDC00EEC0E6 /* dumpi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 37D9DCC113576BDC00EEC0E6 /* Build configuration list for PBXNativeTarget "dumpi" */;
+			buildPhases = (
+				37D9DCAC13576BDC00EEC0E6 /* Sources */,
+				37D9DCAD13576BDC00EEC0E6 /* Frameworks */,
+				37D9DCAE13576BDC00EEC0E6 /* Headers */,
+				377BAEAB135B8478001BC5B9 /* Copy Headers (common) */,
+				377BAEBA135B84C2001BC5B9 /* Copy Headers (libundumpi) */,
+				37D9DD59135787F900EEC0E6 /* Copy Headers (generated) */,
+				37D9DCAF13576BDC00EEC0E6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				377BAF02135BB356001BC5B9 /* PBXTargetDependency */,
+				377BAF04135BB363001BC5B9 /* PBXTargetDependency */,
+			);
+			name = dumpi;
+			productName = libundumpi;
+			productReference = 377BAF0B135BB965001BC5B9 /* dumpi.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		37F5A94F1357660400DB7EA5 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 37F5A9521357660400DB7EA5 /* Build configuration list for PBXProject "dumpi" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 37F5A94D1357660400DB7EA5;
+			productRefGroup = 37D9DCB213576BDC00EEC0E6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				37D9DCB013576BDC00EEC0E6 /* dumpi */,
+				377BAEEE135BB18D001BC5B9 /* dumpistats */,
+				377BAECE135B9397001BC5B9 /* undumpi */,
+				377BAEE4135B9789001BC5B9 /* dumpiconfig */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		37D9DCAF13576BDC00EEC0E6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				377BAED3135B93A3001BC5B9 /* libundumpi.dylib in Resources */,
+				377BAEFE135BB310001BC5B9 /* dumpistats in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		37D9DD59135787F900EEC0E6 /* Copy Headers (generated) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Headers (generated)";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = $SRCROOT/scripts/copy_headers;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		377BAECB135B9397001BC5B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				377BAED4135B93FE001BC5B9 /* constants.c in Sources */,
+				377BAED5135B93FE001BC5B9 /* debugflags.c in Sources */,
+				377BAED6135B93FE001BC5B9 /* dumpiio.c in Sources */,
+				377BAED7135B93FE001BC5B9 /* funclabels.c in Sources */,
+				377BAED8135B93FE001BC5B9 /* funcs.c in Sources */,
+				377BAED9135B93FE001BC5B9 /* gettime.c in Sources */,
+				377BAEDA135B93FE001BC5B9 /* io.c in Sources */,
+				377BAEDB135B93FE001BC5B9 /* iodefs.c in Sources */,
+				377BAEDC135B93FE001BC5B9 /* perfctrs.c in Sources */,
+				377BAEDD135B93FE001BC5B9 /* perfctrtags.c in Sources */,
+				377BAEDE135B93FE001BC5B9 /* types.c in Sources */,
+				377BAEDF135B9412001BC5B9 /* bindings.c in Sources */,
+				377BAEE0135B9412001BC5B9 /* callbacks.c in Sources */,
+				377BAEE1135B9412001BC5B9 /* libundumpi.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		377BAEEB135BB18D001BC5B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				377BAEFB135BB1D1001BC5B9 /* dumpistats-callbacks.cc in Sources */,
+				377BAEFC135BB1D1001BC5B9 /* dumpistats-handlers.cc in Sources */,
+				377BAEFD135BB1D1001BC5B9 /* dumpistats.cc in Sources */,
+				377BAF07135BB5FE001BC5B9 /* metadata.cc in Sources */,
+				377BAF08135BB5FE001BC5B9 /* sharedstate-commconstruct.cc in Sources */,
+				377BAF09135BB5FE001BC5B9 /* sharedstate.cc in Sources */,
+				377BAF0A135BB5FE001BC5B9 /* trace.cc in Sources */,
+				37B039BC1366204F00731919 /* dumpistats-gatherbin.cc in Sources */,
+				37B039BD1366204F00731919 /* dumpistats-timebin.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37D9DCAC13576BDC00EEC0E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		377BAEE9135B984C001BC5B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 377BAEE4135B9789001BC5B9 /* dumpiconfig */;
+			targetProxy = 377BAEE8135B984C001BC5B9 /* PBXContainerItemProxy */;
+		};
+		377BAF02135BB356001BC5B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 377BAECE135B9397001BC5B9 /* undumpi */;
+			targetProxy = 377BAF01135BB356001BC5B9 /* PBXContainerItemProxy */;
+		};
+		377BAF04135BB363001BC5B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 377BAEEE135BB18D001BC5B9 /* dumpistats */;
+			targetProxy = 377BAF03135BB363001BC5B9 /* PBXContainerItemProxy */;
+		};
+		377BAF06135BB376001BC5B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 377BAECE135B9397001BC5B9 /* undumpi */;
+			targetProxy = 377BAF05135BB376001BC5B9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		377BAED1135B9397001BC5B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		377BAED2135B9397001BC5B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				EXECUTABLE_PREFIX = lib;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		377BAEE6135B9789001BC5B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		377BAEE7135B9789001BC5B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		377BAEF6135BB18D001BC5B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-lundumpi";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		377BAEF7135BB18D001BC5B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_LDFLAGS = "-lundumpi";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		37D9DCC213576BDC00EEC0E6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "libundumpi/libundumpi-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "dumpi/dumpi-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Debug;
+		};
+		37D9DCC313576BDC00EEC0E6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "libundumpi/libundumpi-Prefix.pch";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "dumpi/dumpi-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Release;
+		};
+		37F5A9541357660400DB7EA5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/..",
+					"$(SRCROOT)/build/$(CURRENT_ARCH)/$(BUILD_STYLE)",
+				);
+				OTHER_LDFLAGS = "";
+			};
+			name = Debug;
+		};
+		37F5A9551357660400DB7EA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/..",
+					"$(SRCROOT)/build/$(CURRENT_ARCH)/$(BUILD_STYLE)",
+				);
+				OTHER_LDFLAGS = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		377BAED0135B9397001BC5B9 /* Build configuration list for PBXNativeTarget "undumpi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				377BAED1135B9397001BC5B9 /* Debug */,
+				377BAED2135B9397001BC5B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		377BAEE5135B9789001BC5B9 /* Build configuration list for PBXLegacyTarget "dumpiconfig" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				377BAEE6135B9789001BC5B9 /* Debug */,
+				377BAEE7135B9789001BC5B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		377BAEF5135BB18D001BC5B9 /* Build configuration list for PBXNativeTarget "dumpistats" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				377BAEF6135BB18D001BC5B9 /* Debug */,
+				377BAEF7135BB18D001BC5B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		37D9DCC113576BDC00EEC0E6 /* Build configuration list for PBXNativeTarget "dumpi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				37D9DCC213576BDC00EEC0E6 /* Debug */,
+				37D9DCC313576BDC00EEC0E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		37F5A9521357660400DB7EA5 /* Build configuration list for PBXProject "dumpi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				37F5A9541357660400DB7EA5 /* Debug */,
+				37F5A9551357660400DB7EA5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 37F5A94F1357660400DB7EA5 /* Project object */;
+}

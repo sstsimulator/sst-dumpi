@@ -1,0 +1,45 @@
+#! /usr/bin/env python
+
+import re
+text = open("oldmpiconfigs.m4").read()
+
+regexp = re.compile("AH_TEMPLATE.*?DUMPI_SKIP_([_A-Z\d]+).*?AC_DEFINE",re.DOTALL)
+matches = regexp.findall(text)
+
+initial_test = """
+    dnl Test whether mpi.h is found
+    AC_LANG_PUSH(C)
+    AC_MSG_CHECKING([whether mpi.h is found])
+    AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM(
+        [
+          #include <mpi.h>
+          #include <stdlib.h>
+        ], [
+          int *ac; char ***av;
+          MPI_Init(ac, av);
+          MPI_Finalize();
+          return EXIT_SUCCESS;
+        ]
+      )],
+      AC_MSG_RESULT([yes]),
+      AC_MSG_FAILURE([no])
+    )
+"""
+
+extras = """
+AH_TEMPLATE(DUMPI_HAVE_MPI_WIN, [if MPI_WIN functions are available])
+AC_DEFINE(DUMPI_HAVE_MPI_WIN, [1])
+"""
+
+str_arr = ["AC_DEFUN([DUMPI_FUNCTIONS], ["]
+str_arr.append(initial_test)
+str_arr.append(extras)
+for m in matches:
+    line = "AH_TEMPLATE([DUMPI_SKIP_%s], [if %s is missing])" % (m, m)
+    str_arr.append(line)
+str_arr.append("])")
+
+open("mpiconfigs.m4","w").write("\n".join(str_arr))
+
+

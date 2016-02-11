@@ -1,0 +1,241 @@
+A cluttered and disorganized description of the DUMPI trace format.
+
+
+
+DUMPI was created to facilitate more detailed tracing of MPI calls
+than was available from other trace programs we had access to.  In
+particular, the design goals were to:
+  1) Differentiate between related MPI calls (e.g. MPI_Send,
+     MPI_Ssend, MPI_Bsend, MPI_Rsend, ...).
+  2) Provide full input and output argument listings (other than
+     payload data) for MPI calls.  In particular:
+      - Record vector arguments for MPI_*v and MPI_*w collectives
+      - Detailed tracking of requests, including which request(s)
+        were matched by MPI_{Wait,Test}{some,any}.
+      - Provide the ability to turn on and off profiling of specific
+        functions and the amount of data profiled.
+      - Minimize collection overhead, in particular reduce file I/O to
+        the extent possible (many large parallel platforms have poor
+	performance for small writes, which may result in large errors
+	in profiled timings).
+      - Correctly record the special identities of predefined MPI
+        objects (communicators, constants, datatypes, combiners,
+	comparisons, and a whole host of others).
+   3) Provide a low-overhead API for reading trace files into a
+      simulator (many of our current traces have millions of MPI calls
+      recorded on each of hundreds of nodes).
+
+Occasionally asked questions (OAQ):
+
+1)  Why are we not using OTF?
+    We originally intended to use OTF if at all possible. 
+      - The major issue we ran into was how to represent OTF event
+      	record types with variable length records (as an example,
+      	consider the receivecount and displacement arrays in
+      	MPI_Gatherv -- these are valid only at root (and may be unsafe
+      	to read from on other nodes), and on root they have the length
+      	of the communicator given as the last argument.
+      - A secondary issue was the potential performance impact of
+        using OTF, both from converting data to ASCII and from the
+    	more frequent file writes that would be required.
+1b) Why are we not using XML?
+      - We may eventually move to using XML for the metafile, although
+      	my personal opinion is that XML files are notably less readable
+    	than simple key/value configuration files.  
+      - For the same reason, the dumpi.conf preference file for
+      	libdumpi will probably never be converted to xml.
+2)  Why are we not compressing the trace files?
+    We tried this as well.
+      - Using zlib compression added an unacceptable overhead to some
+      	MPI trace runs (in particular an unnamed application that does
+      	very frequent calls to MPI_Iprobe).
+      - Compressing the files provides less than two-fold space
+      	savings at the cost of making random access reads intractable.
+3)  Why does common/types.h define all these weird compact integer
+    types for our versions of all the MPI datatypes in common/types.h
+    (e.g. dumpi_comm, dumpi_errcode, etc.)?  How about if I really
+    need to create more than 32 thousand communicators?
+      - We are trying to keep the trace file size down and minimize
+        file IO; most of these sizes were chosen to exceed the maximum
+    	number of MPI data objects that we expect to encounter in any
+    	actual application.
+4)  Won't it be a problem that our biased time (cpu time and wall
+    time) only have a 16-bit value to hold the seconds?
+      - Possibly.  This means that our clock rolls over every 18
+        hours.  Realistically, this is only a serious problem if we go
+        18 hours without profiling any calls (since the profiled
+        stream is in chronological order).  For current applications
+        of interest, however, it is almost certain that we will run
+        out of disk space to hold the trace files long before the
+        18-hour time limit is reached.
+
+
+Known issues and concerns:
+
+1)  The mechanism used to label profiled calls on the stream could
+    pose Difficulties when time comes to extend the family of profiled
+    calls (this was recently an issue when we added support for call
+    tracing using instrumented functions).  This issue will be of
+    particular concern when MPI-3 eventually is finalized.
+2)  Some records (esp. index records) in the DUMPI trace file should
+    have been stored as key/value pairs rather than relying on a
+    specific ordering.  Due to the investment in collecting current
+    trace files, these changes should be done in a backward-compatible
+    manner.
+
+----------------------------------------------------------------
+
+The DUMPI trace file format:
+
+The results of a DUMPI profiling run consists of 
+- One ASCII metafile (briefly described in section METAFILE) for the
+  entire run, and
+- One binary trace file for each node (described in section TRACEFILE
+  and subsections T0 through T8).
+
+
+METAFILE
+
+The metafile is a simple key/value ASCII file that is intended to be
+human-readable and to facilitate grouping related trace files
+together.
+
+
+TRACEFILE
+
+Each trace file consists of a 64-bit lead-in magic number and 8 data
+records.  Only the lead-in magic and the index record (record YY) are
+positional.  The former occupies the first 8 bytes of the file and the
+latter it occupies the last ZZ bytes of the file.
+
+T.0:  Lead-in magic:  The trace file starts with the 8-byte sequence
+      {0xff, 0xaa, 0xdd, 'D', 'U', 'M', 'P', 'I'}
+
+T.1:  The actual profiled calls
+      - The stream starts with two 32-bit values representing the time
+        bias (in seconds) for CPU and wall time, respectively.	  
+      - Immediately following the time biases, is the time-ordered
+        stream of profiled calls.
+        Each profiled call has the following structure:
+          1) A 16-bit index identifying the profiled call (defined in
+             common/funclabels.h).  The value DUMPI_END_OF_STREAM
+	     terminates the stream.
+	  2) An 8-bit mask defining what optional fields are output on
+             the stream (masks defined in common/settings.h).
+	     Currently, the following masks are used:
+	       - DUMPI_ENABLE_STATUS_MASK (for historical reasons, this
+      	         mask occupies the two lowest order bits).  Specifies
+                 that MPI_Status information is stored for this call.
+	       - DUMPI_CPUTIME_MASK (value (1<<2)).  Specifies that
+                 cpu time information (high resolution timers) is
+                 stored for both function entry and exit.  See section
+                 TIMEINFO for more information.
+	       - DUMPI_WALLTIME_MASK (value (1<<3)).  Specifies that
+	         wall time information is stored for function entry
+                 and exit.  See subsection TIMEINFO.
+	       - DUMPI_THREADID_MASK (value (1<<6)).  Specifies that
+                 a 16-bit integer thread identifier is stored for the
+      		 call.  See subsection THREADINFO.
+	       - DUMPI_PERFINFO_MASK (value (1<<7)).  Specifies that
+  	         performance counter information is stored.  See section
+    		 PERFINFO.
+	  3) Timer information.  Note that all time information is
+      	     biased by subtracting the number of seconds at the start
+      	     of simulation from the stored values.  Time values are
+  	     stored as uint16_t for seconds and uint32_t for
+             nanoseconds.  Time biases are stored at the beginning of
+	     the stream.
+	     a) If DUMPI_CPUTIME_MASK was enabled, CPU time is here.
+ 	     b) if DUMPI_WALLTIME_MASK was enabled, wall time is here.
+	  4) Performance counter information
+	     If DUMPI_PERFINFO_MASK was enabled, PAPI performance
+	     counters are stored for the call.  The format for the
+	     perfcounter information is:
+	       - An 8-bit value indicating the number of active
+	         perfcounters (let's call this 'perfcount').
+	       - 'perfcount' pairs of two 64-bit integer values
+	       	 indicating the state of each perfcounter when the
+	       	 function was entered and exited.
+	  5) Call arguments as defined in common/argtypes.h.  Note that
+	       - Opaque MPI types (MPI_Comm, MPI_Op, etc.) are
+	         hashed to zero-based integer values.  Pre-defined
+		 objects (MPI_COMM_WORLD, MPI_ANY_SOURCE, etc.) are
+		 mapped onto the values of the corresponding DUMPI types
+		 (DUMPI_COMM_WORLD, DUMPI_ANY_SOURCE) as defined in
+		 common/constants.h.
+	       - Array (vector) arguments are stored as a 32-bit integer
+	         representing array length followed by all elements of
+		 the array.  Empty arrays and NULL array pointers are
+		 both stored as the length argument 0 followed by no
+		 values.
+	       - Status arrays are stored as four separate arrays:
+	         1) Array of int32_t for bytes sent/received
+		 2) Array of int32_t for sources
+		 3) Array of int8_t for 'cancelled' state flag
+		 4) Array of int8_t for 'error' state flag
+	       - Status arrays may be of length 0 even if
+	         DUMPI_ENABLE_STATUS_MASK was active.  This is to
+		 permit more compact profiles (in libdumpi, this is
+		 true when the dumpi.conf file defines 'statuses' as
+		 'success').
+
+T.2:  A header record containing 
+      - Version information (stored as three 8-bit values)
+      - Time at the start of simulation (64-bits)
+      - Hostname as reported by gethostname(2)
+      - Username as reported by the LOGNAME environment variable
+        or "<none>" if username is not defined.
+      - Information about the network mesh dimensions (if available
+        on the platform).  These include:
+	   o Mesh dimension (set to zero if no mesh info is
+	     available).
+	   o Position of current node in mesh if available
+	     (array of size mesh dimension).
+	   o Size of mesh if available.  Initialized to zero
+	     if mesh dimension is not zero but mesh size is not
+	     available.
+
+T.3:  A footer record containing:
+      - A 64-bit magic number indicating the start of the record
+        (0xf007fee7).
+      - A list of 32-bit integers indicating of how many times each
+        MPI call was encountered (DUMPI_ALL_FUNCTIONS entries --
+        covers all MPI-2 calls).
+      - A list of 32-bit integers indicating how often each call was
+      	entered but not profiled (similar as above).
+
+T.4:  A keyval record containing:
+      - A 32-bit integer listing the number of key/value pairs stored.
+      - A list of string pairs for each key/value entry.
+
+T.6:  A listing of perfcounter labels.  This section may be empty, in
+which case the index record points to offset 0.  Otherwise, this
+section contains:
+      - A 32-bit integer indicating the number of perfcounter labels.
+      - A list of string names for each perfcounter.
+
+T.7:  A listing of function names encountered in call tracing.  This
+section may be empty, in which case the index record points to offset
+0.  Otherwise, this section contains:
+	- A 32-bit integer indicating the number of function
+	  address/name pairs stored.
+	- A list of paired 64-bit integers / string names for each
+	function encountered.  If a name is not available for one or
+	more function names, the name gets stored as "<none>".
+
+T.8: An index record that lists the offsets into records T.1-7.  This
+record is always the last record in the file.  This index record is a
+not ideal (should probably be replaced with a set of named
+sections), but currently consists of:
+      - (last 64 bits): offset of keyval section
+      - (preceding that): offset of footer section
+      - (preceding that): offset of body (stream) section
+      - (preceding that): offset of header section
+      - (preceding that): offset of percounter labels OR header magic
+        ({0xff, 0xaa, 0xdd, 'D', 'U', 'M', 'P', 'I'}) if this trace
+	file precedes the addition of perfcounter labels.
+      - (preceding that if perfcounter labels were included): offset
+        of function names OR header magic if this trace file precedes
+        the addition of perfcounter labels.
+      - (preceding that if function names were included):  header
+      	magic (eventually new sections might be prepended here).

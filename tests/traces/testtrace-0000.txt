@@ -1,0 +1,371 @@
+version=1.0.0
+starttime=Thu Feb  3 16:05:56 2011
+hostname=hadalst-mbp.ca.sandia.gov
+username=hadalst
+meshdim=0
+meshsize=[]
+meshcrd=[]
+MPI_Init entering at walltime 1296777956.737669000, cputime 0.007712000 seconds in thread 0.
+int argc=1
+string argv[1]=["./mpi"]
+MPI_Init returning at walltime 1296777956.737670000, cputime 0.007716000 seconds in thread 0.
+MPI_Comm_rank entering at walltime 1296777956.737694000, cputime 0.007739000 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+int rank=0
+MPI_Comm_rank returning at walltime 1296777956.737698000, cputime 0.007743000 seconds in thread 0.
+MPI_Comm_size entering at walltime 1296777956.737704000, cputime 0.007749000 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+int size=4
+MPI_Comm_size returning at walltime 1296777956.737705000, cputime 0.007751000 seconds in thread 0.
+MPI_Barrier entering at walltime 1296777956.737712000, cputime 0.007757000 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+MPI_Barrier returning at walltime 1296777956.739659000, cputime 0.008331000 seconds in thread 0.
+MPI_Isend entering at walltime 1296777956.739674000, cputime 0.008347000 seconds in thread 0.
+int count=1
+MPI_Datatype datatype=9 (MPI_INT)
+int dest=1
+int tag=1337
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+MPI_Request request=[2]
+MPI_Isend returning at walltime 1296777956.739689000, cputime 0.008362000 seconds in thread 0.
+MPI_Recv entering at walltime 1296777956.739699000, cputime 0.008373000 seconds in thread 0.
+int count=1
+MPI_Datatype datatype=9 (MPI_INT)
+int source=3
+int tag=1337
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+MPI_Status status=<IGNORED>
+MPI_Recv returning at walltime 1296777956.739880000, cputime 0.008411000 seconds in thread 0.
+MPI_Wait entering at walltime 1296777956.739888000, cputime 0.008419000 seconds in thread 0.
+MPI_Request request=[2]
+MPI_Status status=[{bytes=1606419960, cancelled=0, source=9, tag=9, error=96}]
+MPI_Wait returning at walltime 1296777956.739894000, cputime 0.008425000 seconds in thread 0.
+MPI_Allreduce entering at walltime 1296777956.739909000, cputime 0.008439000 seconds in thread 0.
+int count=1
+MPI_Datatype datatype=9 (MPI_INT)
+MPI_Op op=3 (MPI_SUM)
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+MPI_Allreduce returning at walltime 1296777956.739932000, cputime 0.008462000 seconds in thread 0.
+MPI_Finalize entering at walltime 1296777956.739939000, cputime 0.008469000 seconds in thread 0.
+MPI_Finalize returning at walltime 1296777956.740315000, cputime 0.008685000 seconds in thread 0.
+Total keyvals: 0
+MPI_Send called 0 times and ignored 0 times
+MPI_Recv called 1 times and ignored 0 times
+MPI_Get_count called 0 times and ignored 0 times
+MPI_Bsend called 0 times and ignored 0 times
+MPI_Ssend called 0 times and ignored 0 times
+MPI_Rsend called 0 times and ignored 0 times
+MPI_Buffer_attach called 0 times and ignored 0 times
+MPI_Buffer_detach called 0 times and ignored 0 times
+MPI_Isend called 1 times and ignored 0 times
+MPI_Ibsend called 0 times and ignored 0 times
+MPI_Issend called 0 times and ignored 0 times
+MPI_Irsend called 0 times and ignored 0 times
+MPI_Irecv called 0 times and ignored 0 times
+MPI_Wait called 1 times and ignored 0 times
+MPI_Test called 0 times and ignored 0 times
+MPI_Request_free called 0 times and ignored 0 times
+MPI_Waitany called 0 times and ignored 0 times
+MPI_Testany called 0 times and ignored 0 times
+MPI_Waitall called 0 times and ignored 0 times
+MPI_Testall called 0 times and ignored 0 times
+MPI_Waitsome called 0 times and ignored 0 times
+MPI_Testsome called 0 times and ignored 0 times
+MPI_Iprobe called 0 times and ignored 0 times
+MPI_Probe called 0 times and ignored 0 times
+MPI_Cancel called 0 times and ignored 0 times
+MPI_Test_cancelled called 0 times and ignored 0 times
+MPI_Send_init called 0 times and ignored 0 times
+MPI_Bsend_init called 0 times and ignored 0 times
+MPI_Ssend_init called 0 times and ignored 0 times
+MPI_Rsend_init called 0 times and ignored 0 times
+MPI_Recv_init called 0 times and ignored 0 times
+MPI_Start called 0 times and ignored 0 times
+MPI_Startall called 0 times and ignored 0 times
+MPI_Sendrecv called 0 times and ignored 0 times
+MPI_Sendrecv_replace called 0 times and ignored 0 times
+MPI_Type_contiguous called 0 times and ignored 0 times
+MPI_Type_vector called 0 times and ignored 0 times
+MPI_Type_hvector called 0 times and ignored 0 times
+MPI_Type_indexed called 0 times and ignored 0 times
+MPI_Type_hindexed called 0 times and ignored 0 times
+MPI_Type_struct called 0 times and ignored 0 times
+MPI_Address called 0 times and ignored 0 times
+MPI_Type_extent called 0 times and ignored 0 times
+MPI_Type_size called 0 times and ignored 0 times
+MPI_Type_lb called 0 times and ignored 0 times
+MPI_Type_ub called 0 times and ignored 0 times
+MPI_Type_commit called 0 times and ignored 0 times
+MPI_Type_free called 0 times and ignored 0 times
+MPI_Get_elements called 0 times and ignored 0 times
+MPI_Pack called 0 times and ignored 0 times
+MPI_Unpack called 0 times and ignored 0 times
+MPI_Pack_size called 0 times and ignored 0 times
+MPI_Barrier called 1 times and ignored 0 times
+MPI_Bcast called 0 times and ignored 0 times
+MPI_Gather called 0 times and ignored 0 times
+MPI_Gatherv called 0 times and ignored 0 times
+MPI_Scatter called 0 times and ignored 0 times
+MPI_Scatterv called 0 times and ignored 0 times
+MPI_Allgather called 0 times and ignored 0 times
+MPI_Allgatherv called 0 times and ignored 0 times
+MPI_Alltoall called 0 times and ignored 0 times
+MPI_Alltoallv called 0 times and ignored 0 times
+MPI_Reduce called 0 times and ignored 0 times
+MPI_Op_create called 0 times and ignored 0 times
+MPI_Op_free called 0 times and ignored 0 times
+MPI_Allreduce called 1 times and ignored 0 times
+MPI_Reduce_scatter called 0 times and ignored 0 times
+MPI_Scan called 0 times and ignored 0 times
+MPI_Group_size called 0 times and ignored 0 times
+MPI_Group_rank called 0 times and ignored 0 times
+MPI_Group_translate_ranks called 0 times and ignored 0 times
+MPI_Group_compare called 0 times and ignored 0 times
+MPI_Comm_group called 0 times and ignored 0 times
+MPI_Group_union called 0 times and ignored 0 times
+MPI_Group_intersection called 0 times and ignored 0 times
+MPI_Group_difference called 0 times and ignored 0 times
+MPI_Group_incl called 0 times and ignored 0 times
+MPI_Group_excl called 0 times and ignored 0 times
+MPI_Group_range_incl called 0 times and ignored 0 times
+MPI_Group_range_excl called 0 times and ignored 0 times
+MPI_Group_free called 0 times and ignored 0 times
+MPI_Comm_size called 1 times and ignored 0 times
+MPI_Comm_rank called 1 times and ignored 0 times
+MPI_Comm_compare called 0 times and ignored 0 times
+MPI_Comm_dup called 0 times and ignored 0 times
+MPI_Comm_create called 0 times and ignored 0 times
+MPI_Comm_split called 0 times and ignored 0 times
+MPI_Comm_free called 0 times and ignored 0 times
+MPI_Comm_test_inter called 0 times and ignored 0 times
+MPI_Comm_remote_size called 0 times and ignored 0 times
+MPI_Comm_remote_group called 0 times and ignored 0 times
+MPI_Intercomm_create called 0 times and ignored 0 times
+MPI_Intercomm_merge called 0 times and ignored 0 times
+MPI_Keyval_create called 0 times and ignored 0 times
+MPI_Keyval_free called 0 times and ignored 0 times
+MPI_Attr_put called 0 times and ignored 0 times
+MPI_Attr_get called 0 times and ignored 0 times
+MPI_Attr_delete called 0 times and ignored 0 times
+MPI_Topo_test called 0 times and ignored 0 times
+MPI_Cart_create called 0 times and ignored 0 times
+MPI_Dims_create called 0 times and ignored 0 times
+MPI_Graph_create called 0 times and ignored 0 times
+MPI_Graphdims_get called 0 times and ignored 0 times
+MPI_Graph_get called 0 times and ignored 0 times
+MPI_Cartdim_get called 0 times and ignored 0 times
+MPI_Cart_get called 0 times and ignored 0 times
+MPI_Cart_rank called 0 times and ignored 0 times
+MPI_Cart_coords called 0 times and ignored 0 times
+MPI_Graph_neighbors_count called 0 times and ignored 0 times
+MPI_Graph_neighbors called 0 times and ignored 0 times
+MPI_Cart_shift called 0 times and ignored 0 times
+MPI_Cart_sub called 0 times and ignored 0 times
+MPI_Cart_map called 0 times and ignored 0 times
+MPI_Graph_map called 0 times and ignored 0 times
+MPI_Get_processor_name called 0 times and ignored 0 times
+MPI_Get_version called 0 times and ignored 0 times
+MPI_Errhandler_create called 0 times and ignored 0 times
+MPI_Errhandler_set called 0 times and ignored 0 times
+MPI_Errhandler_get called 0 times and ignored 0 times
+MPI_Errhandler_free called 0 times and ignored 0 times
+MPI_Error_string called 0 times and ignored 0 times
+MPI_Error_class called 0 times and ignored 0 times
+MPI_Wtime called 0 times and ignored 0 times
+MPI_Wtick called 0 times and ignored 0 times
+MPI_Init called 1 times and ignored 0 times
+MPI_Finalize called 1 times and ignored 0 times
+MPI_Initialized called 0 times and ignored 0 times
+MPI_Abort called 0 times and ignored 0 times
+MPI_Pcontrol called 0 times and ignored 0 times
+MPI_Close_port called 0 times and ignored 0 times
+MPI_Comm_accept called 0 times and ignored 0 times
+MPI_Comm_connect called 0 times and ignored 0 times
+MPI_Comm_disconnect called 0 times and ignored 0 times
+MPI_Comm_get_parent called 0 times and ignored 0 times
+MPI_Comm_join called 0 times and ignored 0 times
+MPI_Comm_spawn called 0 times and ignored 0 times
+MPI_Comm_spawn_multiple called 0 times and ignored 0 times
+MPI_Lookup_name called 0 times and ignored 0 times
+MPI_Open_port called 0 times and ignored 0 times
+MPI_Publish_name called 0 times and ignored 0 times
+MPI_Unpublish_name called 0 times and ignored 0 times
+MPI_Accumulate called 0 times and ignored 0 times
+MPI_Get called 0 times and ignored 0 times
+MPI_Put called 0 times and ignored 0 times
+MPI_Win_complete called 0 times and ignored 0 times
+MPI_Win_create called 0 times and ignored 0 times
+MPI_Win_fence called 0 times and ignored 0 times
+MPI_Win_free called 0 times and ignored 0 times
+MPI_Win_get_group called 0 times and ignored 0 times
+MPI_Win_lock called 0 times and ignored 0 times
+MPI_Win_post called 0 times and ignored 0 times
+MPI_Win_start called 0 times and ignored 0 times
+MPI_Win_test called 0 times and ignored 0 times
+MPI_Win_unlock called 0 times and ignored 0 times
+MPI_Win_wait called 0 times and ignored 0 times
+MPI_Alltoallw called 0 times and ignored 0 times
+MPI_Exscan called 0 times and ignored 0 times
+MPI_Add_error_class called 0 times and ignored 0 times
+MPI_Add_error_code called 0 times and ignored 0 times
+MPI_Add_error_string called 0 times and ignored 0 times
+MPI_Comm_call_errhandler called 0 times and ignored 0 times
+MPI_Comm_create_keyval called 0 times and ignored 0 times
+MPI_Comm_delete_attr called 0 times and ignored 0 times
+MPI_Comm_free_keyval called 0 times and ignored 0 times
+MPI_Comm_get_attr called 0 times and ignored 0 times
+MPI_Comm_get_name called 0 times and ignored 0 times
+MPI_Comm_set_attr called 0 times and ignored 0 times
+MPI_Comm_set_name called 0 times and ignored 0 times
+MPI_File_call_errhandler called 0 times and ignored 0 times
+MPI_Grequest_complete called 0 times and ignored 0 times
+MPI_Grequest_start called 0 times and ignored 0 times
+MPI_Init_thread called 0 times and ignored 0 times
+MPI_Is_thread_main called 0 times and ignored 0 times
+MPI_Query_thread called 0 times and ignored 0 times
+MPI_Status_set_cancelled called 0 times and ignored 0 times
+MPI_Status_set_elements called 0 times and ignored 0 times
+MPI_Type_create_keyval called 0 times and ignored 0 times
+MPI_Type_delete_attr called 0 times and ignored 0 times
+MPI_Type_dup called 0 times and ignored 0 times
+MPI_Type_free_keyval called 0 times and ignored 0 times
+MPI_Type_get_attr called 0 times and ignored 0 times
+MPI_Type_get_contents called 0 times and ignored 0 times
+MPI_Type_get_envelope called 0 times and ignored 0 times
+MPI_Type_get_name called 0 times and ignored 0 times
+MPI_Type_set_attr called 0 times and ignored 0 times
+MPI_Type_set_name called 0 times and ignored 0 times
+MPI_Type_match_size called 0 times and ignored 0 times
+MPI_Win_call_errhandler called 0 times and ignored 0 times
+MPI_Win_create_keyval called 0 times and ignored 0 times
+MPI_Win_delete_attr called 0 times and ignored 0 times
+MPI_Win_free_keyval called 0 times and ignored 0 times
+MPI_Win_get_attr called 0 times and ignored 0 times
+MPI_Win_get_name called 0 times and ignored 0 times
+MPI_Win_set_attr called 0 times and ignored 0 times
+MPI_Win_set_name called 0 times and ignored 0 times
+MPI_Alloc_mem called 0 times and ignored 0 times
+MPI_Comm_create_errhandler called 0 times and ignored 0 times
+MPI_Comm_get_errhandler called 0 times and ignored 0 times
+MPI_Comm_set_errhandler called 0 times and ignored 0 times
+MPI_File_create_errhandler called 0 times and ignored 0 times
+MPI_File_get_errhandler called 0 times and ignored 0 times
+MPI_File_set_errhandler called 0 times and ignored 0 times
+MPI_Finalized called 0 times and ignored 0 times
+MPI_Free_mem called 0 times and ignored 0 times
+MPI_Get_address called 0 times and ignored 0 times
+MPI_Info_create called 0 times and ignored 0 times
+MPI_Info_delete called 0 times and ignored 0 times
+MPI_Info_dup called 0 times and ignored 0 times
+MPI_Info_free called 0 times and ignored 0 times
+MPI_Info_get called 0 times and ignored 0 times
+MPI_Info_get_nkeys called 0 times and ignored 0 times
+MPI_Info_get_nthkey called 0 times and ignored 0 times
+MPI_Info_get_valuelen called 0 times and ignored 0 times
+MPI_Info_set called 0 times and ignored 0 times
+MPI_Pack_external called 0 times and ignored 0 times
+MPI_Pack_external_size called 0 times and ignored 0 times
+MPI_Request_get_status called 0 times and ignored 0 times
+MPI_Type_create_darray called 0 times and ignored 0 times
+MPI_Type_create_hindexed called 0 times and ignored 0 times
+MPI_Type_create_hvector called 0 times and ignored 0 times
+MPI_Type_create_indexed_block called 0 times and ignored 0 times
+MPI_Type_create_resized called 0 times and ignored 0 times
+MPI_Type_create_struct called 0 times and ignored 0 times
+MPI_Type_create_subarray called 0 times and ignored 0 times
+MPI_Type_get_extent called 0 times and ignored 0 times
+MPI_Type_get_true_extent called 0 times and ignored 0 times
+MPI_Unpack_external called 0 times and ignored 0 times
+MPI_Win_create_errhandler called 0 times and ignored 0 times
+MPI_Win_get_errhandler called 0 times and ignored 0 times
+MPI_Win_set_errhandler called 0 times and ignored 0 times
+MPI_File_open called 0 times and ignored 0 times
+MPI_File_close called 0 times and ignored 0 times
+MPI_File_delete called 0 times and ignored 0 times
+MPI_File_set_size called 0 times and ignored 0 times
+MPI_File_preallocate called 0 times and ignored 0 times
+MPI_File_get_size called 0 times and ignored 0 times
+MPI_File_get_group called 0 times and ignored 0 times
+MPI_File_get_amode called 0 times and ignored 0 times
+MPI_File_set_info called 0 times and ignored 0 times
+MPI_File_get_info called 0 times and ignored 0 times
+MPI_File_set_view called 0 times and ignored 0 times
+MPI_File_get_view called 0 times and ignored 0 times
+MPI_File_read_at called 0 times and ignored 0 times
+MPI_File_read_at_all called 0 times and ignored 0 times
+MPI_File_write_at called 0 times and ignored 0 times
+MPI_File_write_at_all called 0 times and ignored 0 times
+MPI_File_iread_at called 0 times and ignored 0 times
+MPI_File_iwrite_at called 0 times and ignored 0 times
+MPI_File_read called 0 times and ignored 0 times
+MPI_File_read_all called 0 times and ignored 0 times
+MPI_File_write called 0 times and ignored 0 times
+MPI_File_write_all called 0 times and ignored 0 times
+MPI_File_iread called 0 times and ignored 0 times
+MPI_File_iwrite called 0 times and ignored 0 times
+MPI_File_seek called 0 times and ignored 0 times
+MPI_File_get_position called 0 times and ignored 0 times
+MPI_File_get_byte_offset called 0 times and ignored 0 times
+MPI_File_read_shared called 0 times and ignored 0 times
+MPI_File_write_shared called 0 times and ignored 0 times
+MPI_File_iread_shared called 0 times and ignored 0 times
+MPI_File_iwrite_shared called 0 times and ignored 0 times
+MPI_File_read_ordered called 0 times and ignored 0 times
+MPI_File_write_ordered called 0 times and ignored 0 times
+MPI_File_seek_shared called 0 times and ignored 0 times
+MPI_File_get_position_shared called 0 times and ignored 0 times
+MPI_File_read_at_all_begin called 0 times and ignored 0 times
+MPI_File_read_at_all_end called 0 times and ignored 0 times
+MPI_File_write_at_all_begin called 0 times and ignored 0 times
+MPI_File_write_at_all_end called 0 times and ignored 0 times
+MPI_File_read_all_begin called 0 times and ignored 0 times
+MPI_File_read_all_end called 0 times and ignored 0 times
+MPI_File_write_all_begin called 0 times and ignored 0 times
+MPI_File_write_all_end called 0 times and ignored 0 times
+MPI_File_read_ordered_begin called 0 times and ignored 0 times
+MPI_File_read_ordered_end called 0 times and ignored 0 times
+MPI_File_write_ordered_begin called 0 times and ignored 0 times
+MPI_File_write_ordered_end called 0 times and ignored 0 times
+MPI_File_get_type_extent called 0 times and ignored 0 times
+MPI_Register_datarep called 0 times and ignored 0 times
+MPI_File_set_atomicity called 0 times and ignored 0 times
+MPI_File_get_atomicity called 0 times and ignored 0 times
+MPI_File_sync called 0 times and ignored 0 times
+MPIO_Test called 0 times and ignored 0 times
+MPIO_Wait called 0 times and ignored 0 times
+MPIO_Testall called 0 times and ignored 0 times
+MPIO_Waitall called 0 times and ignored 0 times
+MPIO_Testany called 0 times and ignored 0 times
+MPIO_Waitany called 0 times and ignored 0 times
+MPIO_Waitsome called 0 times and ignored 0 times
+MPIO_Testsome called 0 times and ignored 0 times
+MPI_ALL_FUNCTIONS called 9 times and ignored 0 times
+Performance counters: 0
+Datatype 0 (MPI_DATATYPE_ERROR) has size 0
+Datatype 1 (MPI_DATATYPE_NULL) has size 0
+Datatype 2 (MPI_CHAR) has size 1
+Datatype 3 (MPI_SIGNED_CHAR) has size 1
+Datatype 4 (MPI_UNSIGNED_CHAR) has size 1
+Datatype 5 (MPI_BYTE) has size 1
+Datatype 6 (MPI_WCHAR) has size 4
+Datatype 7 (MPI_SHORT) has size 2
+Datatype 8 (MPI_UNSIGNED_SHORT) has size 2
+Datatype 9 (MPI_INT) has size 4
+Datatype 10 (MPI_UNSIGNED) has size 4
+Datatype 11 (MPI_LONG) has size 8
+Datatype 12 (MPI_UNSIGNED_LONG) has size 8
+Datatype 13 (MPI_FLOAT) has size 4
+Datatype 14 (MPI_DOUBLE) has size 8
+Datatype 15 (MPI_LONG_DOUBLE) has size 16
+Datatype 16 (MPI_LONG_LONG_INT) has size 0
+Datatype 17 (MPI_UNSIGNED_LONG_LONG) has size 8
+Datatype 18 (MPI_LONG_LONG) has size 8
+Datatype 19 (MPI_PACKED) has size 1
+Datatype 20 (MPI_LB) has size 0
+Datatype 21 (MPI_UB) has size 0
+Datatype 22 (MPI_FLOAT_INT) has size 8
+Datatype 23 (MPI_DOUBLE_INT) has size 12
+Datatype 24 (MPI_LONG_INT) has size 12
+Datatype 25 (MPI_SHORT_INT) has size 6
+Datatype 26 (MPI_2INT) has size 8
+Datatype 27 (MPI_LONG_DOUBLE_INT) has size 20

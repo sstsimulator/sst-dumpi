@@ -1,0 +1,86 @@
+1) During trace file gathering:
+   Read a file which controls what gets output:
+   a)  Check the environment variable DUMPI_CONF for a file name (path)
+   b)  Check the current working directory for a file named dumpi.conf
+   c)  Fall back on some reasonable defaults.
+
+1b) During trace gathering:
+    Ways of turning profiling on and off at given times.
+    - Timestamp? (at runtime xxx) -- could be problematic
+    - Given MPI call (at first MPI_xxx)
+    - Call-in methods for instrumenting application code.
+
+Need to decide how we handle storing (or not storing) papi parameters.
+
+2) During or after trace file gathering:
+   Utility to output summary of MPI functions called (counts etc.),
+   configuration parameters used for a given trace file run, etc.
+   Q:  Should we gather statistics on functions that are not explicitly traced
+       (e.g. how often was MPI_Iprobe called, even if MPI_Iprobe was ignored).
+
+3) During trace file parsing:
+   Move to callback-based parsing (undefined callbacks result
+   in associated MPI events being ignored).
+     typedef void (*sendfun_t)(const dumpi_sendprm *, const dumpi_papiprm *);
+     typedaef void (*isendfun_t)(const dumpi_isendprm *, const dumpi_papiprm *);
+     ...
+     void get_send(sendfun_t);
+     void get_isend(isendfun_t);
+     ...
+
+4) Statistics gathering:  Keep separate track of ignored and retreived 
+   MPI calls (e.g. Iprobe).
+
+---------------------------------------------------------------
+
+Make header record a variable-length key/value record (to allow
+storing node names, indices, etc.).
+
+Use zlib to compress the MPI call stream.
+
+Add an index record to the end of the file (to be read via fseek to
+the end of the file):
+fpos Header record start
+fpos Header record end
+fpos Stream record start
+<possibly epoch count/locations>
+fpos Stream record end
+fpos Footer record start
+fpos Footer record end
+
+
+Add DUMPI_ANY_TAG and DUMPI_ANY_SOURCE (and associated testing).
+
+
+--------------------------------------------
+
+IMPORTANT:  Parse routines must take an additional (user) argument
+to differentiate between different parsers in the same address space.
+
+Suggested additions to the header record (fixed width):
+
+Hostname
+User name (or user id?)
+Date/time
+
+----
+
+Add autoconf tests for
+
+DUMPI_ON_REDSTORM
+DUMPI_HAS_PAPI
+
+
+------------------------
+
+KNOWN POTENTIAL PROBLEMS
+
+Allgatherv:  displacement arrays etc. are only required to be valid at root
+(several other functions in the same category).
+
+
+-----------------------------
+
+Current work:
+
+Fix up CSTRING and NULLTERM handing for MPIBINDINGS (getting closer to compiling).

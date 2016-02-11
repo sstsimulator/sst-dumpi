@@ -1,0 +1,32 @@
+/**
+
+\page tools  The various parts of DUMPI
+
+The DUMPI repository contains a collection of libraries and executables 
+built on a common code base.
+
+<ul>
+  <li> libdumpi is the PMPI profiling library.  It traps all MPI calls,
+       profiles them based on the specific options given in the configuration
+       file, and makes the corresponding PMPI call.  It is generally easiest
+       to build libdumpi with mpicc to make sure that all library dependencies
+       are handled correctly, but if shared libraries are disabled it should
+       be sufficient to use any C compiler providing it can find the mpi.h
+       header file.
+  <li> libundumpi is a parse-driven interface to read DUMPI trace files.
+       The parsing is done via callbacks (one callback for each MPI function).
+       An alternate mechanism for parsing (called dumpistate) is currently
+       under development; this will provide a mechanism to aggregate all
+       MPI calls into a common callback routine.  The dumpistate mechanism
+       may be preferable for certain analysis and/or visualization tools.
+  <li> testmpi is a coverage/sanity checker for DUMPI.  It is still under
+       development, but eventually it should test all SPMD methods in MPI-2
+       (we might hold off on MPMD methods such as MPI_Comm_spawn_multiple
+       which are hard to test in a reasonably machine-agnostic manner).
+  <li> dumpi2ascii converts DUMPI binary traces into a human-readable
+       ASCII format.
+  <li> dumpi2otf is currently incomplete.  When complete, it will convert
+       a group of DUMPI traces (identified by a metafile) into a corresponding
+       group of OTF traces.  This utility will require libotf.
+</ul>
+*/

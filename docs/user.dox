@@ -1,0 +1,282 @@
+/**
+
+\page using Building and using the DUMPI library
+
+<ul>
+ <li> \ref simple_example
+ <li> \ref c_cxx_linking
+ <li> \ref ftn_linking
+ <li> \ref cray_example
+ <li> \ref config
+ <li> \ref cntl
+ <li> \ref building_autotools
+</ul>
+
+<hr>
+To serve as a quick start guide we will provide a couple of examples on how you build and use the DUMPI library. We will show a very simple use of <tt>dumpi2ascii</tt>, but the tools are described in \ref tools.
+\section simple_example A simple example
+
+For a typical modern full featured Linux based system, we generally build DUMPI as shown below. 
+We'll typically use mercurial to fetch the latest version and we use the bootstrap script to do the automake/autoconf for us.
+<pre>
+hg clone https://bitbucket.org/jpkenny/dumpi
+cd dumpi
+./bootstrap.sh
+mkdir build
+cd build
+../configure --enable-libdumpi --enable-test --prefix=$HOME/dumpi_inst CC=mpicc CXX=mpiCC
+make
+make install
+make doc
+</pre>
+
+The use of a 'build' directory (or directories if you need to build on a login node and on compute nodes) isn't required, but it is our practice.  In the <tt>configure</tt> above we enable the creation of the libs that are needed to create DUMPI trace files and enable the coverage test program as these aren't built by default. Note that the build of libdumpi is a bit slow as we must test every mpi call. By default the library needed to read DUMPI trace files and tools built with that library are built by default.
+
+\section c_cxx_linking Linking with C/C++
+
+We can use libdumpi that we generated above:
+<pre>
+user\@machine:~/play/mpi$ mpicc hello.c -c
+user\@machine:~/play/mpi$ mpicc hello.o -L$HOME/dumpi_inst/lib -ldumpi -o hello
+user\@machine:~/play/mpi$ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/dumpi_inst/lib ./hello 
+Hello!
+user\@machine:~/play/mpi$ ls
+dumpi-2011.01.25.15.46.10-0000.bin  hello    hello.o
+dumpi-2011.01.25.15.46.10.meta      hello.c
+</pre>
+In this instance there is a single MPI rank created. There are two files created: a metafile and a file for our MPI rank zero. The date and time are encoded into the filename to prevent accidental overwrite of DUMPI trace files.
+
+We can print the trace file using <tt>dumpi2ascii</tt> to verify a simple 'hello world' that does,
+an init, comm_rank, comm_size, and a finalize as its only MPI calls:
+<pre>
+user\@machine:~/play/mpi$ $HOME/dumpi_inst/bin/dumpi2ascii dumpi-2011.01.25.15.46.10-0000.bin 
+MPI_Init entering at walltime 20120.589738643, cputime 0.023382031 seconds in thread 0.
+int argc=1
+string argv[1]=["./hello"]
+MPI_Init returning at walltime 20120.589752472, cputime 0.023385336 seconds in thread 0.
+MPI_Comm_rank entering at walltime 20120.589793260, cputime 0.023437127 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+int rank=0
+MPI_Comm_rank returning at walltime 20120.589796683, cputime 0.023440692 seconds in thread 0.
+MPI_Comm_size entering at walltime 20120.589810022, cputime 0.023453983 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+int size=1
+MPI_Comm_size returning at walltime 20120.589813095, cputime 0.023457038 seconds in thread 0.
+MPI_Finalize entering at walltime 20120.589841172, cputime 0.023484981 seconds in thread 0.
+MPI_Finalize returning at walltime 20120.590067322, cputime 0.023710703 seconds in thread 0.
+</pre>
+
+Libdumpi uses the PMPI interface, so you shouldn't have to use any included header files, or make any subroutine/function calls to DUMPI for most use cases of DUMPI. Of course, when you use libdumpi, you can't use or link against any other tools that use the PMPI interface in the same executable.
+
+By default, DUMPI will emit trace information for every MPI call, with a timestamp for entry and exit to each routine.
+
+\section ftn_linking Linking with Fortran
+
+Here we link a simple fortran program:
+<pre>
+user@machine:~/play> more testf.f
+      program testf
+      implicit none
+      include 'mpif.h'
+      integer ierr
+      call mpi_init(ierr)
+      call mpi_barrier(mpi_comm_world, ierr)
+      call mpi_finalize(ierr)
+      stop
+      end
+
+user@machine:~/play> ftn testf.f -c
+user@machine:~/play> ftn  -o testf testf.o -L$HOME/dumpi_compute/lib -ldumpif90 -ldumpi
+user@machine:~/play> more runit
+#!/bin/bash
+#PBS -q debug
+#PBS -l mppwidth=2
+#PBS -l walltime=00:10:00
+#PBS -N my_job
+#PBS -j oe
+
+cd $PBS_O_WORKDIR
+
+aprun -n 2 ./testf
+user@machine:~/play> qsub runit
+</pre>
+
+As with the C/C++ example above this produces dumpi trace files:
+<pre>
+user@machine:~/play> ls dump*
+dumpi-2011.02.04.14.30.25-0000.bin  dumpi-2011.02.04.14.30.25-0001.bin  dumpi-2011.02.04.14.30.25.meta
+
+user@machine:~/play> ~/dumpi_login/bin/dumpi2ascii dumpi-2011.02.04.14.30.25-0000.bin 
+MPI_Init entering at walltime 515289.696145750, cputime 0.004480440 seconds in thread 0.
+int argc=0
+string argv[0]=<IGNORED>
+MPI_Init returning at walltime 515289.696147750, cputime 0.004483579 seconds in thread 0.
+MPI_Barrier entering at walltime 515289.696159750, cputime 0.004495226 seconds in thread 0.
+MPI_Comm comm=2 (MPI_COMM_WORLD)
+MPI_Barrier returning at walltime 515289.697372750, cputime 0.005707232 seconds in thread 0.
+MPI_Finalize entering at walltime 515289.697383750, cputime 0.005715550 seconds in thread 0.
+MPI_Finalize returning at walltime 515289.697396750, cputime 0.005727163 seconds in thread 0.
+</pre>
+
+
+\section cray_example An example building on a Cray XT5.
+Lets look at a more complicated example, building a real code on a Cray XT5. First, you may find that you need to build a local copy of the autotools. See \ref building_autotools for a very brief description of what we did to get autotools running. We've used versions that were fairly new at the time this document was written.
+
+<ul>
+<li> We must have new enough autotools in our execution path.  We then load some needed modules provided by the system and fetch the DUMPI source as before and run the bootstrap script as before.
+<pre>
+ module load mercurial
+ hg clone https://bitbucket.org/jpkenny/dumpi
+ cd dumpi
+ ./bootstrap
+</pre>
+
+
+<li> We now need to configure DUMPI. As the Cray XT5 has separate executables for the login and compute nodes, we'll 
+create two build directories. Note, that if we wanted to support different compilers on the compute side (e.g. the PGI compiler or the Cray compiler) we would simply create additional directories. As before we enable the trace collection library and coverage tool. We disable the default creation of libs needed read DUMPI files and disable the creation of shared libs for the compute nodes as they aren't supported on our test machine and we don't need to read trace files on the compute nodes. We also enable the collection of PAPI counters, specifying the location of the PAPI <tt>lib</tt> and <tt>include</tt> sub-directories.
+
+Before we can start our build we may need to work around an issue with the autotools, the PGI compiler,  and the Cray environment. In particular, if you see an an unknown flag <tt>-pthead</tt> passed to the compiler we can instruct the PGI compilers to ignore unknown flags with:
+<pre>
+for i in ~/.mypgcpprc ~/.mypgf77rc ~/.mypgf90rc ~/.mypgfortranrc; do echo 'set NOSWITCHERROR=1;' > $i; done
+</pre>
+
+which will create these 4 files in your home directory.
+<pre>
+mkdir build_compute
+cd build_compute
+../configure --enable-libdumpi --disable-libundumpi --disable-shared --enable-test --prefix=$HOME/dumpi_compute \
+    --enable-papi=/opt/cray/perftools/papi/4.1.0/v23  CC=cc F77=ftn FC=ftn
+
+../configure --enable-libdumpi --disable-libundumpi --disable-shared --enable-test --prefix=$HOME/dumpi_compute --enable-papi=/opt/cray/perftools/papi/4.1.0/v23  --enable-f77=`which ftn` --enable-f90=`which ftn` CC=cc
+
+
+make
+# edit dumpi/libdumpi/libdumpif90.la 
+make
+make install
+</pre>
+
+Before we can sucessfully <tt>make</tt> on the Cray, we may have to edit the file dumpi/libdumpi/libdumpif90.la. This file is created as part of the make, so we can't preemptively work around it.
+On the system we have built on we find a line:
+
+<tt>
+# Libraries that this one depends upon.
+dependency_libs=' $HOME/dumpi/build_compute/dumpi/libdumpi/libdumpi.la /opt/fftw/3.2.2.1/lib/libfftw3.la /opt/fftw/3.2.2.1/lib/libfftw3f.la /opt/cray/pmi/1.0-1.0000.7901.22.1.ss/lib64/libpmi.la -ldl'
+</tt>
+
+which tries to bring in the FFT libs, etc. These will prevent the successful build of DUMPI. We edit this to:
+
+<tt>
+dependency_libs=' $HOME/dumpi/build_compute/dumpi/libdumpi/libdumpi.la'
+</tt>
+
+which will allow for the make to continue without error. In a future version of DUMPI, this work around will be
+obviated. Note, that the <tt>$HOME</tt> is used to indicate the home directory that would be expanded in this file. 
+
+We mention now, that internal developer debugging can be turned on by setting <tt>CPPFLAGS="-DDUMPI_DEBUG_SETTING=DUMPI_DEBUG_ALL"</tt>, which will produce excessive debugging information there are other defines found in debugflags.h. You don't want to use these.
+
+<li> Likewise, we need to configure and build DUMPI for the login nodes. This will provide the tools we need so that we can verify that our traces are correct and provide tools and libraries needed to do further analysis on the DUMPI trace files themselves.
+
+<pre>
+mkdir build_login
+cd build_login
+../configure --prefix=$HOME/dumpi_login --disable-libdumpi
+make
+make install
+</pre>
+
+
+\section config Runtime configuration of the DUMPI trace library
+The DUMPI trace collect library, libdumpi, will look for a file called <tt>dumpi.conf</tt> in the current working directory to pick up configuration information. These can be used to initially configure what dumpi collects, how it names its files, etc. Below are a list of options followed by the default value.
+<ul>
+<li> <tt>fileroot dumpi-</tt> This allows you to specify the prefix, including the filesystem directory where to write the generated DUMPI trace files.
+<li> <tt>timestamp full</tt> Can specify <tt>none, cpu, wall, </tt> or <tt>full</tt>.
+<li> <tt>MPI_Default enable</tt> Can specify <tt>disable, success</tt> or <tt>enable</tt>. These allow you to specify how much profiling you want for MPI calls by default. This can be disabled or enabled for profiling (call count statistics will still be collected).  Additionally, probing calls (Iprobe, Test*, ...) can be conditionally profiled iff they succeed (for non-probing calls, success is equivalent to enable).
+<li> Individual MPI calls (e.g. <tt>MPI_Init, MPI_Iprobe, MPI_Testany,</tt>) can be specified using the same arguments above.
+<li><tt>statuses success</tt> Also takes the same arguments as above. Can be used to disable the collection of XXX to reduce the size of the trace files. More information can be found in the \ref traceformat documentation.
+<li><tt>PAPI </tt>\<counter\> (e.g. <tt>PAPI PAPI PAPI_TOT_CYC</tt>) If DUMPI is so configured, you can collect PAPI information on each call to the DUMPI library (e.g. on entry and exit to <tt>MPI_Send</tt>) This greatly increases the file size, and the names of the counters supported is system dependent. Also, the number of counters that can be collected, etc. is also system dependent.
+</ul>
+
+A typical file that we use is:
+<pre>
+# file root defaults to "dumpi-"
+fileroot     dumpi-
+
+# You can define what sort of timestamp information you want output.
+# timestamp (none|cpu|wall|full)  # defaults to full
+timestamp    full
+
+# Specify how much profiling you want for individual MPI calls.
+# All calls can be disabled or enabled for profiling (call count statistics
+# will still be collected).  Additionally, probing calls (Iprobe, Test*, ...)
+# can be conditionally profiled iff they succeed (for non-probing calls,
+# success is equivalent to enable).
+#
+# MPI_Default (disable|success|enable)  # all MPI calls default to enable
+# MPI_Default disable
+# MPI_Init enable
+# MPI_Finalize enable
+#
+# There is a whole set of other calls for PAPI profiling support.
+# By default, all PAPI calls are disabled unless explicitly turned on.
+# To turn on a PAPI call, just specify its name (not commented), e.g.
+# PAPI PAPI_TOT_CYC   # total cycles
+# PAPI PAPI_LST_INS   # total load store instructions
+# PAPI PAPI_L1_DCM
+# PAPI PAPI_L2_DCM
+# PAPI PAPI_BR_INS    # total branch instructions executed
+</pre>
+
+
+\section cntl  Runtime control of the DUMPI trace library
+It is also possible to call DUMPI from within the code we wish to profile. You might want to do this if there was only a small section of code that you wish to profile. This is done by the following functions:
+<pre>
+void libdumpi_disable_profiling();
+void libdumpi_enable_profiling();
+</pre>
+declared in /path/to/dumpi/install/directory/include/dumpi/libdumpi/libdumpi.h. The first disables collecting any stats (other than call counts, which will also increment the 'ignored' count in the footer record), and the second restores collection to the same configuration as before (so if you deliberately disable specific MPI calls throughout the entire run they will remain turned off). You can call the disable/enable functions at any time during the program (including before MPI_Init and after MPI_Finalize). You can also do more extensive runtime control by calling other function declared and documented in libdumpi.h that will allow for fine grained control of what is traced.
+
+
+\section building_autotools Building Autotools
+
+It is possible that you will need to build your own copy of autotools. We will quickly show what we have done to build a local copy of the autotools needed, providing the configure lines we have used. Hopefully you will never need this.
+
+First we need m4:
+<pre>
+tar -xpzf m4-1.4.14.tar.gz
+cd m4-1.4.14
+./configure --prefix=$HOME/autotools
+make
+make install
+</pre>
+
+Second we need to build autoconf:
+<pre>
+tar -xpzf autoconf-2.67.tar.gz
+cd autoconf-2.67
+export PATH=$HOME/autotools/bin:$PATH
+export  M4=$HOME/autotools/bin/m4
+./configure --prefix=$HOME/autotools
+make
+make install
+</pre>
+
+Third we build automake:
+<pre>
+tar -xpzf automake-1.11.1.tar.gz
+cd automake-1.11.1
+./configure --prefix=$HOME/autotools
+make
+make install
+</pre>
+
+Finally we build libtool:
+<pre>
+tar -xpzf libtool-2.2.6b.tar.gz
+cd libtool-2.2.6b
+./configure --prefix=$HOME/autotools --with-pic
+make
+make install
+</pre>
+
+*/

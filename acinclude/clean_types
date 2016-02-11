@@ -1,0 +1,23 @@
+#! /usr/bin/env python
+
+import re
+text = open("oldmpitypes.m4").read()
+
+regexp = re.compile("AH_TEMPLATE.*?DUMPI_HAVE_([_A-Z\d]+)")
+matches = regexp.findall(text)
+
+str_arr = ["AC_DEFUN([DUMPI_TYPES], ["]
+for m in matches:
+    line = "AH_TEMPLATE([DUMPI_HAVE_%s], [defined if %s is available])" % (m, m)
+    str_arr.append(line)
+    line = "AH_TEMPLATE([DUMPI_DATATYPE_%s], [Map DUMPI types to MPI])" % (m)
+    str_arr.append(line)
+    line = "AC_DEFINE(DUMPI_HAVE_%s, [1])" % m
+    str_arr.append(line)
+    line = "AC_DEFINE(DUMPI_DATATYPE_%s, [%s])" % (m,m)
+    str_arr.append(line)
+str_arr.append("])")
+
+open("mpitypes.m4","w").write("\n".join(str_arr))
+
+

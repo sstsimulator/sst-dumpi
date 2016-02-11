@@ -1,0 +1,17 @@
+/**
+
+\page known_issues Known issues and concerns
+
+There are a few issues that will likely force a significant overhaul
+of the trace format and DUMPI code design in the near future.
+
+- The mechanism used to label profiled calls on the stream could
+  pose difficulties when time comes to extend the family of profiled
+  calls, which will be of particular concern when MPI-3 eventually is finalized.
+- Some records (esp. index records) in the DUMPI trace file should
+  have been stored as key/value pairs rather than relying on a
+  specific ordering.  Due to the investment in collecting current
+  trace files, these changes should be done in a backward-compatible
+  manner.
+
+*/
