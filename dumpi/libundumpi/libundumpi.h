@@ -76,11 +76,13 @@ extern "C" {
    * \param userarg  this argument gets sent back with each callback.
    * \return 1 on success, 0 on failure.
    */
-  int undumpi_read_stream_full(dumpi_profile* profile,
-                          const libundumpi_callbacks *callback,
-                          void *userarg,
-                          bool print_progress,
-                          double percent_terminate);
+  int undumpi_read_stream_full(
+    const char* metaname,
+    dumpi_profile* profile,
+    const libundumpi_callbacks *callback,
+    void *userarg,
+    bool print_progress,
+    double percent_terminate);
 
   /**
    * Parse the stream of MPI commands.

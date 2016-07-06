@@ -98,7 +98,7 @@ int undumpi_read_stream(dumpi_profile* profile,
       void *uarg)
 {
   //by default, don't print progress or terminate early
-  return undumpi_read_stream_full(profile,callback,uarg,false,-1);
+  return undumpi_read_stream_full("", profile,callback,uarg,false,-1);
 }
 
 static double
@@ -111,11 +111,13 @@ get_time()
 }
 
 /* Read all MPI calls off a stream */
-int undumpi_read_stream_full(dumpi_profile* profile,
-			const libundumpi_callbacks *callback,
-      void *uarg,
-      bool print_progress,
-      double percent_terminate)
+int undumpi_read_stream_full(
+  const char* metaname,
+  dumpi_profile* profile,
+  const libundumpi_callbacks *callback,
+  void *uarg,
+  bool print_progress,
+  double percent_terminate)
 {
   static bool terminated = false;
   int mpi_finalized = 0;
@@ -124,7 +126,6 @@ int undumpi_read_stream_full(dumpi_profile* profile,
   assert(profile != NULL && profile->file != NULL && callback != NULL);
 
   libundumpi_populate_handlers(callback, callarr);
-
 
   /** First loop through and figure out number of fxns, if necessary */
   bool terminate_early = percent_terminate > 0;
@@ -158,7 +159,8 @@ int undumpi_read_stream_full(dumpi_profile* profile,
       double t_elapsed = get_time() - t_start;
       //printf("DUMPI trace %3d percent complete: %20.12f seconds elapsed\n", 
       //  int_percent_done, t_elapsed);
-      printf("DUMPI trace %3d percent complete\n", int_percent_done);
+      printf("DUMPI trace %3d percent complete: %s\n", 
+        int_percent_done, metaname);
     }
     last_percent_done = int_percent_done;
 
