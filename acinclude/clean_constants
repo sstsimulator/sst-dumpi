@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python2
 
 import re
 text = open("oldmpiconstants.m4").read()
@@ -15,5 +15,3 @@ for m in matches:
 str_arr.append("])")
 
 open("mpiconstants.m4","w").write("\n".join(str_arr))
-
-
