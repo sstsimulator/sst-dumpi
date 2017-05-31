@@ -1476,7 +1476,9 @@ int MPI_Type_indexed(int count, DUMPI_CONST int *lengths, DUMPI_CONST int *indic
 #endif /* DUMPI_SKIP_MPI_TYPE_INDEXED */
 
 #ifndef DUMPI_SKIP_MPI_TYPE_HINDEXED
-int MPI_Type_hindexed(int count, DUMPI_CONST int *lengths, DUMPI_CONST MPI_Aint *indices, MPI_Datatype oldtype, MPI_Datatype *newtype) {
+int MPI_Type_hindexed(int count, DUMPI_DEPRECATED_CONST int *lengths, 
+  DUMPI_DEPRECATED_CONST MPI_Aint *indices, 
+  MPI_Datatype oldtype, MPI_Datatype *newtype) {
   int16_t thread;
   dumpi_time cpu, wall;
   int retval;
@@ -1511,7 +1513,9 @@ int MPI_Type_hindexed(int count, DUMPI_CONST int *lengths, DUMPI_CONST MPI_Aint 
 #endif /* DUMPI_SKIP_MPI_TYPE_HINDEXED */
 
 #ifndef DUMPI_SKIP_MPI_TYPE_STRUCT
-int MPI_Type_struct(int count, DUMPI_CONST int *lengths, DUMPI_CONST MPI_Aint *indices, DUMPI_CONST MPI_Datatype *oldtypes, MPI_Datatype *newtype) {
+int MPI_Type_struct(int count, DUMPI_DEPRECATED_CONST int *lengths, 
+  DUMPI_DEPRECATED_CONST MPI_Aint *indices, 
+  DUMPI_DEPRECATED_CONST MPI_Datatype *oldtypes, MPI_Datatype *newtype) {
   int16_t thread;
   dumpi_time cpu, wall;
   int retval;
@@ -1546,7 +1550,7 @@ int MPI_Type_struct(int count, DUMPI_CONST int *lengths, DUMPI_CONST MPI_Aint *i
 #endif /* DUMPI_SKIP_MPI_TYPE_STRUCT */
 
 #ifndef DUMPI_SKIP_MPI_ADDRESS
-int MPI_Address(DUMPI_CONST void *buf, MPI_Aint *address) {
+int MPI_Address(DUMPI_DEPRECATED_CONST void *buf, MPI_Aint *address) {
   int16_t thread;
   dumpi_time cpu, wall;
   int retval;
