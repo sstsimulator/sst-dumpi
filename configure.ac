@@ -17,7 +17,7 @@ m4_define([DUMPI_SUBSUBVERSION_TAG], 0)
 # Enable this for releases
 dnl m4_define([DUMPI_SNAPSHOT_TAG])
 # Enable this for development snapshots (should generally be enabled)
-m4_define([DUMPI_SNAPSHOT_TAG], -snapshot)
+m4_define([DUMPI_SNAPSHOT_TAG], )
 m4_define([DUMPI_ACVERSION_TAG], 
           [DUMPI_VERSION_TAG.DUMPI_SUBVERSION_TAG.DUMPI_SUBSUBVERSION_TAG''DUMPI_SNAPSHOT_TAG])
 

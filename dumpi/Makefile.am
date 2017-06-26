@@ -29,4 +29,6 @@ endif
 
 AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)
 library_includedir=$(includedir)/dumpi
-library_include_HEADERS = dumpiconfig.h dumpiconfig-generated.h
+library_include_HEADERS = dumpiconfig.h 
+nodist_library_include_HEADERS = dumpiconfig-generated.h
+
