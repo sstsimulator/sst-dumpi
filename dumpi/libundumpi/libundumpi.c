@@ -131,11 +131,10 @@ int undumpi_read_stream(dumpi_profile* profile,
       void *uarg)
 {
   //by default, don't print progress or terminate early
-  return undumpi_read_stream_full("", profile,callback,uarg,false,-1);
+  return undumpi_read_stream_full("", profile,callback,uarg,false);
 }
 
-static double
-get_time()
+static double get_time()
 {
   struct timeval t_st;
   gettimeofday(&t_st, 0);
@@ -149,10 +148,8 @@ int undumpi_read_stream_full(
   dumpi_profile* profile,
   const libundumpi_callbacks *callback,
   void *uarg,
-  bool print_progress,
-  double percent_terminate)
+  bool print_progress)
 {
-  static bool terminated = false;
   int mpi_finalized = 0;
   /* dumpi_function currfunc; */
   libundumpi_cbpair callarr[DUMPI_END_OF_STREAM] = {{NULL, NULL}};
@@ -161,9 +158,8 @@ int undumpi_read_stream_full(
   libundumpi_populate_handlers(callback, callarr);
 
   /** First loop through and figure out number of fxns, if necessary */
-  bool terminate_early = percent_terminate > 0;
   long num_dumpi_fxns = 0;
-  if (print_progress || terminate_early){
+  if (print_progress){
     assert(dumpi_start_stream_read(profile) != 0);
     while (undumpi_read_single_call(profile, callarr, uarg, &mpi_finalized)){
       ++num_dumpi_fxns;
@@ -183,54 +179,16 @@ int undumpi_read_stream_full(
   while(undumpi_read_single_call(profile, callarr, uarg, &mpi_finalized)) {
     ++num_fxns_called;
     double percent_done = 100. * ((double)num_fxns_called) / ((double)num_dumpi_fxns);
-    //if anyone has terminated, hence the OR
-    terminated = terminated || (terminate_early && percent_done >= percent_terminate);
 
     /** Check if we should print anything */
     int int_percent_done = (int) percent_done;
     if (print_progress && (int_percent_done > last_percent_done)){
-      double t_elapsed = get_time() - t_start;
-      //printf("DUMPI trace %3d percent complete: %20.12f seconds elapsed\n", 
-      //  int_percent_done, t_elapsed);
       printf("DUMPI trace %3d percent complete: %s\n", 
         int_percent_done, metaname);
+      fflush(stdout);
     }
     last_percent_done = int_percent_done;
-
-    /** Check if we should terminate early */
-    if (terminated){
-      break;
-    }
   }
-
-#if 0
-  off_t end_stream;
-  end_stream = profile->footer;
-  while((currfunc = dumpi_read_next_function(profile)) < DUMPI_END_OF_STREAM) {
-    /*
-    printf("  Currently %ld bytes into the stream\n",
-	   (long)(ftello(profile->file) - profile->body));
-    */
-    assert(callarr[currfunc].handler != NULL);
-    if(mpi_finalized && (currfunc == 0)) {
-      /* Backward compatibility issue -- we used to terminate differently
-	 (this was before adding function profiling). */
-      break;
-    }
-    if(currfunc == DUMPI_Finalize) {
-      /* Backward compatibility issue -- we used to terminate the stream here */
-      mpi_finalized = 1;
-    }
-    assert(callarr[currfunc].handler(profile, callarr[currfunc].callout, uarg));
-    /*
-    printf("After reading function %d (%s), filepos is at %ld (end at %ld)\n",
-	   (int)currfunc, dumpi_function_label(currfunc),
-	   ftello(profile->file), end_stream);
-    */
-    if(ftello(profile->file) >= end_stream)
-      break;
-  }
-#endif
   return 1;
 }
 
