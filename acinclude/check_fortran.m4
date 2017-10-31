@@ -85,12 +85,12 @@ AC_DEFUN([SANITY_CHECK_F77], [
     [AC_LANG_PROGRAM(
       [],
       [
-  implicit none
-  include 'mpif.h'
-  integer ierr
-  call mpi_init(ierr)
-  call mpi_barrier(mpi_comm_world, ierr)
-  call mpi_finalize(ierr)
+      implicit none
+      include 'mpif.h'
+      integer ierr
+      call mpi_init(ierr)
+      call mpi_barrier(mpi_comm_world, ierr)
+      call mpi_finalize(ierr)
       ]
     )],
     [

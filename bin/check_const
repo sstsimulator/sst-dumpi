@@ -1,0 +1,79 @@
+#! /usr/bin/env python
+
+import sys
+
+def getReText(regexp,text):
+  import re
+  match = re.compile(regexp, re.DOTALL).search(text)
+  if not match:
+    sys.stderr.write(text); sys.stderr.write("\n")
+    sys.exit("No match for %s in text" % regexp)
+  return match.groups()[0]
+
+def getoutput3(cmd,stdin=None,pipe=None):
+  if not (sys.version_info < (3,0)):
+    #Python 3 is an unmitigated disaster
+    #Thanks for breaking everything, Guido
+    from subprocess import check_output,STDOUT,Popen,PIPE
+    if stdin:
+      stdin = open(stdin)
+    elif pipe:
+      pipe = Popen(pipe, stdout=PIPE)
+      stdin = pipe.stdout
+    import io
+    result = check_output(cmd.split(),stdin=stdin,stderr=STDOUT).decode("utf-8").rstrip("\n")
+    if pipe:
+      pipe.wait()
+    #Oh, and I love decoding byte strings manually
+    return result
+
+def getoutput2(cmd,stdin=None,pipe=None):
+  if sys.version_info < (3,0):
+    import commands
+    if stdin:
+      cmd = cmd + " < %s" % stdin
+    elif pipe:
+      str_arr = []
+      for elem in pipe:
+        if " " in elem: str_arr.append("'%s'" % elem)
+        else: str_arr.append(elem)
+      cmd = " ".join(str_arr) + " | " + cmd
+    return commands.getoutput(cmd)
+
+getoutput = None
+if sys.version_info < (3,0):
+  getoutput = getoutput2
+else:
+  getoutput = getoutput3
+
+fobj = open(".const.cc","w")
+fobj.write("#include <mpi.h>")
+fobj.close()
+
+import sys
+cxx = sys.argv[1]
+cmd = "%s -E .const.cc" % cxx
+
+output = getoutput(cmd)
+
+constDeprecated = False
+constRegular = False
+
+#do some regexing on this to determine what's going on with standard functions
+qualifier = getReText("MPI_Send\s*[(](.*?),", output)
+constRegular = "const" in qualifier
+
+#do some regexing on this to determine what's going on with deprecated functions
+qualifier = getReText("MPI_Type_struct\s*[(].*?,(.*?),", output)
+constDeprecated = "const" in qualifier
+
+if constRegular and constDeprecated:
+  print("all")
+elif constRegular:
+  print("noDeprecated")
+else:
+  print("none")
+
+
+
+

@@ -24,7 +24,6 @@ acinclude/ltsugar.m4
 acinclude/ltversion.m4
 acinclude/lt~obsolete.m4
 aclocal.m4
-bin
 bin/config.guess
 bin/config.sub
 bin/depcomp
