@@ -114,8 +114,7 @@ extern "C" {
     dumpi_profile* profile,
     const libundumpi_callbacks *callback,
     void *userarg,
-    bool print_progress,
-    double percent_terminate);
+    bool print_progress);
 
   /**
    * Parse the stream of MPI commands.
