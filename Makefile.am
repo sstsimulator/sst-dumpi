@@ -43,6 +43,10 @@ if WITH_BIN
 dumpi2ascii:
 	cd dumpi/libundumpi && make
 	cd dumpi/bin && make dumpi2ascii
+
+dumpi2otf2:
+	cd dumpi/libundumpi && make
+	cd dumpi/bin && make dumpi2otf2
 endif
 
 if WITH_TEST
