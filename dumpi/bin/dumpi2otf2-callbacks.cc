@@ -11,12 +11,14 @@ d2o2_addrmap *d2o2_addr = NULL;
 int report_MPI_Send(const dumpi_send *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+  //OTF2_EvtWriter_MpiSend()
   DUMPI_RETURNING();
 }
 
 int report_MPI_Recv(const dumpi_recv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+  //OTF2_EvtWriter_MpiRecv()
   DUMPI_RETURNING();
 }
 
@@ -59,6 +61,8 @@ int report_MPI_Buffer_detach(const dumpi_buffer_detach *prm, uint16_t thread, co
 int report_MPI_Isend(const dumpi_isend *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+  //OTF2_EvtWriter_MpiIsend()
+  //OTF2_EvtWriter_MpiIsendComplete()
   DUMPI_RETURNING();
 }
 
@@ -83,12 +87,16 @@ int report_MPI_Irsend(const dumpi_irsend *prm, uint16_t thread, const dumpi_time
 int report_MPI_Irecv(const dumpi_irecv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+  //OTF2_EvtWriter_MpiIrecvRequest()
   DUMPI_RETURNING();
 }
 
 int report_MPI_Wait(const dumpi_wait *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+  // These are generally handled inside one of the wait functions
+  //OTF2_EvtWriter_MpiIrecv()
+  //OTF2_EvtWriter_MpiIsendComplete()
   DUMPI_RETURNING();
 }
 
@@ -1697,66 +1705,6 @@ int report_MPI_File_sync(const dumpi_file_sync *prm, uint16_t thread, const dump
   DUMPI_RETURNING();
 }
 
-int report_MPIO_Test(const dumpio_test *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Wait(const dumpio_wait *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Testall(const dumpio_testall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Waitall(const dumpio_waitall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Testany(const dumpio_testany *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Waitany(const dumpio_waitany *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Waitsome(const dumpio_waitsome *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_MPIO_Testsome(const dumpio_testsome *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_Function_enter(const dumpi_func_call *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
-int report_Function_exit(const dumpi_func_call *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-  DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  DUMPI_RETURNING();
-}
-
 void set_callbacks(libundumpi_callbacks *cbacks) {
   assert(cbacks != NULL);
   cbacks->on_send                      = report_MPI_Send                     ;
@@ -2040,14 +1988,4 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   cbacks->on_file_set_atomicity        = report_MPI_File_set_atomicity       ;
   cbacks->on_file_get_atomicity        = report_MPI_File_get_atomicity       ;
   cbacks->on_file_sync                 = report_MPI_File_sync                ;
-  cbacks->on_iotest                    = report_MPIO_Test                    ;
-  cbacks->on_iowait                    = report_MPIO_Wait                    ;
-  cbacks->on_iotestall                 = report_MPIO_Testall                 ;
-  cbacks->on_iowaitall                 = report_MPIO_Waitall                 ;
-  cbacks->on_iotestany                 = report_MPIO_Testany                 ;
-  cbacks->on_iowaitany                 = report_MPIO_Waitany                 ;
-  cbacks->on_iowaitsome                = report_MPIO_Waitsome                ;
-  cbacks->on_iotestsome                = report_MPIO_Testsome                ;
-  cbacks->on_function_enter            = report_Function_enter               ;
-  cbacks->on_function_exit             = report_Function_exit                ;
 }
