@@ -14,7 +14,7 @@
                        (OTF2_TimeStamp)((((uint64_t)wall->start.sec) << 32) | \
                                           (uint64_t)wall->start.nsec),        \
                        args->region[std::string(fname)]);                     \
-  printf("Entered\n");
+  /*printf("Entered\n");*/
 
 /** Common postamble for dumpi callback*/
 #define DUMPI_RETURNING()                                                    \
@@ -23,7 +23,7 @@
                        (OTF2_TimeStamp)((((uint64_t)wall->stop.sec) << 32) | \
                        (uint64_t)wall->stop.nsec),                           \
                        args->region[std::string(fname)]);                    \
-  printf("Leaving\n");                                                       \
+  /*printf("Leaving\n");*/                                                   \
   return 1;
 
 /** Prints a message saying method is not used */

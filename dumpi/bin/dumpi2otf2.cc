@@ -77,6 +77,7 @@ DumpiArgs otf2_defs;
 typedef struct d2o2opt {
   int verbose, help;
   const char *file;
+  const char *output_archive;
 } d2o2opt;
 
 static int parse_options(int argc, char **argv, d2o2opt *opt);
@@ -150,7 +151,7 @@ int parse_options(int argc, char **argv, d2o2opt* settings) {
   int opt;
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
-  while((opt = getopt(argc, argv, "vhf:")) != -1) {
+  while((opt = getopt(argc, argv, "vhio:")) != -1) {
       switch(opt) {
         case 'v':
           // set verbose
@@ -159,15 +160,19 @@ int parse_options(int argc, char **argv, d2o2opt* settings) {
           break;
         case 'h':
           fprintf(stderr,
-                  "Usage:  %s [-h] [-v] [-f] filename\n"
+                  "Usage:  %s [-h] [-v] [-i] archive [-o] archive\n"
                   "   Options:\n"
                   "        -h               Print this help\n"
                   "        -v               Verbose status output\n"
-                  "        -f  filename     Read the given binary tracefile\n",
+                  "        -i  archive      Path to Dumpi tracefile\n"
+                  "        -o  archive      Output OTF2 archive name\n",
                   argv[0]);
           std::exit(0);
-        case 'f':
+        case 'i':
           settings->file = strdup(optarg);
+          break;
+        case 'o':
+          settings->output_archive = strdup(optarg);
           break;
         default:
           fprintf(stderr, "Invalid argument %c.\n", opt);
