@@ -5,14 +5,20 @@
 #include <unordered_map>
 #include <string>
 
+/*
+ * OTF2's time is arbitrarily assigned in the def file. We use nanoseconds because that
+ * is dumpi's time granularity.
+ */
+#define DUPMI_TO_OTF2_TIMESTAMP(dtime) \
+  ((OTF2_TimeStamp)((((uint64_t)dtime.sec) * 1E9) + (uint64_t)dtime.nsec))
+
 /** Common preample for a dumpi callback */
 #define DUMPI_ENTERING()                                                      \
   const char* fname = __func__ + 7;                                           \
   DumpiArgs* args = (DumpiArgs*)uarg;                                         \
   OTF2_EvtWriter_Enter(args->writer,                                          \
                        nullptr,                                               \
-                       (OTF2_TimeStamp)((((uint64_t)wall->start.sec) << 32) | \
-                                          (uint64_t)wall->start.nsec),        \
+                       DUPMI_TO_OTF2_TIMESTAMP(wall->start),                  \
                        args->region[std::string(fname)]);                     \
   /*printf("Entered\n");*/
 
@@ -20,11 +26,17 @@
 #define DUMPI_RETURNING()                                                    \
   OTF2_EvtWriter_Leave(args->writer,                                         \
                        nullptr,                                              \
-                       (OTF2_TimeStamp)((((uint64_t)wall->stop.sec) << 32) | \
-                       (uint64_t)wall->stop.nsec),                           \
+                       DUPMI_TO_OTF2_TIMESTAMP(wall->stop),                  \
                        args->region[std::string(fname)]);                    \
   /*printf("Leaving\n");*/                                                   \
   return 1;
+
+#define COLLECTIVE_WRAPPER(collective, root, sent, received)                                                                           \
+  OTF2_EvtWriter_MpiCollectiveBegin(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start));                                           \
+  OTF2_EvtWriter_MpiCollectiveEnd(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->stop), collective, prm->comm, root, sent, received);
+
+// TODO: figure out how to get type size from dumpi to count bytes. Assumes every type is 1 byte for now.
+#define BYTE_COUNT(type, count) (count)
 
 /** Prints a message saying method is not used */
 #define WARN_UNUSED(verbose)                                \

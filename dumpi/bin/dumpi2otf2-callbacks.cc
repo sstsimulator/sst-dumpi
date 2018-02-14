@@ -6,19 +6,52 @@
 #include <assert.h>
 #include <otf2/otf2.h>
 
+#include <unordered_map>
+
 d2o2_addrmap *d2o2_addr = NULL;
+
+enum REQUEST_TYPE {
+  REQUEST_TYPE_ISEND = 0,
+  REQUEST_TYPE_IRECV
+};
+
+std::unordered_map<int, dumpi_irecv> irecv_requests;
+std::unordered_map<int, REQUEST_TYPE> request_type;
+
+static void incomplete_call(int request_id, REQUEST_TYPE type) {
+  request_type[request_id] = type;
+}
+
+static void complete_call(OTF2_EvtWriter* writer, int request_id, OTF2_TimeStamp timestamp) {
+  auto t = request_type.find(request_id);
+
+  if (t == request_type.end()) {
+    printf("Error: request id (%i) not found\n", request_id);
+    return;
+  }
+  else if (t->second == REQUEST_TYPE_ISEND) {
+    OTF2_EvtWriter_MpiIsendComplete(writer, nullptr, timestamp, request_id);
+  }
+  else if (t->second == REQUEST_TYPE_IRECV) {
+    auto dumpi_irecv_it = irecv_requests.find(request_id);
+    dumpi_irecv irecv = dumpi_irecv_it->second;
+    if(dumpi_irecv_it == irecv_requests.end()) {
+      printf("Error: MPI_IRecv (%i) request not found\n", request_id);
+      return;
+    }
+    OTF2_EvtWriter_MpiIrecv(writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+  }
+}
 
 int report_MPI_Send(const dumpi_send *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  //OTF2_EvtWriter_MpiSend()
+  OTF2_EvtWriter_MpiSend(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->dest, prm->comm, prm->tag, prm->count);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Recv(const dumpi_recv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  //OTF2_EvtWriter_MpiRecv()
+  OTF2_EvtWriter_MpiRecv(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->source, prm->comm, prm->tag, prm->count);
   DUMPI_RETURNING();
 }
 
@@ -60,9 +93,8 @@ int report_MPI_Buffer_detach(const dumpi_buffer_detach *prm, uint16_t thread, co
 
 int report_MPI_Isend(const dumpi_isend *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  //OTF2_EvtWriter_MpiIsend()
-  //OTF2_EvtWriter_MpiIsendComplete()
+  incomplete_call(prm->request, REQUEST_TYPE_ISEND);
+  OTF2_EvtWriter_MpiIsend(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->dest, prm->comm, prm->tag, prm->count, prm->request);
   DUMPI_RETURNING();
 }
 
@@ -86,17 +118,15 @@ int report_MPI_Irsend(const dumpi_irsend *prm, uint16_t thread, const dumpi_time
 
 int report_MPI_Irecv(const dumpi_irecv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  //OTF2_EvtWriter_MpiIrecvRequest()
+  irecv_requests[prm->request] = *prm;
+  incomplete_call(prm->request, REQUEST_TYPE_IRECV);
+  OTF2_EvtWriter_MpiIrecvRequest(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->request);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Wait(const dumpi_wait *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-  // These are generally handled inside one of the wait functions
-  //OTF2_EvtWriter_MpiIrecv()
-  //OTF2_EvtWriter_MpiIsendComplete()
+  complete_call(args->writer, prm->request, DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
@@ -127,6 +157,7 @@ int report_MPI_Testany(const dumpi_testany *prm, uint16_t thread, const dumpi_ti
 int report_MPI_Waitall(const dumpi_waitall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   WARN_UNUSED(true);
+
   DUMPI_RETURNING();
 }
 
@@ -330,13 +361,13 @@ int report_MPI_Pack_size(const dumpi_pack_size *prm, uint16_t thread, const dump
 
 int report_MPI_Barrier(const dumpi_barrier *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BARRIER, 0, 0, 0);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Bcast(const dumpi_bcast *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BCAST, prm->root, prm->count, prm->count);
   DUMPI_RETURNING();
 }
 
