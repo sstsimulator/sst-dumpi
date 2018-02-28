@@ -4,6 +4,7 @@
 #include <otf2/otf2.h>
 #include <unordered_map>
 #include <string>
+#include <vector>
 
 /*
  * OTF2's time is arbitrarily assigned in the def file. We use nanoseconds because that
@@ -35,7 +36,7 @@
   OTF2_EvtWriter_MpiCollectiveBegin(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start));                                           \
   OTF2_EvtWriter_MpiCollectiveEnd(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->stop), collective, prm->comm, root, sent, received);
 
-// TODO: figure out how to get type size from dumpi to count bytes. Assumes every type is 1 byte for now.
+// TODO: figure out how to get type size from dumpi to count bytes. Assume every type is 1 byte for now.
 #define BYTE_COUNT(type, count) (count)
 
 /** Prints a message saying method is not used */
@@ -44,6 +45,7 @@
     printf("%s callback is not implemented\n", fname); \
   }
 
+// provides string to id mappings
 class OTF2DefTable {
 public:
   OTF2DefTable();
@@ -59,6 +61,17 @@ private:
   int _counter = 0;
 };
 
+/*
+ * Program options struct.
+ */
+typedef struct d2o2opt {
+  int verbose, help;
+  const char *dumpi_archive;
+  std::string dumpi_meta;
+  std::vector<std::string> dumpi_bin;
+  const char *output_archive;
+} d2o2opt;
+
 struct DumpiArgs {
   OTF2DefTable string;
   OTF2DefTable system_tree_node;
@@ -67,9 +80,13 @@ struct DumpiArgs {
   //OTF2DefTable location;
   //OTF2DefTable location_group;
   OTF2DefTable comm;
+  std::unordered_map<int, int> mpi_type_to_size;
 
   OTF2_Archive* archive;
   OTF2_EvtWriter* writer;
+  int rank;
+  d2o2opt program_options;
+  uint64_t start_time;
 };
 
 #endif // DUMPI2OTF2_H

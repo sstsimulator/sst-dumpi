@@ -52,6 +52,7 @@ Questions? Contact sst-macro-help@sandia.gov
 //#include <dumpi/common/perfctrs.h>
 //#include <dumpi/common/debugflags.h>
 #include <otf2/otf2.h>
+#include <glob.h>
 
 #include <algorithm>
 #include <cstring>
@@ -70,17 +71,8 @@ extern int optind;
 FILE *dumpfh = NULL;
 DumpiArgs otf2_defs;
 
-
-/*
- * Program options struct.
- */
-typedef struct d2o2opt {
-  int verbose, help;
-  const char *file;
-  const char *output_archive;
-} d2o2opt;
-
 static int parse_options(int argc, char **argv, d2o2opt *opt);
+static std::vector<std::string> glob_files(const char* path);
 static void read_header(const dumpi_header *head);
 static OTF2_Archive* open_archive();
 static OTF2_FlushType pre_flush( void* userData, OTF2_FileType fileType, OTF2_LocationRef location, void* callerData, bool final);
@@ -98,35 +90,49 @@ OTF2_FlushCallbacks flush_callbacks =
 };
 
 /* TODO
+ * - handle data type creation
  * - Parse dumpi datatypes into correct byte sizes (see dumpi2asci -X)
- * - Implement wait functions
- * - Implement collectives and pt2pt callbacks
+ * - Handle V collectives
  */
 int main(int argc, char **argv) {
 
   dumpi_profile *profile;
   libundumpi_callbacks cback;
-  d2o2opt opt;
+  d2o2opt& opt = otf2_defs.program_options;
   dumpfh = stdout;
 
-  if(parse_options(argc, argv, &opt) == 0) {
-      return 1;
-    }
+  if(parse_options(argc, argv, &opt) == 0) return 1;
+
   libundumpi_clear_callbacks(&cback);
   set_callbacks(&cback);
 
   OTF2_Archive* archive = init_otf2(1);
-  if((profile = undumpi_open(opt.file)) == NULL) {
-      return 2;
+  //auto dumpi_meta_file = glob_files((std::string(opt.dumpi_archive) + "*.meta").c_str());
+
+
+  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive) + "*.bin").c_str());
+  if (dumpi_bin_files.size() == 0) {
+    printf("Error: could not open dumpi archive\n");
+    return 2;
   }
 
   //Loop over ranks
   int num_ranks = 1;
-  for(int rank = 0; rank < num_ranks; rank++) {
+  for(int rank = 0; rank < dumpi_bin_files.size(); rank++) {
+    profile = undumpi_open(dumpi_bin_files[rank].c_str());
     OTF2_EvtWriter* evt_writer = OTF2_Archive_GetEvtWriter(archive, rank);
+    otf2_defs.rank = rank;
+    otf2_defs.writer = evt_writer;
 
+    // Get type sizes
+    dumpi_sizeof sizes;
+    dumpi_read_datatype_sizes(profile, &sizes);
+    for(int i = 0; i < sizes.count; i++)
+      otf2_defs.mpi_type_to_size[i] = sizes.size[i];
+
+    // Get start time from header
     dumpi_header *head = undumpi_read_header(profile);
-    read_header(head);
+    otf2_defs.start_time = head->starttime; // TODO: WRONG! this is a unix timestamp!
     dumpi_free_header(head);
 
     d2o2_addr = (d2o2_addrmap*)calloc(1, sizeof(d2o2_addrmap));
@@ -134,12 +140,19 @@ int main(int argc, char **argv) {
     dumpi_read_function_addresses(profile, &(d2o2_addr->count),
                                   &(d2o2_addr->address), &(d2o2_addr->name));
     undumpi_read_stream(profile, &cback, (void*)&otf2_defs);
+    undumpi_close(profile);
+    OTF2_Archive_CloseEvtWriter(archive, evt_writer);
   }
 
+  OTF2_Archive_CloseEvtFiles(archive);
   write_def_table(&otf2_defs, archive);
+  OTF2_Archive_Close(archive);
 
-  for(int i = 0; i < d2o2_addr->count; ++i)
+  printf("What are these?\n");
+  for(int i = 0; i < d2o2_addr->count; ++i) {
+    printf("%s\n", d2o2_addr->name[i]);
     free(d2o2_addr->name[i]);
+  }
   free(d2o2_addr->address);
   free(d2o2_addr->name);
   free(d2o2_addr);
@@ -151,7 +164,7 @@ int parse_options(int argc, char **argv, d2o2opt* settings) {
   int opt;
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
-  while((opt = getopt(argc, argv, "vhio:")) != -1) {
+  while((opt = getopt(argc, argv, "vhi:o:")) != -1) {
       switch(opt) {
         case 'v':
           // set verbose
@@ -168,8 +181,9 @@ int parse_options(int argc, char **argv, d2o2opt* settings) {
                   "        -o  archive      Output OTF2 archive name\n",
                   argv[0]);
           std::exit(0);
+          break;
         case 'i':
-          settings->file = strdup(optarg);
+          settings->dumpi_archive = strdup(optarg);
           break;
         case 'o':
           settings->output_archive = strdup(optarg);
@@ -180,39 +194,6 @@ int parse_options(int argc, char **argv, d2o2opt* settings) {
         }
     }
   return 1;
-}
-
-void read_header(const dumpi_header *head) {
-  /*
-    char      version[3];
-    uint64_t  starttime;
-    char     *hostname;
-    char     *username;
-    int       meshdim;
-    int      *meshcrd;
-    int      *meshsize;
-  */
-  int i;
-  time_t timev = (time_t)head->starttime;
-  printf("version=%d.%d.%d\n"
-          "starttime=%s"
-          "hostname=%s\n"
-          "username=%s\n"
-          "meshdim=%d\n",
-          head->version[0], head->version[1], head->version[2],
-          ctime(&timev), head->hostname, head->username, head->meshdim);
-  printf("meshsize=[");
-  for(i = 0; i < head->meshdim; ++i) {
-    printf("%d", head->meshsize[i]);
-    if(i < (head->meshdim-1)) fprintf(dumpfh, ", ");
-  }
-  printf("]\n");
-  printf("meshcrd=[");
-  for(i = 0; i < head->meshdim; ++i) {
-    printf("%d", head->meshcrd[i]);
-    if(i < (head->meshdim-1)) fprintf(dumpfh, ", ");
-  }
-  printf("]\n");
 }
 
 OTF2_FlushType pre_flush( void* userData, OTF2_FileType fileType, OTF2_LocationRef location, void* callerData, bool final)
@@ -226,7 +207,7 @@ OTF2_TimeStamp post_flush(void* userData, OTF2_FileType fileType, OTF2_LocationR
 }
 
 OTF2_Archive* init_otf2(int num_ranks) {
-  OTF2_Archive* archive = OTF2_Archive_Open( "ArchivePath",
+  OTF2_Archive* archive = OTF2_Archive_Open( "/home/sknight/code/github/sst-dumpi-backup/build/df_AMG_n8_dumpi/",
                                              "ArchiveName",
                                              OTF2_FILEMODE_WRITE,
                                              1024 * 1024 /* event chunk size */,
@@ -234,10 +215,25 @@ OTF2_Archive* init_otf2(int num_ranks) {
                                              OTF2_SUBSTRATE_POSIX,
                                              OTF2_COMPRESSION_NONE );
 
+//  OTF2_MPI_Archive_SetCollectiveCallbacks( archive,
+//                                           DUMPI_COMM_WORLD,
+//                                           DUMPI_COMM_NULL );
+
   OTF2_Archive_SetFlushCallbacks( archive, &flush_callbacks, NULL );
   OTF2_Archive_OpenEvtFiles(archive);
 
   return archive;
+}
+
+static std::vector<std::string> glob_files(const char* path)
+{
+  glob_t g_res;
+  glob(path, GLOB_TILDE, nullptr, &g_res);
+  std::vector<std::string> result;
+  for(int i = 0; i < g_res.gl_pathc; i++)
+    result.push_back(std::string(g_res.gl_pathv[i]));
+  globfree(&g_res);
+  return result;
 }
 
 void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
@@ -245,11 +241,14 @@ void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
   OTF2_GlobalDefWriter* gdefwriter = OTF2_Archive_GetGlobalDefWriter(archive);
   mpi_call_map.clear();
 
-  //PARADIGM
-  OTF2_GlobalDefWriter_WriteParadigm(gdefwriter,
-                                     OTF2_PARADIGM_MPI,
-                                     otf2_defs.string[std::string("MPI")],
-                                     OTF2_PARADIGM_CLASS_PROCESS);
+  // Reference
+  // https://silc.zih.tu-dresden.de/otf2-current/group__usage__writing__mpi.html
+
+  // CLOCK
+  OTF2_GlobalDefWriter_WriteClockProperties(gdefwriter,
+                                            1E9,        /* dumpi is accurate to the nanosecond */
+                                            0,          /* TODO: find the correct offset, dumpi probably does not start at 0 */
+                                            0);
 
   // REGIONS
   for (int i = 0; i < otf2_defs.region.size(); i++) {
@@ -267,6 +266,27 @@ void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
                                       0                             /* end lno */ );
   }
 
+//  TODO: find size
+//  uint64_t comm_locations[ size ];
+//  for ( int r = 0; r < size; r++ )
+//  {
+//      comm_locations[ r ] = r;
+//  }
+//  OTF2_GlobalDefWriter_WriteGroup( gdefwriter,
+//                                   0 /* id */,
+//                                   7 /* name */,
+//                                   OTF2_GROUP_TYPE_COMM_LOCATIONS,
+//                                   OTF2_PARADIGM_MPI,
+//                                   OTF2_GROUP_FLAG_NONE,
+//                                   size,
+//                                   comm_locations );
+
+//  //PARADIGM
+//  OTF2_GlobalDefWriter_WriteParadigm(gdefwriter,
+//                                     OTF2_PARADIGM_MPI,
+//                                     otf2_defs.string[std::string("MPI")],
+//                                     OTF2_PARADIGM_CLASS_PROCESS);
+
   // SYSTEM_TREE_NODE
   OTF2_GlobalDefWriter_WriteSystemTreeNode( gdefwriter,
                                             0 /* id */,
@@ -274,15 +294,13 @@ void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
                                             0 /* class */,
                                             OTF2_UNDEFINED_SYSTEM_TREE_NODE /* parent */ );
 
-  //COMM
-  //CLOCK_PROPERTIES
-  //LocationGroup?
-  //Location?
-
   // STRINGS
   for(int i = 0; i < otf2_defs.string.size(); i++) {
     OTF2_GlobalDefWriter_WriteString(gdefwriter, i, otf2_defs.string[i].c_str());
   }
+  //COMM
+  //LocationGroup?
+  //Location
 }
 
 OTF2DefTable::OTF2DefTable() {}

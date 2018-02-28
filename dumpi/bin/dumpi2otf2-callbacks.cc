@@ -132,6 +132,7 @@ int report_MPI_Wait(const dumpi_wait *prm, uint16_t thread, const dumpi_time *cp
 
 int report_MPI_Test(const dumpi_test *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  //TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
@@ -144,20 +145,21 @@ int report_MPI_Request_free(const dumpi_request_free *prm, uint16_t thread, cons
 
 int report_MPI_Waitany(const dumpi_waitany *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  complete_call(args->writer, prm->requests[prm->index], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
 int report_MPI_Testany(const dumpi_testany *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  //TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Waitall(const dumpi_waitall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
-
+  for (int i = 0; i < prm->count; i++)
+    complete_call(args->writer, prm->requests[i], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
@@ -169,7 +171,9 @@ int report_MPI_Testall(const dumpi_testall *prm, uint16_t thread, const dumpi_ti
 
 int report_MPI_Waitsome(const dumpi_waitsome *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  for (int i = 0; i < prm->outcount; i++) {
+      complete_call(args->writer, prm->requests[prm->indices[i]], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+  }
   DUMPI_RETURNING();
 }
 
@@ -373,7 +377,10 @@ int report_MPI_Bcast(const dumpi_bcast *prm, uint16_t thread, const dumpi_time *
 
 int report_MPI_Gather(const dumpi_gather *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_GATHER,
+                     prm->root,
+                     BYTE_COUNT(prm->sendtype, prm->sendcount),
+                     (args->rank == prm->root) ? BYTE_COUNT(prm->dumpi_type, prm->recvcount) : 0);
   DUMPI_RETURNING();
 }
 
@@ -385,7 +392,10 @@ int report_MPI_Gatherv(const dumpi_gatherv *prm, uint16_t thread, const dumpi_ti
 
 int report_MPI_Scatter(const dumpi_scatter *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTER,
+                     prm->root,
+                     BYTE_COUNT(prm->sendtype, prm->sendcount),
+                     (args->rank == prm->root) ? BYTE_COUNT(prm->dumpi_type, prm->recvcount) : 0);
   DUMPI_RETURNING();
 }
 
@@ -397,7 +407,10 @@ int report_MPI_Scatterv(const dumpi_scatterv *prm, uint16_t thread, const dumpi_
 
 int report_MPI_Allgather(const dumpi_allgather *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHER,
+                     0, // root is not used for this collective
+                     BYTE_COUNT(prm->sendtype, prm->sendcount),
+                     BYTE_COUNT(prm->recvtype, prm->recvcount));
   DUMPI_RETURNING();
 }
 
@@ -409,7 +422,10 @@ int report_MPI_Allgatherv(const dumpi_allgatherv *prm, uint16_t thread, const du
 
 int report_MPI_Alltoall(const dumpi_alltoall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALL,
+                     0, // root is not used in this collective
+                     BYTE_COUNT(prm->sendtype, prm->sendcount),
+                     BYTE_COUNT(prm->recvtype, prm->recvcount));
   DUMPI_RETURNING();
 }
 
@@ -421,7 +437,13 @@ int report_MPI_Alltoallv(const dumpi_alltoallv *prm, uint16_t thread, const dump
 
 int report_MPI_Reduce(const dumpi_reduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  // TODO: Get comm size to determine byte receive count
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE,
+                     prm->root,
+                     (args->rank == prm->root) ? 0 : BYTE_COUNT(prm->datatype, prm->count),
+                     0 // FIXME!
+                     );
+
   DUMPI_RETURNING();
 }
 
@@ -439,13 +461,22 @@ int report_MPI_Op_free(const dumpi_op_free *prm, uint16_t thread, const dumpi_ti
 
 int report_MPI_Allreduce(const dumpi_allreduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLREDUCE,
+                     0, // root is not used in this collective
+                     BYTE_COUNT(prm->datatype, prm->count),
+                     BYTE_COUNT(prm->datatype, prm->count));
   DUMPI_RETURNING();
 }
 
 int report_MPI_Reduce_scatter(const dumpi_reduce_scatter *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
+  int recv_sum = 0;
+  for (int i = 0; i < prm->commsize; i++) recv_sum += prm->recvcounts[i];
+
+  COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE_SCATTER,
+                     0,
+                     BYTE_COUNT(prm->datatype, prm->recvcounts[args->rank]), //TODO, get correct rank, instead of global rank.
+                     BYTE_COUNT(prm->datatype, recv_sum));
   DUMPI_RETURNING();
 }
 
@@ -535,13 +566,11 @@ int report_MPI_Group_free(const dumpi_group_free *prm, uint16_t thread, const du
 
 int report_MPI_Comm_size(const dumpi_comm_size *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Comm_rank(const dumpi_comm_rank *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
@@ -553,18 +582,21 @@ int report_MPI_Comm_compare(const dumpi_comm_compare *prm, uint16_t thread, cons
 
 int report_MPI_Comm_dup(const dumpi_comm_dup *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  // TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Comm_create(const dumpi_comm_create *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  // TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Comm_split(const dumpi_comm_split *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  // TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
@@ -795,14 +827,11 @@ int report_MPI_Wtick(const dumpi_wtick *prm, uint16_t thread, const dumpi_time *
 
 int report_MPI_Init(const dumpi_init *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-
-  WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Finalize(const dumpi_finalize *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
@@ -976,6 +1005,7 @@ int report_MPI_Win_wait(const dumpi_win_wait *prm, uint16_t thread, const dumpi_
 
 int report_MPI_Alltoallw(const dumpi_alltoallw *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  //TODO
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
