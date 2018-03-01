@@ -1,10 +1,10 @@
-#include <dumpi/bin/dumpi2otf2-callbacks.h>
 #include <dumpi/bin/dumpi2otf2-defs.h>
 #include <dumpi/libundumpi/callbacks.h>
 #include <dumpi/common/argtypes.h>
 #include <dumpi/common/constants.h>
 #include <assert.h>
 #include <otf2/otf2.h>
+#include <algorithm>
 
 #include <unordered_map>
 
@@ -22,36 +22,45 @@ static void incomplete_call(int request_id, REQUEST_TYPE type) {
   request_type[request_id] = type;
 }
 
-static void complete_call(OTF2_EvtWriter* writer, int request_id, OTF2_TimeStamp timestamp) {
+/*
+ * ISends and IRecvs begin when invoked, but important information about
+ * them are not recorded by OTF2 until they are completed, which occurs inside of Waits, Tests, etc.
+ * Returns the number of events generated
+ */
+static int complete_call(OTF2_EvtWriter* writer, int request_id, OTF2_TimeStamp timestamp) {
   auto t = request_type.find(request_id);
-
+  int events = 0;
   if (t == request_type.end()) {
     printf("Error: request id (%i) not found\n", request_id);
-    return;
   }
   else if (t->second == REQUEST_TYPE_ISEND) {
     OTF2_EvtWriter_MpiIsendComplete(writer, nullptr, timestamp, request_id);
+    events++;
   }
   else if (t->second == REQUEST_TYPE_IRECV) {
     auto dumpi_irecv_it = irecv_requests.find(request_id);
     dumpi_irecv irecv = dumpi_irecv_it->second;
     if(dumpi_irecv_it == irecv_requests.end()) {
-      printf("Error: MPI_IRecv (%i) request not found\n", request_id);
-      return;
+      printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
+    } else {
+      OTF2_EvtWriter_MpiIrecv(writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+      events++;
     }
-    OTF2_EvtWriter_MpiIrecv(writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
   }
+  return events;
 }
 
 int report_MPI_Send(const dumpi_send *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   OTF2_EvtWriter_MpiSend(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->dest, prm->comm, prm->tag, prm->count);
+  args->event_count[args->rank]++;
   DUMPI_RETURNING();
 }
 
 int report_MPI_Recv(const dumpi_recv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
   OTF2_EvtWriter_MpiRecv(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->source, prm->comm, prm->tag, prm->count);
+  args->event_count[args->rank]++;
   DUMPI_RETURNING();
 }
 
@@ -95,6 +104,7 @@ int report_MPI_Isend(const dumpi_isend *prm, uint16_t thread, const dumpi_time *
   DUMPI_ENTERING();
   incomplete_call(prm->request, REQUEST_TYPE_ISEND);
   OTF2_EvtWriter_MpiIsend(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->dest, prm->comm, prm->tag, prm->count, prm->request);
+  args->event_count[args->rank]++;
   DUMPI_RETURNING();
 }
 
@@ -121,12 +131,13 @@ int report_MPI_Irecv(const dumpi_irecv *prm, uint16_t thread, const dumpi_time *
   irecv_requests[prm->request] = *prm;
   incomplete_call(prm->request, REQUEST_TYPE_IRECV);
   OTF2_EvtWriter_MpiIrecvRequest(args->writer, nullptr, DUPMI_TO_OTF2_TIMESTAMP(wall->start), prm->request);
+  args->event_count[args->rank]++;
   DUMPI_RETURNING();
 }
 
 int report_MPI_Wait(const dumpi_wait *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  complete_call(args->writer, prm->request, DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+  args->event_count[args->rank] += complete_call(args->writer, prm->request, DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
@@ -145,7 +156,7 @@ int report_MPI_Request_free(const dumpi_request_free *prm, uint16_t thread, cons
 
 int report_MPI_Waitany(const dumpi_waitany *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  complete_call(args->writer, prm->requests[prm->index], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+  args->event_count[args->rank] += complete_call(args->writer, prm->requests[prm->index], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
@@ -158,8 +169,10 @@ int report_MPI_Testany(const dumpi_testany *prm, uint16_t thread, const dumpi_ti
 
 int report_MPI_Waitall(const dumpi_waitall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  int events = 0;
   for (int i = 0; i < prm->count; i++)
-    complete_call(args->writer, prm->requests[i], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+    events += complete_call(args->writer, prm->requests[i], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+  args->event_count[args->rank] += events;
   DUMPI_RETURNING();
 }
 
@@ -171,9 +184,11 @@ int report_MPI_Testall(const dumpi_testall *prm, uint16_t thread, const dumpi_ti
 
 int report_MPI_Waitsome(const dumpi_waitsome *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  int events = 0;
   for (int i = 0; i < prm->outcount; i++) {
-      complete_call(args->writer, prm->requests[prm->indices[i]], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
+      events += complete_call(args->writer, prm->requests[prm->indices[i]], DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   }
+  args->event_count[args->rank] += events;
   DUMPI_RETURNING();
 }
 
@@ -380,7 +395,7 @@ int report_MPI_Gather(const dumpi_gather *prm, uint16_t thread, const dumpi_time
   COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_GATHER,
                      prm->root,
                      BYTE_COUNT(prm->sendtype, prm->sendcount),
-                     (args->rank == prm->root) ? BYTE_COUNT(prm->dumpi_type, prm->recvcount) : 0);
+                     (args->rank == prm->root) ? BYTE_COUNT(prm->recvtype, prm->recvcount) : 0);
   DUMPI_RETURNING();
 }
 
@@ -395,7 +410,7 @@ int report_MPI_Scatter(const dumpi_scatter *prm, uint16_t thread, const dumpi_ti
   COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTER,
                      prm->root,
                      BYTE_COUNT(prm->sendtype, prm->sendcount),
-                     (args->rank == prm->root) ? BYTE_COUNT(prm->dumpi_type, prm->recvcount) : 0);
+                     (args->rank == prm->root) ? BYTE_COUNT(prm->recvtype, prm->recvcount) : 0);
   DUMPI_RETURNING();
 }
 
@@ -827,11 +842,15 @@ int report_MPI_Wtick(const dumpi_wtick *prm, uint16_t thread, const dumpi_time *
 
 int report_MPI_Init(const dumpi_init *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  // Record the earliest start time
+  args->start_time = std::min(args->start_time, DUPMI_TO_OTF2_TIMESTAMP(wall->start));
   DUMPI_RETURNING();
 }
 
 int report_MPI_Finalize(const dumpi_finalize *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
+  // Record the latest end time
+  args->stop_time = std::max(args->stop_time, DUPMI_TO_OTF2_TIMESTAMP(wall->stop));
   DUMPI_RETURNING();
 }
 
