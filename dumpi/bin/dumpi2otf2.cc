@@ -44,6 +44,8 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <dumpi/bin/dumpi2otf2-defs.h>
 #include <dumpi/libundumpi/libundumpi.h>
+//#include <dumpi/libundumpi/types.h>
+#include <dumpi/libundumpi/dumpistate.h>
 
 #include <otf2/otf2.h>
 #include <glob.h>
@@ -77,6 +79,7 @@ static void write_def_table(DumpiArgs*, OTF2_Archive*);
 
 static void mk_archive_dir(const char* path);
 static void print_usage();
+static std::vector<int> get_type_sizes(dumpi_profile*);
 
 static std::unordered_map<const char*, int> mpi_call_map;
 extern std::vector<const char*> mpi_api_list;
@@ -88,11 +91,9 @@ OTF2_FlushCallbacks flush_callbacks =
 };
 
 /* TODO
- * - handle data type creation
  * - Handle V collectives
  */
 int main(int argc, char **argv) {
-
   dumpi_profile *profile;
   libundumpi_callbacks cback;
   d2o2opt& opt = otf2_defs.program_options;
@@ -108,8 +109,8 @@ int main(int argc, char **argv) {
     printf("Error: could not open dumpi archive\n");
     return 2;
   }
-  otf2_defs.num_ranks = dumpi_bin_files.size();
 
+  otf2_defs.num_ranks = dumpi_bin_files.size();
   OTF2_Archive* archive = init_otf2(dumpi_bin_files.size(), opt.output_archive);
 
   // Loop over ranks
@@ -120,37 +121,31 @@ int main(int argc, char **argv) {
     otf2_defs.writer = evt_writer;
 
     // Get type sizes
-    dumpi_sizeof sizes;
-    dumpi_read_datatype_sizes(profile, &sizes);
-    for(int i = 0; i < sizes.count; i++)
-      otf2_defs.mpi_type_to_size[i] = sizes.size[i];
+    otf2_defs.type_sizes = get_type_sizes(profile);
 
-    // Get start time from header
-    dumpi_header *head = undumpi_read_header(profile);
-    otf2_defs.start_time = head->starttime; // TODO: WRONG! this is a unix timestamp!
-    dumpi_free_header(head);
-
-    d2o2_addr = (d2o2_addrmap*)calloc(1, sizeof(d2o2_addrmap));
-    assert(d2o2_addr != NULL);
-    dumpi_read_function_addresses(profile, &(d2o2_addr->count),
-                                  &(d2o2_addr->address), &(d2o2_addr->name));
+    //d2o2_addr = (d2o2_addrmap*)calloc(1, sizeof(d2o2_addrmap));
+    //assert(d2o2_addr != NULL);
+    //dumpi_read_function_addresses(profile, &(d2o2_addr->count),
+    //                              &(d2o2_addr->address), &(d2o2_addr->name));
     undumpi_read_stream(profile, &cback, (void*)&otf2_defs);
     undumpi_close(profile);
     OTF2_Archive_CloseEvtWriter(archive, evt_writer);
-  }
 
-  // Write def files
-  write_def_table(&otf2_defs, archive);
+    if (rank == 0) {
+      // Write def files
+      write_def_table(&otf2_defs, archive);
+    }
+  }
 
   // Close the Archive
   OTF2_Archive_CloseEvtFiles(archive);
   OTF2_Archive_Close(archive);
 
-  for(int i = 0; i < d2o2_addr->count; ++i) free(d2o2_addr->name[i]);
-  free(d2o2_addr->address);
-  free(d2o2_addr->name);
-  free(d2o2_addr);
-    d2o2_addr = NULL;
+  //for(int i = 0; i < d2o2_addr->count; ++i) free(d2o2_addr->name[i]);
+  //free(d2o2_addr->address);
+  //free(d2o2_addr->name);
+  //free(d2o2_addr);
+  //  d2o2_addr = NULL;
   return 0;
 }
 
@@ -161,7 +156,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
 
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
-  while((opt = getopt(argc, argv, "vhi:o:")) != -1) {
+  while((opt = getopt(argc, argv, "vhsi:o:")) != -1) {
       switch(opt) {
         case 'v':
           fprintf(stdout, "Setting output to verbose.\n");
@@ -178,6 +173,9 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
         case 'o':
           settings->output_archive = strdup(optarg);
           output_set = true;
+          break;
+        case 's':
+          settings->skip_unused_calls = true;
           break;
         default:
           fprintf(stderr, "Invalid argument %c.\n", opt);
@@ -206,6 +204,7 @@ void print_usage() {
         "   Options:\n"
         "        -h               Print this help\n"
         "        -v               Verbose status output\n"
+        "        -s               Skip callbacks that will not be used by SST/macro (untested)"
         "        -i  archive      Path to Dumpi tracefile\n"
         "        -o  archive      Output OTF2 archive name\n");
 }
@@ -238,6 +237,19 @@ OTF2_Archive* init_otf2(int num_ranks, const char* archive_dir) {
   return archive;
 }
 
+std::vector<int> get_type_sizes(dumpi_profile* profile) {
+  dumpi_sizeof sizes = undumpi_read_datatype_sizes(profile);
+  std::vector<int> sz_vec;
+
+  //printf("Reading Sizes:\n");
+  for (int i = 0; i < sizes.count; i++) {
+    //printf("  type id: %i, size: %i\n", i, sizes.size[i]);
+    sz_vec.push_back(sizes.size[i]);
+  }
+  delete[] sizes.size;
+  return sz_vec;
+}
+
 // Returns a list of files that match the pattern
 static std::vector<std::string> glob_files(const char* path)
 {
@@ -249,6 +261,9 @@ static std::vector<std::string> glob_files(const char* path)
   globfree(&g_res);
   return result;
 }
+
+// See ScoreP source for local def writer examples
+// ./vendor/otf2/src/tools/otf2_speed_test/otf2_speed_test.c
 
 void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
 {
