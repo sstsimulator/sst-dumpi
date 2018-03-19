@@ -88,6 +88,7 @@ public:
   // Operator overload sugar
   const std::string operator[] (int index);
   int operator[] (const std::string string);
+  int operator[] (const char*);
   int size();
   bool added_last_lookup();
 private:
@@ -131,7 +132,7 @@ public:
 struct DumpiArgs {
   DumpiArgs(): start_time(INT_MAX), stop_time(INT_MIN) {
     auto root_comm = MPI_comm("MPI_COMM_WORLD", 0, DUMPI_COMM_WORLD, 0);
-    mpi_comm[0] = root_comm;
+    mpi_comm[DUMPI_COMM_WORLD] = root_comm;
 
     //TODO define global group
   }
@@ -142,7 +143,7 @@ struct DumpiArgs {
   //OTF2DefTable location;
   //OTF2DefTable location_group;
   std::unordered_map<int, std::vector<int>> mpi_group;
-  std::unordered_map<int, MPI_comm> mpi_comm;
+  std::map<int, MPI_comm> mpi_comm;
   //std::unordered_map<int, int> mpi_type_to_size;
   std::unordered_map<int, int> event_count;
   std::vector<int> type_sizes;

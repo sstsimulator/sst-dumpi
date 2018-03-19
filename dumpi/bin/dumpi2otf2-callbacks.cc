@@ -723,24 +723,30 @@ int report_MPI_Group_range_excl(const dumpi_group_range_excl *prm, uint16_t thre
 
 int report_MPI_Group_free(const dumpi_group_free *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  // What happens if the MPI implementation re-uses the group's id? The standard does not seem to forbid it
+  // TODO: What happens if the MPI implementation re-uses the group's id?
   printf("Warning: Group Freed\n");
   DUMPI_RETURNING();
 }
 
 int report_MPI_Comm_size(const dumpi_comm_size *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  IF_SKIP_UNUSED_BEGIN(uarg);
   DUMPI_ENTERING();
   DUMPI_RETURNING();
+  IF_SKIP_UNUSED_END();
 }
 
 int report_MPI_Comm_rank(const dumpi_comm_rank *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  IF_SKIP_UNUSED_BEGIN(uarg);
   DUMPI_ENTERING();
   DUMPI_RETURNING();
+  IF_SKIP_UNUSED_END();
 }
 
 int report_MPI_Comm_compare(const dumpi_comm_compare *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  IF_SKIP_UNUSED_BEGIN(uarg);
   DUMPI_ENTERING();
   DUMPI_RETURNING();
+  IF_SKIP_UNUSED_END();
 }
 
 int report_MPI_Comm_dup(const dumpi_comm_dup *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
@@ -760,13 +766,14 @@ int report_MPI_Comm_split(const dumpi_comm_split *prm, uint16_t thread, const du
   DUMPI_ENTERING();
   // TODO This is an architectural issue. We can't know the result of a comm split until
   // after the def file would have been written. We should not use global def files because of this
+  // One fix would be to write each def file individually
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }
 
 int report_MPI_Comm_free(const dumpi_comm_free *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING();
-  // TODO: What happens after a comm is freed? Could the implementation reuse the id and overwrite its value in the final Def file.
+  // TODO: What happens after a comm is freed? The implementation could reuse the id and overwrite its value in the final Def file.
   WARN_UNUSED(true);
   DUMPI_RETURNING();
 }

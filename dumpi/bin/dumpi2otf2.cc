@@ -44,8 +44,6 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <dumpi/bin/dumpi2otf2-defs.h>
 #include <dumpi/libundumpi/libundumpi.h>
-//#include <dumpi/libundumpi/types.h>
-#include <dumpi/libundumpi/dumpistate.h>
 
 #include <otf2/otf2.h>
 #include <glob.h>
@@ -71,6 +69,7 @@ static int parse_cli_options(int argc, char **argv, d2o2opt *opt);
 static std::vector<std::string> glob_files(const char* path);
 static void read_header(const dumpi_header *head);
 static OTF2_Archive* open_archive();
+static void check_status( OTF2_ErrorCode status, char* description);
 static OTF2_FlushType pre_flush( void* userData, OTF2_FileType fileType, OTF2_LocationRef location, void* callerData, bool final);
 static OTF2_TimeStamp post_flush(void* userData, OTF2_FileType fileType, OTF2_LocationRef location);
 static OTF2_Archive* init_otf2(int ranks, const char* archive);
@@ -81,7 +80,6 @@ static void mk_archive_dir(const char* path);
 static void print_usage();
 static std::vector<int> get_type_sizes(dumpi_profile*);
 
-static std::unordered_map<const char*, int> mpi_call_map;
 extern std::vector<const char*> mpi_api_list;
 
 OTF2_FlushCallbacks flush_callbacks =
@@ -123,29 +121,18 @@ int main(int argc, char **argv) {
     // Get type sizes
     otf2_defs.type_sizes = get_type_sizes(profile);
 
-    //d2o2_addr = (d2o2_addrmap*)calloc(1, sizeof(d2o2_addrmap));
-    //assert(d2o2_addr != NULL);
-    //dumpi_read_function_addresses(profile, &(d2o2_addr->count),
-    //                              &(d2o2_addr->address), &(d2o2_addr->name));
     undumpi_read_stream(profile, &cback, (void*)&otf2_defs);
     undumpi_close(profile);
-    OTF2_Archive_CloseEvtWriter(archive, evt_writer);
-
-    if (rank == 0) {
-      // Write def files
-      write_def_table(&otf2_defs, archive);
-    }
+    OTF2_Archive_CloseEvtWriter(archive, evt_writer); 
   }
+  //if (rank == 0) {
+  //  // Write def files
+    write_def_table(&otf2_defs, archive);
+  //}
 
   // Close the Archive
   OTF2_Archive_CloseEvtFiles(archive);
   OTF2_Archive_Close(archive);
-
-  //for(int i = 0; i < d2o2_addr->count; ++i) free(d2o2_addr->name[i]);
-  //free(d2o2_addr->address);
-  //free(d2o2_addr->name);
-  //free(d2o2_addr);
-  //  d2o2_addr = NULL;
   return 0;
 }
 
@@ -262,8 +249,13 @@ static std::vector<std::string> glob_files(const char* path)
   return result;
 }
 
+static void check_status( OTF2_ErrorCode status, const char* description) {
+  if ( status != OTF2_SUCCESS )
+    printf("OTF2 Error: %s\n\t%s\n", description, OTF2_Error_GetDescription(status));
+}
+
 // See ScoreP source for local def writer examples
-// ./vendor/otf2/src/tools/otf2_speed_test/otf2_speed_test.c
+//  vendor/otf2/src/tools/otf2_trace_gen/otf2_trace_gen.c
 
 void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
 {
@@ -276,13 +268,41 @@ void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
                                             otf2_defs.start_time,
                                             otf2_defs.stop_time - otf2_defs.start_time
                                             );
-  mpi_call_map.clear();
 
-  //REGIONS
+  // Strings must come first in the def file
+  // Otherwise tools like otf2_print will report errors, even though all of the information is available
+  otf2_defs.string[""];
+  otf2_defs.string["MPI_COMM_WORLD"];
+
+//  for(int i = 0; i < otf2_defs.num_ranks; i++) {
+//    char process_name[32];
+//    sprintf(process_name, "MPI Rank %d", i);
+//    otf2_defs.string[process_name];
+//  }
+
+//  for (int i = 0; i < otf2_defs.num_ranks; i++) {
+//    char loc_name[32];
+//    sprintf(loc_name, "Master Thread %d", i);
+
+//  }
+  for(int rank = 0; rank < otf2_defs.num_ranks; rank++) {
+    otf2_defs.string[std::string("MPI Rank ") + std::to_string(rank)];
+    otf2_defs.string[std::string("Master Thread ") + std::to_string(rank)];
+  }
+
+
+
+  // STRINGS
+  for(int i = 0; i < otf2_defs.string.size(); i++) {
+    OTF2_GlobalDefWriter_WriteString(defwriter, i, otf2_defs.string[i].c_str());
+  }
+
+  // REGIONS
+  printf("%i\n", otf2_defs.region.size());
   for(int i = 0; i < otf2_defs.region.size(); i++) {
     std::string region_name = otf2_defs.region[i];
     auto val = otf2_defs.string[region_name];
-    int z = otf2_defs.region[std::string("MPI_Comm_size")];
+    printf("REGION: %s\n", region_name.c_str());
     OTF2_GlobalDefWriter_WriteRegion(defwriter,
                                  i                             /* id */,
                                  otf2_defs.region[region_name] /* region name  */,
@@ -304,26 +324,95 @@ void write_def_table(DumpiArgs* dargs, OTF2_Archive* archive)
                                             0 /* class */,
                                             OTF2_UNDEFINED_SYSTEM_TREE_NODE /* parent */ );
 
-  for(int i = 0; i < otf2_defs.num_ranks; i++) {
-    char process_name[32];
-    sprintf(process_name, "MPI Rank %d", i);
-
-    OTF2_GlobalDefWriter_WriteLocation( defwriter,
-                                        i,
-                                        otf2_defs.string[process_name],
-                                        OTF2_LOCATION_TYPE_CPU_THREAD,
-                                        otf2_defs.event_count[i],
-                                        0);
+//  }
+  // LOCATIONGROUP
+  // locationgroup appears to be used to identify computation localities. For example, all of the threads on a given node.
+  for (int i = 0; i < otf2_defs.num_ranks; i++) {
+    char rank_name[32];
+    sprintf(rank_name, "MPI Rank %d", i);
+    OTF2_GlobalDefWriter_WriteLocationGroup(defwriter,
+                                            i,
+                                            otf2_defs.string[rank_name],
+                                            OTF2_LOCATION_GROUP_TYPE_PROCESS,
+                                            0 // TODO, This should point to the node this rank ran on. Not necessary for sst/macro trace replay.
+                                            );
   }
 
-  // TODO, write strings first
-  // STRINGS
-  for(int i = 0; i < otf2_defs.string.size(); i++) {
-    OTF2_GlobalDefWriter_WriteString(defwriter, i, otf2_defs.string[i].c_str());
+  // LOCATION
+  // In this context, each location will identifies a rank. Must come before groups.
+  for (int i = 0; i < otf2_defs.num_ranks; i++) {
+    char loc_name[32];
+    sprintf(loc_name, "Master Thread %d", i);
+    OTF2_GlobalDefWriter_WriteLocation(defwriter,
+                                       i,
+                                       otf2_defs.string[loc_name],
+                                       OTF2_LOCATION_TYPE_CPU_THREAD,
+                                       otf2_defs.event_count[i],
+                                       0);
   }
 
-  //COMM
-  //LocationGroup
+
+  // GROUP
+  for(auto group_it = otf2_defs.mpi_group.begin(); group_it != otf2_defs.mpi_group.end(); group_it++) {
+    auto members = group_it->second;
+    uint64_t* group_list = new uint64_t[members.size()];
+    for (int i = 0; i < members.size(); i++)  group_list[i] = (uint64_t)members[i];
+
+    OTF2_GlobalDefWriter_WriteGroup(defwriter,
+                                    group_it->first,
+                                    otf2_defs.string[""],
+                                    OTF2_GROUP_TYPE_COMM_GROUP,
+                                    OTF2_PARADIGM_MPI,
+                                    OTF2_GROUP_FLAG_NONE,
+                                    members.size(),
+                                    group_list);
+    delete group_list;
+  }
+
+  // When no communicator manipulation occurs, mpi_group list will be empty because it is dynamically generated from MPI callbacks.
+  // The trace needs to have at least one group for MPI_COMM_WORLD
+  if (otf2_defs.mpi_group.size() == 0) {
+    uint64_t* group_list = new uint64_t[otf2_defs.num_ranks];
+    for (int i = 0; i < otf2_defs.num_ranks; i++)  group_list[i] = i;
+    OTF2_GlobalDefWriter_WriteGroup(defwriter,
+                                    0,
+                                    otf2_defs.string[""],
+                                    OTF2_GROUP_TYPE_COMM_GROUP,
+                                    OTF2_PARADIGM_MPI,
+                                    OTF2_GROUP_FLAG_NONE,
+                                    otf2_defs.num_ranks,
+                                    group_list);
+    delete group_list;
+  }
+
+  // COMM
+  for(auto comm_it = otf2_defs.mpi_comm.begin(); comm_it != otf2_defs.mpi_comm.end(); comm_it++) {
+    MPI_comm& comm = comm_it->second;
+
+    OTF2_GlobalDefWriter_WriteComm( defwriter,
+                                    comm_it->first,
+                                    comm.id == DUMPI_COMM_WORLD ? otf2_defs.string["MPI_COMM_WORLD"] : otf2_defs.string[""],
+                                    comm.group,
+                                    comm.parent);
+  }
+
+  // Register communicator mapping. Also essential for creating Local def files, which are not created automatically.
+  for(int rank = 0; rank< otf2_defs.num_ranks; rank++) {
+    OTF2_DefWriter* local_def_writer = OTF2_Archive_GetDefWriter(archive, rank);
+
+    // local COMM mappings
+    OTF2_IdMap* mpi_comm_map = OTF2_IdMap_Create( OTF2_ID_MAP_SPARSE, 2 );
+
+    // Each location uses its rank as the communicator id which maps to the global 0
+    check_status(OTF2_IdMap_AddIdPair( mpi_comm_map, rank, DUMPI_COMM_WORLD ), "Adding MPI_COMM_WORLD to a mapping table");
+    check_status(OTF2_IdMap_AddIdPair( mpi_comm_map, rank + otf2_defs.num_ranks, DUMPI_COMM_SELF ), "Adding MPI_COMM_SELF to a mapping table");
+    check_status(OTF2_DefWriter_WriteMappingTable( local_def_writer,
+                                      OTF2_MAPPING_COMM,
+                                      mpi_comm_map ), "Writing a communicator mapping table to the OTF2 archive");
+
+    OTF2_IdMap_Free(mpi_comm_map);
+    check_status(OTF2_Archive_CloseDefWriter( archive, local_def_writer), "Closing a local def writer");
+  }
 }
 
 void mk_archive_dir(const char *path) {
@@ -348,6 +437,7 @@ int OTF2DefTable::map(std::string string)
   return _counter++;
 }
 
+
 const std::string OTF2DefTable::map(int index) {
   // Finds the string corresponding to the given int.
   auto out = std::find_if(_map.begin(), _map.end(), [index] (const auto& elem) { return elem.second == index; });
@@ -355,6 +445,7 @@ const std::string OTF2DefTable::map(int index) {
 }
 
 const std::string OTF2DefTable::operator[] (int index) { return map(index); }
+int OTF2DefTable::operator[] (const char* index) { return map(std::string(index));}
 int OTF2DefTable::operator[] (std::string string) { return map(string); }
 int OTF2DefTable::size() { return _counter; }
 bool OTF2DefTable::added_last_lookup() {return _added_last_lookup;}
