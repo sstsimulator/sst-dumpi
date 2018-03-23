@@ -9,30 +9,12 @@
 #   SST/macroscale directory.
 #
 
-SUBDIRS = common
-
-if WITH_LIBDUMPI
-  SUBDIRS += libdumpi 
-endif
-
-if WITH_LIBUNDUMPI
-  SUBDIRS += libundumpi
-endif
-
-if WITH_OTF2
-  SUBDIRS += libotf2dump
-endif
-
-if WITH_BIN
-  SUBDIRS += bin
-endif
-
-if WITH_TEST
-  SUBDIRS +=  test
-endif
-
-AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)
-library_includedir=$(includedir)/dumpi
-library_include_HEADERS = dumpiconfig.h 
-nodist_library_include_HEADERS = dumpiconfig-generated.h
-
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
+AM_LDFLAGS =
+library_includedir=$(includedir)/dumpi/libotf2dump
+library_include_HEADERS = \
+								      otf2writer.h
+lib_LTLIBRARIES = libotf2dump.la
+libotf2dump_la_SOURCES = otf2writer.cc
+libotf2dump_la_LDFLAGS = -version-info @DUMPI_LIBVERSION@
+libotf2dump_la_LIBADD = ../common/libdumpi_common.la

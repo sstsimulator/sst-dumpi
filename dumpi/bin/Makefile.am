@@ -34,7 +34,7 @@ endif
 if WITH_OTF2
   bin_PROGRAMS += dumpi2otf2
   dumpi2otf2_SOURCES = dumpi2otf2.cc dumpi2otf2-callbacks.cc
-  dumpi2otf2_LDADD = ../libundumpi/libundumpi.la $(OTF2DIR) -lotf2
+  dumpi2otf2_LDADD = ../libundumpi/libundumpi.la ../libotf2dump/libotf2dump.la $(OTF2DIR) -lotf2
 endif
 
 dumpi2ascii_SOURCES = dumpi2ascii.c dumpi2ascii-callbacks.c
