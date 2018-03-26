@@ -12,157 +12,11 @@
 //  DUMPI_RETURNING();
 //}
 
-//int report_MPI_Comm_group(const dumpi_comm_group *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  // NULL indicates invalid parameters
-//  if (prm->group != DUMPI_COMM_NULL) {
-//    // Useful for settings MPI_COMM_WORLD's group ID to the implementation's default, otherwise it overwrites known parameters.
-//    args->mpi_comm[prm->comm].group = prm->group;
-//  }
-//  DUMPI_RETURNING();
-//}
-
-//// C++17/20 have nifty STL set operations that operate on arbitrary iterators (std::set_union, std::set_intersection, etc...)
-//// Unfortunately, this code targets C++11
-
-//int report_MPI_Group_union(const dumpi_group_union *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  auto g1_it = args->mpi_group[prm->group1].begin();
-//  auto g2_it = args->mpi_group[prm->group2].begin();
-//  auto g1_end = args->mpi_group[prm->group1].end();
-//  auto g2_end = args->mpi_group[prm->group2].end();
-//  auto dest = std::back_inserter(args->mpi_group[prm->newgroup]);
-
-//  // Set Union
-//  while (true)
-//  {
-//      if (g1_it==g1_end) { std::copy(g2_it,g2_end,dest); break; }
-//      if (g2_it==g2_end) { std::copy(g1_it,g1_end,dest); break; }
-
-//      if (*g1_it<*g2_it) { *dest = *g1_it; ++g1_it; }
-//      else if (*g2_it<*g1_it) { *dest = *g2_it; ++g2_it; }
-//      else { *dest = *g1_it; ++g1_it; ++g2_it; }
-//      ++dest;
-//  }
-
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Group_intersection(const dumpi_group_intersection *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  auto g1_it = args->mpi_group[prm->group1].begin();
-//  auto g2_it = args->mpi_group[prm->group2].begin();
-//  auto g1_end = args->mpi_group[prm->group1].end();
-//  auto g2_end = args->mpi_group[prm->group2].end();
-//  auto dest = std::back_inserter(args->mpi_group[prm->newgroup]);
-
-//  // Set Intersection
-//  while (g1_it!=g1_end && g2_it!=g2_end)
-//  {
-//    if (*g1_it<*g2_it) ++g1_it;
-//    else if (*g2_it<*g1_it) ++g2_it;
-//    else {
-//      *dest = *g1_it;
-//      ++dest; ++g1_it; ++g2_it;
-//    }
-//  }
-
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Group_difference(const dumpi_group_difference *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-
-//  auto g1_it = args->mpi_group[prm->group1].begin();
-//  auto g2_it = args->mpi_group[prm->group2].begin();
-//  auto g1_end = args->mpi_group[prm->group1].end();
-//  auto g2_end = args->mpi_group[prm->group2].end();
-//  auto dest = std::back_inserter(args->mpi_group[prm->newgroup]);
-
-//  // Set Difference
-//  while (g1_it != g1_end) {
-//    if (g2_it == g2_end) { std::copy(g1_it, g1_end, dest); break; }
-
-//    if (*g1_it < *g2_it) {
-//      *dest++ = *g1_it++;
-//    } else {
-//      if (! (*g2_it < *g1_it)) {
-//        ++g1_it;
-//      }
-//      ++g2_it;
-//    }
-//  }
-
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Group_incl(const dumpi_group_incl *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-
-//  // Creates a new group that includes the listed ranks
-//  auto new_group = args->mpi_group[prm->newgroup];
-
-//  for (int i = 0; i < prm->count; i++)
-//    new_group.push_back(prm->ranks[i]);
-
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Group_excl(const dumpi_group_excl *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-
-//  // Creates a new group that excludes the listed ranks
-//  auto new_group = args->mpi_group[prm->newgroup];
-//  auto old_group = args->mpi_group[prm->group];
-
-//  for (int i = 0; i < old_group.size(); i++) {
-//    bool exclude = false;
-//    for (int j = 0; j < prm->count; j++) {
-//      if (prm->ranks[j] == i) {
-//        exclude = true;
-//        break;
-//      }
-//    }
-//    if (!exclude) new_group.push_back(old_group[i]);
-//  }
-
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Group_range_incl(const dumpi_group_range_incl *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  args->mpi_group[prm->newgroup] = args->mpi_group[prm->group];
-//  for (int i = 0; i < prm->count; i++)
-//    for(int j = prm->ranges[i][0]; j < prm->ranges[i][1]; j+=prm->ranges[i][2])
-//      args->mpi_group[prm->newgroup].push_back(j);
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Comm_dup(const dumpi_comm_dup *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  args->mpi_comm[prm->newcomm] = args->mpi_comm[prm->oldcomm];
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Comm_create(const dumpi_comm_create *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  MPI_comm new_comm = MPI_comm("", prm->oldcomm, prm->newcomm, prm->group);
-//  args->mpi_comm[prm->newcomm] = new_comm;
-//  DUMPI_RETURNING();
-//}
-
 //int report_MPI_Comm_split(const dumpi_comm_split *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
 //  DUMPI_ENTERING();
 //  // TODO This is an architectural issue. We can't know the result of a comm split until
 //  // after the def file would have been written. We should not use global def files because of this
 //  // One fix would be to write each def file individually
-//  WARN_UNUSED(true);
-//  DUMPI_RETURNING();
-//}
-
-//int report_MPI_Comm_free(const dumpi_comm_free *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
-//  DUMPI_ENTERING();
-//  // TODO: What happens after a comm is freed? The implementation could reuse the id and overwrite its value in the final Def file.
 //  WARN_UNUSED(true);
 //  DUMPI_RETURNING();
 //}
@@ -202,15 +56,15 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(send)                      { MACRO_INIT(); otf2_writer.mpi_send(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag); MACRO_RET(); };
   CBACK_INIT(recv)                      { MACRO_INIT(); otf2_writer.mpi_recv(TIME, prm->datatype, prm->count, prm->source, prm->comm, prm->tag); MACRO_RET(); };
   CBACK_INIT(get_count)                 { GENERIC_CALL("MPI_Get_count"); };
-  CBACK_INIT(bsend)                     { GENERIC_CALL("MPI_Bsend"); };
-  CBACK_INIT(ssend)                     { GENERIC_CALL("MPI_Ssend"); };
-  CBACK_INIT(rsend)                     { GENERIC_CALL("MPI_Rsend"); };
+  CBACK_INIT(bsend)                     { MACRO_INIT(); otf2_writer.mpi_bsend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag); MACRO_RET(); };
+  CBACK_INIT(ssend)                     { MACRO_INIT(); otf2_writer.mpi_ssend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag); MACRO_RET(); };
+  CBACK_INIT(rsend)                     { MACRO_INIT(); otf2_writer.mpi_rsend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag); MACRO_RET(); };
   CBACK_INIT(buffer_attach)             { GENERIC_CALL("MPI_Buffer_attach"); };
   CBACK_INIT(buffer_detach)             { GENERIC_CALL("MPI_Buffer_detach"); };
   CBACK_INIT(isend)                     { MACRO_INIT(); otf2_writer.mpi_isend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag, prm->request); MACRO_RET(); };
-  CBACK_INIT(ibsend)                    { GENERIC_CALL("MPI_Ibsend"); };
-  CBACK_INIT(issend)                    { GENERIC_CALL("MPI_Issend"); };
-  CBACK_INIT(irsend)                    { GENERIC_CALL("MPI_Irsend"); };
+  CBACK_INIT(ibsend)                    { MACRO_INIT(); otf2_writer.mpi_ibsend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag, prm->request); MACRO_RET(); };
+  CBACK_INIT(issend)                    { MACRO_INIT(); otf2_writer.mpi_issend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag, prm->request); MACRO_RET(); };
+  CBACK_INIT(irsend)                    { MACRO_INIT(); otf2_writer.mpi_irsend(TIME, prm->datatype, prm->count, prm->dest, prm->comm, prm->tag, prm->request); MACRO_RET(); };
   CBACK_INIT(irecv)                     { MACRO_INIT(); otf2_writer.mpi_irecv(TIME, prm->datatype, prm->count, prm->source, prm->comm, prm->tag, prm->request); MACRO_RET(); };
   CBACK_INIT(wait)                      { MACRO_INIT(); otf2_writer.mpi_wait(TIME, prm->request); MACRO_RET(); };
   CBACK_INIT(test)                      { MACRO_INIT(); otf2_writer.mpi_test(TIME, prm->request, prm->flag); MACRO_RET(); };
@@ -234,10 +88,10 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(startall)                  { GENERIC_CALL("MPI_Startall"); };
   CBACK_INIT(sendrecv)                  { GENERIC_CALL("MPI_Sendrecv"); };
   CBACK_INIT(sendrecv_replace)          { GENERIC_CALL("MPI_Sendrecv_replace"); };
-  CBACK_INIT(type_contiguous)           { GENERIC_CALL("MPI_Type_contiguous"); };
-  CBACK_INIT(type_vector)               { GENERIC_CALL("MPI_Type_vector"); };
+  CBACK_INIT(type_contiguous)           { MACRO_INIT(); otf2_writer.mpi_type_contiguous(TIME, prm->count, prm->oldtype, prm->newtype); MACRO_RET(); };
+  CBACK_INIT(type_vector)               { MACRO_INIT(); otf2_writer.mpi_type_vector(TIME, prm->count, prm->blocklength, prm->stride, prm->oldtype, prm->newtype); MACRO_RET(); };
   CBACK_INIT(type_hvector)              { GENERIC_CALL("MPI_Type_hvector"); };
-  CBACK_INIT(type_indexed)              { GENERIC_CALL("MPI_Type_indexed"); };
+  CBACK_INIT(type_indexed)              { MACRO_INIT(); otf2_writer.mpi_type_indexed(TIME, prm->count, prm->lengths, prm->indices, prm->oldtype, prm->newtype); MACRO_RET(); };
   CBACK_INIT(type_hindexed)             { GENERIC_CALL("MPI_Type_hindexed"); };
   CBACK_INIT(type_struct)               { GENERIC_CALL("MPI_Type_struct"); };
   CBACK_INIT(address)                   { GENERIC_CALL("MPI_Address"); };
@@ -254,37 +108,37 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(barrier)                   { MACRO_INIT(); otf2_writer.mpi_barrier(TIME, prm->comm); MACRO_RET(); };
   CBACK_INIT(bcast)                     { MACRO_INIT(); otf2_writer.mpi_bcast(TIME, prm->count, prm->datatype, prm->root, prm->comm); MACRO_RET(); };
   CBACK_INIT(gather)                    { MACRO_INIT(); otf2_writer.mpi_gather(TIME, prm->sendcount, prm->sendtype, prm->recvcount, prm->recvtype, prm->root, prm->comm); MACRO_RET(); };
-  CBACK_INIT(gatherv)                   { GENERIC_CALL("MPI_Gatherv"); };
+  CBACK_INIT(gatherv)                   { MACRO_INIT(); otf2_writer.mpi_gatherv(TIME, prm->sendcount, prm->sendtype, prm->recvcounts, prm->recvtype, prm->root, prm->comm); MACRO_RET(); };
   CBACK_INIT(scatter)                   { MACRO_INIT(); otf2_writer.mpi_scatter(TIME, prm->sendcount, prm->sendtype, prm->recvcount, prm->recvtype, prm->root, prm->comm); MACRO_RET(); };
-  CBACK_INIT(scatterv)                  { GENERIC_CALL("MPI_Scatterv"); };
+  CBACK_INIT(scatterv)                  { MACRO_INIT(); otf2_writer.mpi_scatterv(TIME, prm->sendcounts, prm->sendtype, prm->recvcount, prm->recvtype, prm->root, prm->comm); MACRO_RET(); };
   CBACK_INIT(allgather)                 { MACRO_INIT(); otf2_writer.mpi_allgather(TIME, prm->sendcount, prm->sendtype, prm->recvcount, prm->recvtype, prm->comm); MACRO_RET(); };
-  CBACK_INIT(allgatherv)                { GENERIC_CALL("MPI_Allgatherv"); };
+  CBACK_INIT(allgatherv)                { MACRO_INIT(); otf2_writer.mpi_allgatherv(TIME, prm->sendcount, prm->sendtype, prm->recvcounts, prm->displs, prm->recvtype, prm->comm); MACRO_RET(); };
   CBACK_INIT(alltoall)                  { MACRO_INIT(); otf2_writer.mpi_alltoall(TIME, prm->sendcount, prm->sendtype, prm->recvcount, prm->recvtype, prm->comm); MACRO_RET(); };
-  CBACK_INIT(alltoallv)                 { GENERIC_CALL("MPI_Alltoallv"); };
+  CBACK_INIT(alltoallv)                 { MACRO_INIT(); otf2_writer.mpi_alltoallv(TIME, prm->sendcounts, prm->sendtype, prm->recvcounts, prm->recvtype, prm->comm); MACRO_RET(); };
   CBACK_INIT(reduce)                    { MACRO_INIT(); otf2_writer.mpi_reduce(TIME, prm->count, prm->datatype, prm->root, prm->comm); MACRO_RET(); };
   CBACK_INIT(op_create)                 { GENERIC_CALL("MPI_Op_create"); };
   CBACK_INIT(op_free)                   { GENERIC_CALL("MPI_Op_free"); };
   CBACK_INIT(allreduce)                 { MACRO_INIT(); otf2_writer.mpi_allreduce(TIME, prm->count, prm->datatype, prm->comm); MACRO_RET(); };
   CBACK_INIT(reduce_scatter)            { MACRO_INIT(); otf2_writer.mpi_reduce_scatter(TIME, prm->recvcounts, prm->datatype, prm->comm); MACRO_RET(); };
-  CBACK_INIT(scan)                      { GENERIC_CALL("MPI_Scan"); };
+  CBACK_INIT(scan)                      { MACRO_INIT(); otf2_writer.mpi_scan(TIME, prm->count, prm->datatype, prm->comm); MACRO_RET(); };
   CBACK_INIT(group_size)                { GENERIC_CALL("MPI_Group_size"); };
   CBACK_INIT(group_rank)                { GENERIC_CALL("MPI_Group_rank"); };
   CBACK_INIT(group_translate_ranks)     { GENERIC_CALL("MPI_Group_translate_ranks"); };
   CBACK_INIT(group_compare)             { GENERIC_CALL("MPI_Group_compare"); };
-  CBACK_INIT(comm_group)                { GENERIC_CALL("MPI_Comm_group"); };
-  CBACK_INIT(group_union)               { GENERIC_CALL("MPI_Group_union"); };
-  CBACK_INIT(group_intersection)        { GENERIC_CALL("MPI_Group_intersection"); };
-  CBACK_INIT(group_difference)          { GENERIC_CALL("MPI_Group_difference"); };
-  CBACK_INIT(group_incl)                { GENERIC_CALL("MPI_Group_incl"); };
-  CBACK_INIT(group_excl)                { GENERIC_CALL("MPI_Group_excl"); };
-  CBACK_INIT(group_range_incl)          { GENERIC_CALL("MPI_Group_range_incl"); };
+  CBACK_INIT(comm_group)                { MACRO_INIT(); otf2_writer.mpi_comm_group(TIME, prm->comm, prm->group); MACRO_RET(); };
+  CBACK_INIT(group_union)               { MACRO_INIT(); otf2_writer.mpi_group_union(TIME, prm->group1, prm->group2, prm->newgroup); MACRO_RET(); };
+  CBACK_INIT(group_intersection)        { MACRO_INIT(); otf2_writer.mpi_group_intersection(TIME, prm->group1, prm->group2, prm->newgroup); MACRO_RET(); };
+  CBACK_INIT(group_difference)          { MACRO_INIT(); otf2_writer.mpi_group_difference(TIME, prm->group1, prm->group2, prm->newgroup); MACRO_RET(); };
+  CBACK_INIT(group_incl)                { MACRO_INIT(); otf2_writer.mpi_group_incl(TIME, prm->group, prm->count, prm->ranks, prm->newgroup); MACRO_RET(); };
+  CBACK_INIT(group_excl)                { MACRO_INIT(); otf2_writer.mpi_group_excl(TIME, prm->group, prm->count, prm->ranks, prm->newgroup); MACRO_RET(); };
+  CBACK_INIT(group_range_incl)          { MACRO_INIT(); otf2_writer.mpi_group_range_incl(TIME, prm->group, prm->count, prm->ranges, prm->newgroup); MACRO_RET(); };
   CBACK_INIT(group_range_excl)          { GENERIC_CALL("MPI_Group_range_excl"); };
   CBACK_INIT(group_free)                { GENERIC_CALL("MPI_Group_free"); };
   CBACK_INIT(comm_size)                 { GENERIC_CALL("MPI_Comm_size"); };
   CBACK_INIT(comm_rank)                 { GENERIC_CALL("MPI_Comm_rank"); };
   CBACK_INIT(comm_compare)              { GENERIC_CALL("MPI_Comm_compare"); };
-  CBACK_INIT(comm_dup)                  { GENERIC_CALL("MPI_Comm_dup"); };
-  CBACK_INIT(comm_create)               { GENERIC_CALL("MPI_Comm_create"); };
+  CBACK_INIT(comm_dup)                  { MACRO_INIT(); otf2_writer.mpi_comm_dup(TIME, prm->oldcomm, prm->newcomm); MACRO_RET(); };
+  CBACK_INIT(comm_create)               { MACRO_INIT(); otf2_writer.mpi_comm_create(TIME, prm->oldcomm, prm->group, prm->newcomm); MACRO_RET(); };
   CBACK_INIT(comm_split)                { GENERIC_CALL("MPI_Comm_split"); };
   CBACK_INIT(comm_free)                 { GENERIC_CALL("MPI_Comm_free"); };
   CBACK_INIT(comm_test_inter)           { GENERIC_CALL("MPI_Comm_test_inter"); };
@@ -417,11 +271,11 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(request_get_status)        { GENERIC_CALL("MPI_Request_get_status"); };
   CBACK_INIT(type_create_darray)        { GENERIC_CALL("MPI_Type_create_darray"); };
   CBACK_INIT(type_create_hindexed)      { GENERIC_CALL("MPI_Type_create_hindexed"); };
-  CBACK_INIT(type_create_hvector)       { GENERIC_CALL("MPI_Type_create_hvector"); };
+  CBACK_INIT(type_create_hvector)       { MACRO_INIT(); otf2_writer.mpi_type_create_hvector(TIME, prm->count, prm->blocklength, prm->oldtype, prm->newtype); MACRO_RET(); };
   CBACK_INIT(type_create_indexed_block) { GENERIC_CALL("MPI_Type_create_indexed_block"); };
   CBACK_INIT(type_create_resized)       { GENERIC_CALL("MPI_Type_create_resized"); };
-  CBACK_INIT(type_create_struct)        { GENERIC_CALL("MPI_Type_create_struct"); };
-  CBACK_INIT(type_create_subarray)      { GENERIC_CALL("MPI_Type_create_subarray"); };
+  CBACK_INIT(type_create_struct)        { MACRO_INIT(); otf2_writer.mpi_type_create_struct(TIME, prm->count, prm->blocklengths, prm->displacements, prm->oldtypes, prm->newtype); MACRO_RET(); };
+  CBACK_INIT(type_create_subarray)      { MACRO_INIT(); otf2_writer.mpi_type_create_subarray(TIME, prm->ndims, prm->subsizes, prm->oldtype, prm->newtype); MACRO_RET(); };
   CBACK_INIT(type_get_extent)           { GENERIC_CALL("MPI_Type_get_extent"); };
   CBACK_INIT(type_get_true_extent)      { GENERIC_CALL("MPI_Type_get_true_extent"); };
   CBACK_INIT(unpack_external)           { GENERIC_CALL("MPI_Unpack_external"); };

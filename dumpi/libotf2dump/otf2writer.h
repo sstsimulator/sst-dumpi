@@ -13,7 +13,7 @@ namespace dumpi {
   // TODO make these more meaningful
   typedef int32_t request_t;
   typedef int32_t comm_t;
-  typedef int32_t mpi_type_t;
+  typedef int16_t mpi_type_t;
   typedef uint64_t otf2_time_t;
 
   enum OTF2_WRITER_RESULT {
@@ -24,7 +24,10 @@ namespace dumpi {
     OTF2_WRITER_ERROR_OUT_OF_RANGE,
     OTF2_WRITER_ERROR_NO_RANK_SET,
     OTF2_WRITER_ERROR_WRITER_NOT_SET,
-    OTF2_WRITER_ERROR_ARCHIVE_ALREADY_OPEN
+    OTF2_WRITER_ERROR_ARCHIVE_ALREADY_OPEN,
+    OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP,
+    OTF2_WRITER_ERROR_UKNOWN_MPI_COMM,
+    OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE
   };
 
   enum OTF2_WRITER_VERBOSITY {
@@ -103,34 +106,74 @@ namespace dumpi {
     OTF2_WRITER_RESULT generic_call(otf2_time_t start, otf2_time_t stop, std::string name);
 
     OTF2_WRITER_RESULT mpi_send(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
-    OTF2_WRITER_RESULT mpi_recv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag);
+    OTF2_WRITER_RESULT mpi_bsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
+    OTF2_WRITER_RESULT mpi_ssend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
+    OTF2_WRITER_RESULT mpi_rsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
+
     OTF2_WRITER_RESULT mpi_isend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+    OTF2_WRITER_RESULT mpi_ibsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+    OTF2_WRITER_RESULT mpi_issend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+    OTF2_WRITER_RESULT mpi_irsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+
+    OTF2_WRITER_RESULT mpi_recv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag);
     OTF2_WRITER_RESULT mpi_irecv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request);
 
     OTF2_WRITER_RESULT mpi_wait(otf2_time_t start, otf2_time_t stop, request_t request);
-    OTF2_WRITER_RESULT mpi_waitany(otf2_time_t start, otf2_time_t stop, request_t request);
     OTF2_WRITER_RESULT mpi_waitall(otf2_time_t start, otf2_time_t stop, int count, request_t* requests);
+    OTF2_WRITER_RESULT mpi_waitany(otf2_time_t start, otf2_time_t stop, request_t request);
     OTF2_WRITER_RESULT mpi_waitsome(otf2_time_t start, otf2_time_t stop, request_t* requests, int outcount, int* indices);
 
     OTF2_WRITER_RESULT mpi_test(otf2_time_t start, otf2_time_t stop, request_t request, int flag);
-    OTF2_WRITER_RESULT mpi_testany(otf2_time_t start, otf2_time_t stop, request_t* requests, int index, int flag);
     OTF2_WRITER_RESULT mpi_testall(otf2_time_t start, otf2_time_t stop, int count, request_t* requests, int flag);
+    OTF2_WRITER_RESULT mpi_testany(otf2_time_t start, otf2_time_t stop, request_t* requests, int index, int flag);
     OTF2_WRITER_RESULT mpi_testsome(otf2_time_t start, otf2_time_t stop, request_t* requests, int outcount, int* indices);
 
+    // TODO FIX STRIDES! must iterate through and aggregate each count on v collectives because they get compacted.
+    OTF2_WRITER_RESULT mpi_allgather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
+    OTF2_WRITER_RESULT mpi_allgatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, int* displs, mpi_type_t recvtype, comm_t comm);
+    OTF2_WRITER_RESULT mpi_allreduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm);
+    OTF2_WRITER_RESULT mpi_alltoall(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
+    OTF2_WRITER_RESULT mpi_alltoallv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_barrier(otf2_time_t start, otf2_time_t stop, comm_t comm);
     OTF2_WRITER_RESULT mpi_bcast(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_gather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_scatter(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_allgather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
-    OTF2_WRITER_RESULT mpi_alltoall(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
+    OTF2_WRITER_RESULT mpi_gatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_allreduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce_scatter(otf2_time_t start, otf2_time_t stop, int* recvcounts, mpi_type_t type, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatter(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatterv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
+
+
+    OTF2_WRITER_RESULT mpi_group_difference(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
+    OTF2_WRITER_RESULT mpi_group_excl(otf2_time_t start, otf2_time_t stop, int group, int count, int*ranks, int newgroup);
+    OTF2_WRITER_RESULT mpi_group_incl(otf2_time_t start, otf2_time_t stop, int group, int count, int*ranks, int newgroup);
+    OTF2_WRITER_RESULT mpi_group_intersection(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
+    OTF2_WRITER_RESULT mpi_group_range_incl(otf2_time_t start, otf2_time_t stop, int group, int count, int**ranges, int newgroup);
+    //OTF2_WRITER_RESULT mpi_group_range_excl(otf2_time_t start, otf2_time_t stop, int group, int count, int**ranges, int newgroup);
+    OTF2_WRITER_RESULT mpi_group_union(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
+
+    OTF2_WRITER_RESULT mpi_comm_dup(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, comm_t newcomm);
+    OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
+    OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
+    //OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
+
+    // TODO FIX STRIDES! must iterate through and aggregate each member because they get compacted.
+
+    // These are depricated in MPI v2.0
+    OTF2_WRITER_RESULT mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, int stride, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, int* indices, mpi_type_t oldtype, mpi_type_t newtype);
+    //OTF2_WRITER_RESULT mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t newtype);
+
+    OTF2_WRITER_RESULT mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, int* displacements, mpi_type_t* oldtypes, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_create_subarray(otf2_time_t start, otf2_time_t stop, int ndims, int* subsizes, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
 
   private:
     void incomplete_call(int request_id, REQUEST_TYPE type);
     int complete_call(request_t request_id, uint64_t timestamp);
-    bool is_root(int world_rank, comm_t comm);
+    bool ranks_equivalent(int world_rank, int comm_rank, comm_t comm);
     int get_comm_rank(int world_rank, comm_t comm);
     int get_comm_size(comm_t comm);
     int mk_archive_dir(const char *path);
@@ -140,6 +183,15 @@ namespace dumpi {
     void close_evt_file();
     void write_def_files();
     uint64_t count_bytes(mpi_type_t type, uint64_t count);
+    int array_sum(int* array, int count);
+
+    bool group_is_known(int group);
+    bool comm_is_known(int comm);
+    bool type_is_known(mpi_type_t type);
+
+    // prevent redundant code for MPI call variants
+    OTF2_WRITER_RESULT mpi_send_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
+    OTF2_WRITER_RESULT mpi_isend_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
 
   private:
     std::string directory;
