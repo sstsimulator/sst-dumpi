@@ -25,12 +25,4 @@ typedef struct d2o2opt {
   bool skip_unused_calls;
 } d2o2opt;
 
-/**
- * Struct a passed into callbacks.
- */
-struct DumpiArgs {
-  d2o2opt program_options;
-  dumpi::OTF2_Writer otf2_writer;
-};
-
 #endif // DUMPI2OTF2_H

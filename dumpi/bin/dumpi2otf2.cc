@@ -50,8 +50,6 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <getopt.h>
 #include <assert.h>
 
-DumpiArgs otf2_defs;
-
 static int parse_cli_options(int argc, char **argv, d2o2opt *opt);
 static std::vector<std::string> glob_files(const char* path);
 static void read_header(const dumpi_header *head);
@@ -63,7 +61,8 @@ static std::vector<int> get_type_sizes(dumpi_profile*);
 int main(int argc, char **argv) {
   dumpi_profile *profile;
   libundumpi_callbacks cback;
-  d2o2opt& opt = otf2_defs.program_options;
+  d2o2opt opt;
+  dumpi::OTF2_Writer writer;
 
   if(parse_cli_options(argc, argv, &opt) == 0) return 1;
 
@@ -76,9 +75,7 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  auto& writer = otf2_defs.otf2_writer;
-  if (opt.verbose == 1)
-    writer.set_verbosity(dumpi::OWV_INFO);
+  if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
   writer.open_archive(opt.output_archive, dumpi_bin_files.size(), true);
   writer.register_comm_world(DUMPI_COMM_WORLD);
 
@@ -88,7 +85,7 @@ int main(int argc, char **argv) {
     writer.set_rank(rank);
     register_type_sizes(profile, &writer);
 
-    undumpi_read_stream(profile, &cback, (void*)&otf2_defs);
+    undumpi_read_stream(profile, &cback, (void*)&writer);
     undumpi_close(profile);
   }
   writer.close_archive();
@@ -136,7 +133,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
   }
 
   if (!input_set) {
-    printf("%s", "Error: No path Dumpi trace path set. Use '-i'\n");
+    printf("%s", "Error: No Dumpi trace path set. Use '-i'\n");
     print_usage();
     return 0;
   }

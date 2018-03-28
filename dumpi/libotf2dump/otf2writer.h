@@ -130,8 +130,8 @@ namespace dumpi {
 
     // TODO FIX STRIDES! must iterate through and aggregate each count on v collectives because they get compacted.
     OTF2_WRITER_RESULT mpi_allgather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
-    OTF2_WRITER_RESULT mpi_allgatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, int* displs, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_allreduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm);
+    OTF2_WRITER_RESULT mpi_allgatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_alltoall(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_alltoallv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_barrier(otf2_time_t start, otf2_time_t stop, comm_t comm);
@@ -143,7 +143,7 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_scatter(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_scatterv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_scan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
-
+    //OTF2_WRITER_RESULT mpi_exscan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
 
     OTF2_WRITER_RESULT mpi_group_difference(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
     OTF2_WRITER_RESULT mpi_group_excl(otf2_time_t start, otf2_time_t stop, int group, int count, int*ranks, int newgroup);
@@ -156,17 +156,16 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_comm_dup(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, comm_t newcomm);
     OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
     OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
+    // TODO: need to know the result of this before recording gatherv, scatterv, allgatherv, alltoallv, and reduce_scatter
     //OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
-
-    // TODO FIX STRIDES! must iterate through and aggregate each member because they get compacted.
 
     // These are depricated in MPI v2.0
     OTF2_WRITER_RESULT mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype);
-    OTF2_WRITER_RESULT mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, int stride, mpi_type_t oldtype, mpi_type_t newtype);
-    OTF2_WRITER_RESULT mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, int* indices, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, mpi_type_t oldtype, mpi_type_t newtype);
     //OTF2_WRITER_RESULT mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t newtype);
 
-    OTF2_WRITER_RESULT mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, int* displacements, mpi_type_t* oldtypes, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_subarray(otf2_time_t start, otf2_time_t stop, int ndims, int* subsizes, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
 
@@ -182,48 +181,51 @@ namespace dumpi {
     void check_otf2(OTF2_ErrorCode status, const char* description);
     void close_evt_file();
     void write_def_files();
+
+    // Compact some redundant code
+    template<typename T>
+    int array_sum(const T* array, int count);
     uint64_t count_bytes(mpi_type_t type, uint64_t count);
-    int array_sum(int* array, int count);
 
     bool group_is_known(int group);
     bool comm_is_known(int comm);
     bool type_is_known(mpi_type_t type);
 
-    // prevent redundant code for MPI call variants
+    // For MPI call variants
     OTF2_WRITER_RESULT mpi_send_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
     OTF2_WRITER_RESULT mpi_isend_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
 
   private:
-    std::string directory;
-    std::unordered_map<int, std::vector<int>> mpi_group;
-    std::map<int, MPI_Comm_Struct> mpi_comm;
-    std::unordered_map<int, int> event_count;
-    std::unordered_map<mpi_type_t, int> type_sizes;
-    std::set<comm_t> unknown_comms; // Comms that have shown up in the event files but have not been registered.
+    std::string _directory;
+    std::unordered_map<int, std::vector<int>> _mpi_group;
+    std::map<int, MPI_Comm_Struct> _mpi_comm;
+    std::unordered_map<int, int> _event_count;
+    std::unordered_map<mpi_type_t, int> _type_sizes;
+    std::set<comm_t> _unknown_comms; // Comms that have shown up in the event files but have not been registered.
 
     OTF2DefTable _string;
     OTF2DefTable _region;
 
-    std::unordered_map<int, irecv_capture> irecv_requests;
-    std::unordered_map<int, REQUEST_TYPE> request_type;
+    std::unordered_map<int, irecv_capture> _irecv_requests;
+    std::unordered_map<int, REQUEST_TYPE> _request_type;
 
-    OTF2_Archive* archive = nullptr;
-    OTF2_EvtWriter* evt_writer = nullptr;
-    OTF2_TimeStamp start_time = ~0;
-    OTF2_TimeStamp stop_time = 0;
+    OTF2_Archive* _archive = nullptr;
+    OTF2_EvtWriter* _evt_writer = nullptr;
+    OTF2_TimeStamp _start_time = ~0;
+    OTF2_TimeStamp _stop_time = 0;
     int rank;
-    int num_ranks = -1;
-    int comm_world_id = -1;
+    int _num_ranks = -1;
+    int _comm_world_id = -1;
 
-    OTF2_WRITER_VERBOSITY verbosity = OWV_NONE;
-    uint64_t clock_resolution = 0;
+    // TODO implement clock
+    OTF2_WRITER_VERBOSITY _verbosity = OWV_NONE;
+    uint64_t _clock_resolution = 0;
 
     // The first three COMM_GROUPS are reserved.
     const uint64_t COMM_LOCATIONS_GROUP_ID = 0;
     const uint64_t COMM_WORLD_GROUP_ID = 1;
     const uint64_t COMM_SELF_GROUP_ID = 2;
     const uint64_t USER_DEF_COMM_GROUP_OFFSET = 3;
-
   };
 }
 #endif // OTF2WRITER_H
