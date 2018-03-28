@@ -75,11 +75,14 @@ int main(int argc, char **argv) {
     return 2;
   }
 
+  // Initialize the writer
   if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
   writer.open_archive(opt.output_archive, dumpi_bin_files.size(), true);
   writer.register_comm_world(DUMPI_COMM_WORLD);
+  writer.register_null_request(DUMPI_REQUEST_NULL);
+  writer.set_clock_resolution(1E9);
 
-  // Loop over ranks
+  // Loop over trace files. Dumpi creates one trace file per MPI rank
   for(int rank = 0; rank < dumpi_bin_files.size(); rank++) {
     profile = undumpi_open(dumpi_bin_files[rank].c_str());
     writer.set_rank(rank);
@@ -99,7 +102,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
 
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
-  while((opt = getopt(argc, argv, "vhsi:o:")) != -1) {
+  while((opt = getopt(argc, argv, "vhi:o:")) != -1) {
       switch(opt) {
         case 'v':
           fprintf(stdout, "Setting output to verbose.\n");
@@ -117,9 +120,9 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           settings->output_archive = strdup(optarg);
           output_set = true;
           break;
-        case 's':
-          settings->skip_unused_calls = true;
-          break;
+//        case 's':
+//          settings->skip_unused_calls = true;
+//          break;
         default:
           fprintf(stderr, "Invalid argument %c.\n", opt);
           break;
@@ -147,9 +150,9 @@ void print_usage() {
         "   Options:\n"
         "        -h               Print this help\n"
         "        -v               Verbose status output\n"
-        "        -s               Skip callbacks that will not be used by SST/macro (untested)"
         "        -i  archive      Path to Dumpi tracefile\n"
         "        -o  archive      Output OTF2 archive name\n");
+        //"        -s               Skip callbacks that will not be used by SST/macro (untested)"
 }
 
 static void register_type_sizes(dumpi_profile *profile, dumpi::OTF2_Writer* writer) {

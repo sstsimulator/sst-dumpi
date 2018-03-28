@@ -26,8 +26,8 @@
   return 1;
 
 // Turns a dumpi_clock struct into an integer of total nanoseconds
-static inline uint32_t convert_time(dumpi_clock c) {
-  return (((uint64_t)c.sec) * 1E9) + (uint64_t)c.nsec;
+static inline uint64_t convert_time(dumpi_clock c) {
+  return ((((uint64_t)c.sec) * 1E9) + (uint64_t)c.nsec);
 }
 
 // Partially generated using set_callbacks() in dumpi2ascii-callbacks.cc and this vim substitution:

@@ -10,7 +10,6 @@
 
 namespace dumpi {
 
-  // TODO make these more meaningful
   typedef int32_t request_t;
   typedef int32_t comm_t;
   typedef int16_t mpi_type_t;
@@ -99,9 +98,13 @@ namespace dumpi {
     OTF2_WRITER_RESULT set_rank(int rank);
 
     void register_comm_world(comm_t id);
+    void register_type(mpi_type_t type, int size);
+    void register_null_request(request_t request);
     void set_verbosity(OTF2_WRITER_VERBOSITY verbosity);
     void set_clock_resolution(uint64_t ticks_per_second);
-    void register_type(mpi_type_t type, int size);
+
+    // Remove calls that SST/macro does not need for trace replay.
+    //void skip_unused_calls(bool);
 
     OTF2_WRITER_RESULT generic_call(otf2_time_t start, otf2_time_t stop, std::string name);
 
@@ -128,7 +131,6 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_testany(otf2_time_t start, otf2_time_t stop, request_t* requests, int index, int flag);
     OTF2_WRITER_RESULT mpi_testsome(otf2_time_t start, otf2_time_t stop, request_t* requests, int outcount, int* indices);
 
-    // TODO FIX STRIDES! must iterate through and aggregate each count on v collectives because they get compacted.
     OTF2_WRITER_RESULT mpi_allgather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_allreduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm);
     OTF2_WRITER_RESULT mpi_allgatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm);
@@ -156,7 +158,8 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_comm_dup(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, comm_t newcomm);
     OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
     OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
-    // TODO: need to know the result of this before recording gatherv, scatterv, allgatherv, alltoallv, and reduce_scatter
+
+    // TODO: need to know the result of comm_split before recording gatherv, scatterv, allgatherv, alltoallv, and reduce_scatter
     //OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
 
     // These are depricated in MPI v2.0
@@ -216,8 +219,9 @@ namespace dumpi {
     int rank;
     int _num_ranks = -1;
     int _comm_world_id = -1;
+    request_t _null_request = -1;
+    bool _skip_unused_calls = false;
 
-    // TODO implement clock
     OTF2_WRITER_VERBOSITY _verbosity = OWV_NONE;
     uint64_t _clock_resolution = 0;
 

@@ -4,13 +4,14 @@
 #include <algorithm>
 #include <limits.h>
 #include <cstring>
+#include <unordered_set>
 
 #define FIXME_COMM_SELF 1000
 
 #define CHECK_RANK(rank, _num_ranks) \
   if (rank < 0 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
 
-#define CHECK__evt_writer() \
+#define CHECK_EVT_WRITER() \
   if (_evt_writer == nullptr) return OTF2_WRITER_ERROR_WRITER_NOT_SET;
 
 #define CHECK_COMM() \
@@ -28,12 +29,15 @@
     logger(OWV_ERROR, _fname + " failed");     \
     return OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP;}
 
-#define _ENTER(fname)                    \
-  CHECK_RANK(rank, _num_ranks);              \
-  CHECK__evt_writer();                       \
+#define _ENTER(fname)                       \
+  CHECK_RANK(rank, _num_ranks);             \
+  CHECK_EVT_WRITER();                       \
+  logger(OWV_INFO, fname); fflush(stdout);  \
+  _start_time = std::min(_start_time, start);             \
+  _stop_time = std::max(_stop_time, stop);               \
   auto this_region = _region[string(fname)];\
   string _fname = fname;                    \
-  OTF2_EvtWriter_Enter(_evt_writer,          \
+  OTF2_EvtWriter_Enter(_evt_writer,         \
                        nullptr,             \
                        start,               \
                        this_region);        \
@@ -61,8 +65,6 @@ using std::to_string;
 
 namespace dumpi {
   OTF2_Writer::OTF2_Writer() {
-//    printf("CONSTRUCTED\n");
-//    fflush(stdout);
   }
 
   string OTF2_Writer::get_otf2_directory() {
@@ -144,6 +146,10 @@ namespace dumpi {
 
   // lousy logger implementation
   void OTF2_Writer::logger(OTF2_WRITER_VERBOSITY level, string msg) {
+    logger(level, msg.c_str());
+  }
+
+  void OTF2_Writer::logger(OTF2_WRITER_VERBOSITY level, const char* msg) {
     if (_verbosity >= level && _verbosity != OWV_NONE) {
       const char* prepender = "";
       switch (level) {
@@ -163,12 +169,9 @@ namespace dumpi {
         prepender = "OTF2 WRITER  (UNK): ";
         break;
       }
-      printf("%s%s\n", prepender, msg.c_str());
+      printf("%s%s\n", prepender, msg);
+      fflush(stdout);
     }
-  }
-
-  void OTF2_Writer::logger(OTF2_WRITER_VERBOSITY level, const char* msg) {
-    logger(level, string(msg));
   }
 
   void OTF2_Writer::check_otf2(OTF2_ErrorCode status, const char* description) {
@@ -198,6 +201,13 @@ namespace dumpi {
       logger(OWV_ERROR, str);
     }
 
+    if (_clock_resolution == 0) logger(OWV_ERROR, "Clock Resolution not set, use 'set_clock_resolution() to set ticks per second'");
+
+    check_otf2(OTF2_GlobalDefWriter_WriteClockProperties( defwriter,
+                                                          _clock_resolution,
+                                                          _start_time,
+                                                          _stop_time - _start_time), "Writing clock properties to global def file");
+
     // Strings must come first in the def file
     // Otherwise tools like otf2_print will report errors, even though all of the information is available
     int EMPTY_STRING = _string[""];
@@ -214,11 +224,13 @@ namespace dumpi {
     for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) comm_it->second.name;
 
     // STRINGS
+    logger(OWV_INFO, "Writing STRINGs to the def file");
     for(int i = 0; i < _string.size(); i++) {
       check_otf2(OTF2_GlobalDefWriter_WriteString(defwriter, i, _string[i].c_str()), "Writing string to global def file");
     }
 
     //PARADIGM
+    logger(OWV_INFO, "Writing PARADIGMs to the def file");
     check_otf2(OTF2_GlobalDefWriter_WriteParadigm( defwriter,
                                         OTF2_PARADIGM_MPI,
                                         _string["MPI"],
@@ -226,6 +238,7 @@ namespace dumpi {
                                         "Writing Paradigm to global def file");
 
     // REGIONS
+    logger(OWV_INFO, "Writing REGIONs to the def file");
     for(int i = 0; i < _region.size(); i++) {
       string region_name = _region[i];
       auto str_id = _string[region_name];
@@ -244,6 +257,7 @@ namespace dumpi {
     }
 
     // SYSTEM_TREE_NODE
+    logger(OWV_INFO, "Writing SYSTEM_TREE_NODE to the def file");
     check_otf2(OTF2_GlobalDefWriter_WriteSystemTreeNode( defwriter,
                                               0 /* id */,
                                               0 /* name */,
@@ -252,6 +266,7 @@ namespace dumpi {
                                               "Writing SystemTreeNode to global def file");
 
     // LOCATION_GROUP
+    logger(OWV_INFO, "Writing LOCATION_GROUPs to the def file");
     // locationgroup appears to be used to identify computation localities. For example, all of the threads on a given node.
     for (int i = 0; i < _num_ranks; i++) {
       char rank_name[32];
@@ -265,6 +280,7 @@ namespace dumpi {
     }
 
     // LOCATION
+    logger(OWV_INFO, "Writing LOCATIONs to the def file");
     // Each location will identifies a rank. Must come before groups.
     for (int i = 0; i < _num_ranks; i++) {
       char loc_name[32];
@@ -279,6 +295,7 @@ namespace dumpi {
     }
 
     // GROUP
+    logger(OWV_INFO, "Writing GROUPs to the def file");
     // ScoreP behavior: Each COMM points to a GROUP def of type OTF2_GROUP_TYPE_COMM_GROUP.
     // Althout the GROUP defs enumerate their ranks, Each must point to a root group of type OTF2_GROUP_TYPE_COMM_LOCATIONS.
     // ScoreP does not seem to nest groups, instead flattening each to the global LOCATIONS group.
@@ -453,8 +470,16 @@ namespace dumpi {
   }
 
   void OTF2_Writer::register_comm_world(comm_t id) {
+    std::vector<int> w_group;
+    for(int i = 0; i < _num_ranks; i++) w_group.push_back(i);
+    _mpi_group[COMM_WORLD_GROUP_ID] = w_group;
     _comm_world_id = id;
+    _mpi_comm[id] = {.name="MPI_COMM_WORLD", .parent=0, .id=id, .group=(int)COMM_WORLD_GROUP_ID};
     _unknown_comms.erase(id);
+  }
+
+  void OTF2_Writer::register_null_request(request_t request) {
+    _null_request = request;
   }
 
   void OTF2_Writer::set_verbosity(OTF2_WRITER_VERBOSITY verbosity) {
@@ -565,15 +590,18 @@ namespace dumpi {
         printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
       } else {
         OTF2_EvtWriter_MpiIrecv(_evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+        _irecv_requests.erase(irecv_it);
         events++;
       }
     }
+    _request_type.erase(t);
     return events;
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(OTF2_EvtWriter* _evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     CHECK_COMM();
     incomplete_call(request, REQUEST_TYPE_ISEND);
+    //logger(OWV_INFO, string("  MPI isend request ") + to_string(request));
     OTF2_EvtWriter_MpiIsend(_evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count, request);
     _event_count[rank]++;
     return OTF2_WRITER_SUCCESS;
@@ -606,6 +634,7 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irecv");
     CHECK_COMM();
+    //logger(OWV_INFO, string("  MPI irecv request ") + to_string(request));
     _irecv_requests[request] = {count, type, source, tag, comm, request};
     incomplete_call(request, REQUEST_TYPE_IRECV);
     OTF2_EvtWriter_MpiIrecvRequest(_evt_writer, nullptr, start, request);
@@ -614,6 +643,9 @@ namespace dumpi {
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::generic_call(otf2_time_t start, otf2_time_t stop, string name) {
+    if (stop < start) {
+      printf("ERROR, end happened before start\n");
+    }
     _ENTER(name);
     _LEAVE();
   }
@@ -633,8 +665,14 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_waitall(otf2_time_t start, otf2_time_t stop, int count, request_t* requests) {
     _ENTER("MPI_Waitall");
     int events = 0;
-    for(int i = 0; i < count; i++)
-      events += complete_call(requests[i], start);
+    std::unordered_set<request_t> called;
+    for(int i = 0; i < count; i++) {
+      auto req = requests[i];
+      if (req != _null_request && called.find(req) == called.end()) {
+        events += complete_call(req, start);
+        called.insert(req);
+      }
+    }
     _event_count[rank] += events;
     _LEAVE();
   }
@@ -980,10 +1018,9 @@ namespace dumpi {
     _LEAVE();
   }
 
-
   bool OTF2_Writer::comm_is_known(comm_t comm) {
     if (_mpi_comm.find(comm) == _mpi_comm.end()) {
-      logger(OWV_WARN, string("Unknown Communicator (") + to_string(comm));
+      logger(OWV_WARN, string("Unknown Communicator (") + to_string(comm) + ")");
       return false;
     }
     return true;
@@ -1148,13 +1185,16 @@ namespace dumpi {
     return _mpi_group[_mpi_comm[comm].group].size();
   }
 
- uint64_t OTF2_Writer::count_bytes(mpi_type_t type, uint64_t count){
+  uint64_t OTF2_Writer::count_bytes(mpi_type_t type, uint64_t count){
    if (_type_sizes.find(type) == _type_sizes.end()) {
      logger(OWV_ERROR, string("Unkown data type (") + to_string((int)type) + "). Assuming 4 bytes in size.");
      return 4*count;
    } else return _type_sizes[type]*count;
- }
+  }
 
+//  void OTF2_Writer::skip_unused_calls(bool skip_unused) {
+//    _skip_unused_calls = skip_unused;
+//  }
 
   OTF2DefTable::OTF2DefTable() {}
   int OTF2DefTable::map(string string)
