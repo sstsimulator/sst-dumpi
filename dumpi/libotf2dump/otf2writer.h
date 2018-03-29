@@ -164,13 +164,16 @@ namespace dumpi {
 
     // These are depricated in MPI v2.0
     OTF2_WRITER_RESULT mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
-    OTF2_WRITER_RESULT mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, mpi_type_t oldtype, mpi_type_t newtype);
-    //OTF2_WRITER_RESULT mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_hindexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t* oldtypes, mpi_type_t newtype);
 
     OTF2_WRITER_RESULT mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_subarray(otf2_time_t start, otf2_time_t stop, int ndims, int* subsizes, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
+    OTF2_WRITER_RESULT mpi_type_create_hindexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
   private:
     void incomplete_call(int request_id, REQUEST_TYPE type);
@@ -197,6 +200,10 @@ namespace dumpi {
     // For MPI call variants
     OTF2_WRITER_RESULT mpi_send_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
     OTF2_WRITER_RESULT mpi_isend_inner(OTF2_EvtWriter* evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+    void mpi_t_struct_inner(const char* fname, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype);
+    void mpi_t_vector_inner(const char* fname, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
+    void mpi_t_indexed_inner(const char* name, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
+
 
   private:
     std::string _directory;

@@ -1066,6 +1066,12 @@ namespace dumpi {
     _LEAVE();
   }
 
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm) {
+//    _ENTER("MPI_Comm_split");
+
+//    _LEAVE();
+//  }
+
   OTF2_WRITER_RESULT OTF2_Writer::mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_contiguous");
 
@@ -1079,48 +1085,76 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
-    _ENTER("MPI_Type_vector");
-
-    if (!type_is_known(oldtype)){
-      logger(OWV_ERROR, string("MPI_type_vector failed"));
-      return OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE;
-    }
-
-    //TODO check math. As I understand it, strides are not part of the communication.
-    _type_sizes[newtype] = count_bytes(oldtype, blocklength) * count;
-
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
+    _ENTER("MPI_Type_hvector");
+    mpi_t_vector_inner("MPI_Type_hvector", count, blocklength, oldtype, newtype);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, mpi_type_t oldtype, mpi_type_t newtype) {
-    _ENTER("MPI_Type_indexed");
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
+    _ENTER("MPI_Type_vector");
+    mpi_t_vector_inner("MPI_Type_vector", count, blocklength, oldtype, newtype);
+    _LEAVE();
+  }
 
+  void OTF2_Writer::mpi_t_vector_inner(const char* fname, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
     if (!type_is_known(oldtype)){
-      logger(OWV_ERROR, string("MPI_type_indexed failed"));
-      return OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE;
+      logger(OWV_ERROR, string(fname) + " failed");
+      return;
+    }
+    _type_sizes[newtype] = count_bytes(oldtype, blocklength) * count;
+  }
+
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+    _ENTER("MPI_Type_indexed");
+    mpi_t_indexed_inner("MPI_Type_indexed", count, lengths, oldtype, newtype);
+    _LEAVE();
+  }
+
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hindexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+    _ENTER("MPI_Type_hindexed");
+    mpi_t_indexed_inner("MPI_Type_hindexed", count, lengths, oldtype, newtype);
+    _LEAVE();
+  }
+
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hindexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+    _ENTER("MPI_Type_hindexed");
+    mpi_t_indexed_inner("MPI_Type_hindexed", count, lengths, oldtype, newtype);
+    _LEAVE();
+  }
+
+  void OTF2_Writer::mpi_t_indexed_inner(const char* name, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+    if (!type_is_known(oldtype)){
+      logger(OWV_ERROR, string(name) + " failed");
+      return;
     }
 
     _type_sizes[newtype] = count_bytes(oldtype, array_sum(lengths, count));
+  }
 
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
+    _ENTER("MPI_Type_struct");
+    mpi_t_struct_inner("MPI_Type_struct", count, blocklengths, oldtypes, newtype);
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
     _ENTER("MPI_Type_create_struct");
+    mpi_t_struct_inner("MPI_Type_create_struct", count, blocklengths, oldtypes, newtype);
+    _LEAVE();
+  }
 
+  void OTF2_Writer::mpi_t_struct_inner(const char* fname, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
     int sum = 0;
     for(int i = 0; i < count; i++) {
       if (!type_is_known(oldtypes[i])){
-        logger(OWV_ERROR, string("MPI_Type_create_struct failed"));
-        return OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE;
+        logger(OWV_ERROR, string(fname) + "failed");
+        return;
       }
-      sum += blocklengths[i] * _type_sizes[oldtypes[i]];
+      sum += count_bytes(oldtypes[i], blocklengths[i]);
     }
 
     _type_sizes[newtype] = sum;
-
-    _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_subarray(otf2_time_t start, otf2_time_t stop, int ndims, int* subsizes, mpi_type_t oldtype, mpi_type_t newtype) {
@@ -1137,15 +1171,8 @@ namespace dumpi {
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
-    _ENTER("MPI_Type_hvector");
-
-    if (!type_is_known(oldtype)){
-      logger(OWV_ERROR, string("MPI_Type_hvector failed"));
-      return OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE;
-    }
-
-    _type_sizes[newtype] = count * blocklength * _type_sizes[oldtype];
-
+    _ENTER("MPI_Type_create_hvector");
+    mpi_t_vector_inner("MPI_Type_create_hvector", count, blocklength, oldtype, newtype);
     _LEAVE();
   }
 

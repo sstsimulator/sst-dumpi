@@ -73,8 +73,8 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(type_vector)               { MACRO_INIT(); otf2_writer.mpi_type_vector(TIME, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
   CBACK_INIT(type_hvector)              { GENERIC_CALL("MPI_Type_hvector"); };
   CBACK_INIT(type_indexed)              { MACRO_INIT(); otf2_writer.mpi_type_indexed(TIME, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_hindexed)             { GENERIC_CALL("MPI_Type_hindexed"); };
-  CBACK_INIT(type_struct)               { GENERIC_CALL("MPI_Type_struct"); };
+  CBACK_INIT(type_hindexed)             { MACRO_INIT(); otf2_writer.mpi_type_indexed(TIME, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
+  CBACK_INIT(type_struct)               { MACRO_INIT(); otf2_writer.mpi_type_struct(TIME, p.count, p.lengths, p.oldtypes, p.newtype); MACRO_RET(); };
   CBACK_INIT(address)                   { GENERIC_CALL("MPI_Address"); };
   CBACK_INIT(type_extent)               { GENERIC_CALL("MPI_Type_extent"); };
   CBACK_INIT(type_size)                 { GENERIC_CALL("MPI_Type_size"); };
@@ -251,7 +251,7 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(pack_external_size)        { GENERIC_CALL("MPI_Pack_external_size"); };
   CBACK_INIT(request_get_status)        { GENERIC_CALL("MPI_Request_get_status"); };
   CBACK_INIT(type_create_darray)        { GENERIC_CALL("MPI_Type_create_darray"); };
-  CBACK_INIT(type_create_hindexed)      { GENERIC_CALL("MPI_Type_create_hindexed"); };
+  CBACK_INIT(type_create_hindexed)      { MACRO_INIT(); otf2_writer.mpi_type_create_hindexed(TIME, p.count, p.blocklengths, p.oldtype, p.newtype); MACRO_RET(); };
   CBACK_INIT(type_create_hvector)       { MACRO_INIT(); otf2_writer.mpi_type_create_hvector(TIME, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
   CBACK_INIT(type_create_indexed_block) { GENERIC_CALL("MPI_Type_create_indexed_block"); };
   CBACK_INIT(type_create_resized)       { GENERIC_CALL("MPI_Type_create_resized"); };
