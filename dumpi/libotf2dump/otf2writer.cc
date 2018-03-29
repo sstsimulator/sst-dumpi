@@ -1059,12 +1059,39 @@ namespace dumpi {
     UNKNOWN_COMM_TRAP();
     UNKNOWN_GROUP_TRAP(group);
 
-    _mpi_comm[newcomm].group = group;
-    _mpi_comm[newcomm].parent = comm;
-    _mpi_comm[newcomm].id = newcomm;
+    auto nc = _mpi_comm[newcomm];
+    nc.group = group;
+    nc.parent = comm;
+    nc.id = newcomm;
+
 
     _LEAVE();
   }
+
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t comm, int ndims, int* dims, comm_t newcomm) {
+//    _ENTER("MPI_Cart_create");
+//    UNKNOWN_COMM_TRAP();
+
+//    // Copy the settings from the previous communicator.
+//    auto nc = _mpi_comm[newcomm];
+//    nc = _mpi_comm[comm];
+//    nc.ndims = ndims;
+//    for(int i = 0; i < ndims; i++) nc.dims.push_back(dims[i]);
+
+//    _LEAVE();
+//  }
+
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t comm, const int* remain_dims, comm_t newcomm) {
+//    _ENTER("MPI_Cart_sub");
+//    UNKNOWN_COMM_TRAP();
+
+//    // For now, we will copy the settings from the previous communicator
+//    auto nc = _mpi_comm[newcomm];
+//    nc = _mpi_comm[comm];
+
+
+//    _LEAVE();
+//  }
 
 //  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm) {
 //    _ENTER("MPI_Comm_split");
@@ -1209,7 +1236,14 @@ namespace dumpi {
   }
 
   int OTF2_Writer::get_comm_size(comm_t comm) {
-    return _mpi_group[_mpi_comm[comm].group].size();
+    auto c = _mpi_comm[comm];
+    if (c.ndims == 0)
+      return _mpi_group[c.group].size();
+    else {
+      int sum = 0;
+      for(int i = 0; i < c.ndims; i++) sum *= c.dims[i];
+      return sum;
+    }
   }
 
   uint64_t OTF2_Writer::count_bytes(mpi_type_t type, uint64_t count){
@@ -1236,8 +1270,10 @@ namespace dumpi {
 
   const string OTF2DefTable::map(int index) {
     // Finds the string corresponding to the given int.
-    auto out = std::find_if(_map.begin(), _map.end(), [index] (const auto& elem) { return elem.second == index; });
-    return out == _map.end() ? nullptr : out->first;
+    for (auto elem = _map.begin(); elem != _map.end(); elem++)
+      if (elem->second == index)
+        return elem->first;
+    return string();
   }
 
   const string OTF2DefTable::operator[] (int index) { return map(index); }

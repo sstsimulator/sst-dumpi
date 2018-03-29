@@ -70,12 +70,11 @@ int main(int argc, char **argv) {
   set_callbacks(&cback);
 
   auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive) + "/*.bin").c_str());
-  if (dumpi_bin_files.size() == 0) {
+  int num_ranks = dumpi_bin_files.size();
+  if (num_ranks == 0) {
     printf("Error: could not open dumpi archive\n");
     return 2;
   }
-
-  int num_ranks = dumpi_bin_files.size();
 
   // Initialize the writer
   if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);

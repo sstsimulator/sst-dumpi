@@ -73,13 +73,15 @@ namespace dumpi {
   };
 
   struct MPI_Comm_Struct {
-    MPI_Comm_Struct(): name(""), parent(0), id(0) {}
-    MPI_Comm_Struct(std::string name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group){}
-    MPI_Comm_Struct(const char* name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group){}
+    MPI_Comm_Struct(): name(""), parent(0), id(0), ndims(0) {}
+    MPI_Comm_Struct(std::string name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndims(0){}
+    MPI_Comm_Struct(const char* name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndims(0){}
 
     int parent;
     int id;
     int group;
+    int ndims;
+    std::vector<int> dims;
     std::string name;
   };
 
@@ -159,6 +161,9 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
     OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
 
+    //OTF2_WRITER_RESULT mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int ndims, int* dims, comm_t newcomm);
+    //OTF2_WRITER_RESULT mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, const int* remain_dims, comm_t newcomm);
+
     // TODO: need to know the result of comm_split before recording gatherv, scatterv, allgatherv, alltoallv, and reduce_scatter
     //OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
 
@@ -175,6 +180,7 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_hindexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
+
   private:
     void incomplete_call(int request_id, REQUEST_TYPE type);
     int complete_call(request_t request_id, uint64_t timestamp);
@@ -187,6 +193,7 @@ namespace dumpi {
     void check_otf2(OTF2_ErrorCode status, const char* description);
     void close_evt_file();
     void write_def_files();
+    //std::vector<int>& create_shadow_group();
 
     // Compact some redundant code
     template<typename T>
