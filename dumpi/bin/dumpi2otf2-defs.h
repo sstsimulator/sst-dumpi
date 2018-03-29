@@ -19,7 +19,7 @@ extern "C" {
     std::string dumpi_meta;
     std::vector<std::string> dumpi_bin;
     const char *output_archive;
-    bool skip_unused_calls;
+    bool print_progress = false;
   } d2o2opt;
 }
 #endif // DUMPI2OTF2_H

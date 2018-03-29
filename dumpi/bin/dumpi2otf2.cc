@@ -69,27 +69,31 @@ int main(int argc, char **argv) {
   libundumpi_clear_callbacks(&cback);
   set_callbacks(&cback);
 
-  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive) + "*.bin").c_str());
+  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive) + "/*.bin").c_str());
   if (dumpi_bin_files.size() == 0) {
     printf("Error: could not open dumpi archive\n");
     return 2;
   }
 
+  int num_ranks = dumpi_bin_files.size();
+
   // Initialize the writer
   if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
-  writer.open_archive(opt.output_archive, dumpi_bin_files.size(), true);
+  writer.open_archive(opt.output_archive, num_ranks, true);
   writer.register_comm_world(DUMPI_COMM_WORLD);
   writer.register_null_request(DUMPI_REQUEST_NULL);
   writer.set_clock_resolution(1E9);
 
   // Loop over trace files. Dumpi creates one trace file per MPI rank
-  for(int rank = 0; rank < dumpi_bin_files.size(); rank++) {
+  for(int rank = 0; rank < num_ranks; rank++) {
     profile = undumpi_open(dumpi_bin_files[rank].c_str());
     writer.set_rank(rank);
     register_type_sizes(profile, &writer);
 
     undumpi_read_stream(profile, &cback, (void*)&writer);
     undumpi_close(profile);
+
+    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
   }
   writer.close_archive();
   return 0;
@@ -102,7 +106,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
 
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
-  while((opt = getopt(argc, argv, "vhi:o:")) != -1) {
+  while((opt = getopt(argc, argv, "vhpi:o:")) != -1) {
       switch(opt) {
         case 'v':
           fprintf(stdout, "Setting output to verbose.\n");
@@ -120,23 +124,23 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           settings->output_archive = strdup(optarg);
           output_set = true;
           break;
-//        case 's':
-//          settings->skip_unused_calls = true;
-//          break;
+        case 'p':
+          settings->print_progress = true;
+          break;
         default:
           fprintf(stderr, "Invalid argument %c.\n", opt);
           break;
         }
     }
 
-  if (!output_set) {
-    printf("%s", "Error: no OTF2 archive destination set. Use '-o'\n");
+  if (!input_set) {
+    printf("%s", "Error: No Dumpi trace path set. Use '-i'\n\n");
     print_usage();
     return 0;
   }
 
-  if (!input_set) {
-    printf("%s", "Error: No Dumpi trace path set. Use '-i'\n");
+  if (!output_set) {
+    printf("%s", "Error: no OTF2 archive destination set. Use '-o'\n\n");
     print_usage();
     return 0;
   }
@@ -146,13 +150,13 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
 
 void print_usage() {
   printf("%s",
-        "Usage:  %s [-h] [-v] [-i] archive [-o] archive\n"
+        "Usage:  %s [-h] [-v] [-p] [-i] archive [-o] archive\n"
         "   Options:\n"
         "        -h               Print this help\n"
         "        -v               Verbose status output\n"
+        "        -p               Print progress\n"
         "        -i  archive      Path to Dumpi tracefile\n"
         "        -o  archive      Output OTF2 archive name\n");
-        //"        -s               Skip callbacks that will not be used by SST/macro (untested)"
 }
 
 static void register_type_sizes(dumpi_profile *profile, dumpi::OTF2_Writer* writer) {
