@@ -9,13 +9,14 @@
 #define FIXME_COMM_SELF 1000
 
 #define CHECK_RANK(rank, _num_ranks) \
-  if (rank < 0 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
-
-#define CHECK_EVT_WRITER() \
-  if (_evt_writer == nullptr) return OTF2_WRITER_ERROR_WRITER_NOT_SET;
+  if (rank < -1 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
 
 #define CHECK_COMM() \
   if (comm != _comm_world_id && _mpi_comm.find(comm) == _mpi_comm.end()) _unknown_comms.insert(comm);
+
+#define GET_ARCHIVE_CONTEXT(rank) \
+  CHECK_RANK(rank, _num_ranks);   \
+  ArchiveContext& ctx = fetch_context(rank);
 
 // immediately returns an error code when the comm is unknown
 #define UNKNOWN_COMM_TRAP()                                \
@@ -30,25 +31,24 @@
     return OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP;}
 
 #define _ENTER(fname)                       \
-  CHECK_RANK(rank, _num_ranks);             \
-  CHECK_EVT_WRITER();                       \
+  GET_ARCHIVE_CONTEXT(rank)                 \
   logger(OWV_INFO, fname); fflush(stdout);  \
   _start_time = std::min(_start_time, start);             \
   _stop_time = std::max(_stop_time, stop);               \
   auto this_region = _region[string(fname)];\
   string _fname = fname;                    \
-  OTF2_EvtWriter_Enter(_evt_writer,         \
+  OTF2_EvtWriter_Enter(ctx.evt_writer,         \
                        nullptr,             \
                        start,               \
                        this_region);        \
-  _event_count[rank]++;
+  ctx.event_count++;
 
 #define _LEAVE()                  \
-  OTF2_EvtWriter_Leave(_evt_writer,  \
+  OTF2_EvtWriter_Leave(ctx.evt_writer,  \
                        nullptr,     \
                        stop,        \
                        this_region);\
-  _event_count[rank]++;              \
+  ctx.event_count++;                \
   return OTF2_WRITER_SUCCESS;
 
 // All collectives are recorded with the same function in OTF2. Some collectives don't have a root, so some calls need a bogus parameter.
@@ -56,9 +56,9 @@
 
 #define COLLECTIVE_WRAPPER(collective, sent, received)                                                \
   CHECK_COMM();                                                                                       \
-  OTF2_EvtWriter_MpiCollectiveBegin(_evt_writer, nullptr, start);                                      \
-  OTF2_EvtWriter_MpiCollectiveEnd(_evt_writer, nullptr, stop, collective, comm, root, sent, received); \
-  _event_count[rank] += 2;
+  OTF2_EvtWriter_MpiCollectiveBegin(ctx.evt_writer, nullptr, start);                                      \
+  OTF2_EvtWriter_MpiCollectiveEnd(ctx.evt_writer, nullptr, stop, collective, comm, root, sent, received); \
+  ctx.event_count += 2;
 
 using std::string;
 using std::to_string;
@@ -172,6 +172,22 @@ namespace dumpi {
       printf("%s%s\n", prepender, msg);
       fflush(stdout);
     }
+  }
+
+  ArchiveContext& OTF2_Writer::fetch_context(int new_rank) {
+    if (new_rank >= _num_ranks || new_rank < -1)
+      logger(OWV_ERROR, string("Rank out of bounds: ") + to_string(new_rank));
+    else if (new_rank == -1)
+      // Use value from last call to 'set_rank()'
+      return _archive_context[_rank];
+
+    ArchiveContext& ctx = _archive_context[new_rank];
+    if (ctx.rank == -1) {
+      // When has not been initialized yet
+      ctx.rank = new_rank;
+      ctx.evt_writer = OTF2_Archive_GetEvtWriter(_archive, new_rank);
+    }
+    return ctx;
   }
 
   void OTF2_Writer::check_otf2(OTF2_ErrorCode status, const char* description) {
@@ -289,7 +305,7 @@ namespace dumpi {
                                          i,
                                          _string[loc_name],
                                          OTF2_LOCATION_TYPE_CPU_THREAD,
-                                         _event_count[i],
+                                         _archive_context[i].event_count,
                                          0),
                                          "Writing Location to global def file");
     }
@@ -436,14 +452,17 @@ namespace dumpi {
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::close_archive() {
-    if (_request_type.size() > 0)
-      logger(OWV_WARN, string("") + string("Closing archive with ") + to_string(_request_type.size()) + string(" incomplete MPI calls on rank ") + to_string(rank));
 
-    _request_type.clear();
-    _irecv_requests.clear();
+    // Clean up the event archive for each rank
+    for( auto ac_it = _archive_context.begin(); ac_it != _archive_context.end(); ac_it++) {
+      int rank = ac_it->second.rank;
+      int incomplete = ac_it->second.dispose(_archive);
+      if (incomplete > 0) {
+        logger(OWV_WARN, string("") + string("Closing archive with ") + to_string(incomplete) + string(" incomplete MPI calls on rank ") + to_string(rank));
+      }
+    }
 
-    // Close currently open event file (if necessary)
-    close_evt_file();
+    _archive_context.clear();
 
     check_otf2(OTF2_Archive_CloseEvtFiles(_archive), "Closing all event files");
     write_def_files();
@@ -494,155 +513,118 @@ namespace dumpi {
     _type_sizes[type] = size;
   }
 
-  void OTF2_Writer::close_evt_file() {
-    // close existing OTF2 event file if it is open
-    if (_evt_writer != nullptr) {
-      check_otf2(OTF2_Archive_CloseEvtWriter(_archive, _evt_writer), "Closing event writer for current rank");
-      _evt_writer = nullptr;
-    }
-  }
+//  void OTF2_Writer::close_evt_file(int rank) {
+//    auto ctx_it = _archive_context.find(rank);
+
+//    if (ctx_it == _archive_context.end()) {
+//      logger(OWV_ERROR, string("Cannot close Archive for unknown rank ") + to_string(rank));
+//      return;
+//    }
+
+//    auto& ctx = ctx_it->second;
+
+//    // close existing OTF2 event file if it is open
+//    if (ctx._evt_writer != nullptr) {
+//      check_otf2(OTF2_Archive_CloseEvtWriter(_archive, ctx._evt_writer), "Closing event writer for current rank");
+//      ctx._evt_writer = nullptr;
+//    }
+//  }
 
   OTF2_WRITER_RESULT OTF2_Writer::set_rank(int rank) {
     CHECK_RANK(rank, _num_ranks);
 
-    // check for outstanding incomplete calls (ie isends, irecv)
-    if (_request_type.size() > 0) {
-      logger(OWV_WARN, string("Incomplete MPI calls on rank ") + to_string(this->rank));
-    }
-
-    // Close currently open event file (if necessary)
-    close_evt_file();
-
     // set the new rank
-    this->rank = rank;
+    this->_rank = rank;
 
     // Open OTF2 event file for new rank
-    _evt_writer = OTF2_Archive_GetEvtWriter(_archive, rank);
+    fetch_context(rank).evt_writer = OTF2_Archive_GetEvtWriter(_archive, rank);
 
     return OTF2_WRITER_SUCCESS;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_send_inner(OTF2_EvtWriter* _evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_send_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     CHECK_COMM();
-    OTF2_EvtWriter_MpiSend(_evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count);
-    _event_count[rank]++;
+    OTF2_EvtWriter_MpiSend(ctx.evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count);
+    ctx.event_count++;
     return OTF2_WRITER_SUCCESS;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_send(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_send(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     _ENTER("MPI_Send");
-    mpi_send_inner(_evt_writer, start, type, count, dest, comm, tag);
+    mpi_send_inner(ctx, start, type, count, dest, comm, tag);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_bsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_bsend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     _ENTER("MPI_Bsend");
-    mpi_send_inner(_evt_writer, start, type, count, dest, comm, tag);
+    mpi_send_inner(ctx, start, type, count, dest, comm, tag);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_ssend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_ssend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     _ENTER("MPI_Ssend");
-    mpi_send_inner(_evt_writer, start, type, count, dest, comm, tag);
+    mpi_send_inner(ctx, start, type, count, dest, comm, tag);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_rsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_rsend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     _ENTER("MPI_Rsend");
-    mpi_send_inner(_evt_writer, start, type, count, dest, comm, tag);
+    mpi_send_inner(ctx, start, type, count, dest, comm, tag);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_recv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_recv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag) {
     _ENTER("MPI_Recv");
     CHECK_COMM();
-    OTF2_EvtWriter_MpiRecv(_evt_writer, nullptr, start, source, comm, tag, _type_sizes[type]*count);
-    _event_count[rank]++;
+    OTF2_EvtWriter_MpiRecv(ctx.evt_writer, nullptr, start, source, comm, tag, count_bytes(type, count));
+    ctx.event_count++;
     _LEAVE();
   }
 
-  // TODO replace this mess with lambdas
-  // I-event handling
-
-  void OTF2_Writer::incomplete_call(int request_id, REQUEST_TYPE type) {
-    _request_type[request_id] = type;
-  }
-
-  /*
-   * ISends and IRecvs begin when invoked, but important information about
-   * them are not recorded by OTF2 until they are completed, which occurs inside of Waits, Tests, etc.
-   * Returns the number of events generated
-   */
-  int OTF2_Writer::complete_call(request_t request_id, uint64_t timestamp) {
-    auto t = _request_type.find(request_id);
-    int events = 0;
-    if (t == _request_type.end()) {
-      printf("Error: request id (%i) not found\n", request_id);
-    }
-    else if (t->second == REQUEST_TYPE_ISEND) {
-      OTF2_EvtWriter_MpiIsendComplete(_evt_writer, nullptr, timestamp, request_id);
-      events++;
-    }
-    else if (t->second == REQUEST_TYPE_IRECV) {
-      auto irecv_it = _irecv_requests.find(request_id);
-      irecv_capture irecv = irecv_it->second;
-      if(irecv_it == _irecv_requests.end()) {
-        printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
-      } else {
-        OTF2_EvtWriter_MpiIrecv(_evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
-        _irecv_requests.erase(irecv_it);
-        events++;
-      }
-    }
-    _request_type.erase(t);
-    return events;
-  }
-
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(OTF2_EvtWriter* _evt_writer, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     CHECK_COMM();
-    incomplete_call(request, REQUEST_TYPE_ISEND);
-    //logger(OWV_INFO, string("  MPI isend request ") + to_string(request));
-    OTF2_EvtWriter_MpiIsend(_evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count, request);
-    _event_count[rank]++;
+    ctx.incomplete_call(request, REQUEST_TYPE_ISEND);
+    OTF2_EvtWriter_MpiIsend(ctx.evt_writer, nullptr, start, dest, comm, tag, count_bytes(type, count), request);
+    ctx.event_count++;
     return OTF2_WRITER_SUCCESS;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Isend");
-    mpi_isend_inner(_evt_writer, start, type, count, dest, comm, tag, request);
+    mpi_isend_inner(ctx, start, type, count, dest, comm, tag, request);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_ibsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_ibsend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Ibsend");
-    mpi_isend_inner(_evt_writer, start, type, count, dest, comm, tag, request);
+    mpi_isend_inner(ctx, start, type, count, dest, comm, tag, request);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_issend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_issend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Issend");
-    mpi_isend_inner(_evt_writer, start, type, count, dest, comm, tag, request);
+    mpi_isend_inner(ctx, start, type, count, dest, comm, tag, request);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_irsend(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_irsend(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irsend");
-    mpi_isend_inner(_evt_writer, start, type, count, dest, comm, tag, request);
+    mpi_isend_inner(ctx, start, type, count, dest, comm, tag, request);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irecv");
     CHECK_COMM();
     //logger(OWV_INFO, string("  MPI irecv request ") + to_string(request));
-    _irecv_requests[request] = {count, type, source, tag, comm, request};
-    incomplete_call(request, REQUEST_TYPE_IRECV);
-    OTF2_EvtWriter_MpiIrecvRequest(_evt_writer, nullptr, start, request);
-    _event_count[rank]++;
+    ctx.irecv_requests[request] = {count, type, source, tag, comm, request};
+    ctx.incomplete_call(request, REQUEST_TYPE_IRECV);
+    OTF2_EvtWriter_MpiIrecvRequest(ctx.evt_writer, nullptr, start, request);
+    ctx.event_count++;
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::generic_call(otf2_time_t start, otf2_time_t stop, string name) {
+  OTF2_WRITER_RESULT OTF2_Writer::generic_call(int rank, otf2_time_t start, otf2_time_t stop, string name) {
     if (stop < start) {
       printf("ERROR, end happened before start\n");
     }
@@ -650,74 +632,68 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_wait(otf2_time_t start, otf2_time_t stop, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_wait(int rank, otf2_time_t start, otf2_time_t stop, request_t request) {
     _ENTER("MPI_Wait");
-    _event_count[rank] += complete_call(request, start);
+    ctx.complete_call(request, start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitany(otf2_time_t start, otf2_time_t stop, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitany(int rank, otf2_time_t start, otf2_time_t stop, request_t request) {
     _ENTER("MPI_Waitany");
-    _event_count[rank] += complete_call(request, start);
+    ctx.complete_call(request, start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitall(otf2_time_t start, otf2_time_t stop, int count, request_t* requests) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitall(int rank, otf2_time_t start, otf2_time_t stop, int count, const request_t* requests) {
     _ENTER("MPI_Waitall");
-    int events = 0;
     std::unordered_set<request_t> called;
     for(int i = 0; i < count; i++) {
       auto req = requests[i];
       if (req != _null_request && called.find(req) == called.end()) {
-        events += complete_call(req, start);
+        ctx.complete_call(req, start);
         called.insert(req);
       }
     }
-    _event_count[rank] += events;
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitsome(otf2_time_t start, otf2_time_t stop, request_t* requests, int outcount, int* indices) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_waitsome(int rank, otf2_time_t start, otf2_time_t stop, const request_t* requests, int outcount, const int* indices) {
     _ENTER("MPI_Waitsome");
-    int events = 0;
     for (int i = 0; i < outcount; i++)
-      events += complete_call(requests[indices[i]], start);
-    _event_count[rank] += events;
+      ctx.complete_call(requests[indices[i]], start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_test(otf2_time_t start, otf2_time_t stop, request_t request, int flag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_test(int rank, otf2_time_t start, otf2_time_t stop, request_t request, int flag) {
     _ENTER("MPI_Test");
     if (flag)
-      _event_count[rank] += complete_call(request, start);
+      ctx.complete_call(request, start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_testany(otf2_time_t start, otf2_time_t stop, request_t* requests, int index, int flag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_testany(int rank, otf2_time_t start, otf2_time_t stop, const request_t* requests, int index, int flag) {
     _ENTER("MPI_Testany");
     if (flag)
-      _event_count[rank] += complete_call(requests[index], start);
+      ctx.complete_call(requests[index], start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_testall(otf2_time_t start, otf2_time_t stop, int count, request_t* requests, int flag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_testall(int rank, otf2_time_t start, otf2_time_t stop, int count, const request_t* requests, int flag) {
     _ENTER("MPI_Testall");
     if (flag)
       for (int i = 0; i < count; i++)
-        _event_count[rank] += complete_call(requests[i], start);
+        ctx.complete_call(requests[i], start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_testsome(otf2_time_t start, otf2_time_t stop, request_t* requests, int outcount, int* indices) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_testsome(int rank, otf2_time_t start, otf2_time_t stop, const request_t* requests, int outcount, const int* indices) {
     _ENTER("MPI_Testsome");
-    int events = 0;
     for (int i = 0; i < outcount; i++)
-      events += complete_call(requests[indices[i]], start);
-    _event_count[rank] += events;
+      ctx.complete_call(requests[indices[i]], start);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_barrier(otf2_time_t start, otf2_time_t stop, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_barrier(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm) {
     _ENTER("MPI_Barrier");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
@@ -725,7 +701,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_bcast(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
     _ENTER("MPI_Bcast");
     UNKNOWN_COMM_TRAP();
     int bytes = count_bytes(type, count);
@@ -735,7 +711,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_gather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Gather");
     UNKNOWN_COMM_TRAP();
 
@@ -751,15 +727,17 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_gatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Gatherv");
     UNKNOWN_COMM_TRAP();
+
+    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
 
     int send_count = 0;
     int recv_count = 0;
 
     if (ranks_equivalent(rank, root, comm))
-      recv_count = count_bytes(recvtype, array_sum(recvcounts, get_comm_size(comm)));
+      recv_count = count_bytes(recvtype, array_sum(recvcounts, comm_size));
     else
       send_count = count_bytes(sendtype, sendcount);
 
@@ -769,7 +747,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_scatter(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Scatter");
     UNKNOWN_COMM_TRAP();
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTER,
@@ -778,14 +756,16 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_scatterv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Scatterv");
     UNKNOWN_COMM_TRAP();
     int send_count = 0;
     int recv_count = 0;
 
+    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
+
     if (ranks_equivalent(rank, root, comm))
-      send_count = count_bytes(sendtype, array_sum(sendcounts, get_comm_size(comm)));
+      send_count = count_bytes(sendtype, array_sum(sendcounts, comm_size));
     else
       recv_count = count_bytes(recvtype, recvcount);
 
@@ -795,7 +775,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_scan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm) {
     _ENTER("MPI_Scan");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
@@ -805,7 +785,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_allgather(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_allgather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Allgather");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
@@ -815,17 +795,19 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_allgatherv(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_allgatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Allgatherv");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
+    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
+
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHERV,
                        count_bytes(sendtype, sendcount),
-                       count_bytes(recvtype, array_sum(recvcounts, get_comm_size(comm))));
+                       count_bytes(recvtype, array_sum(recvcounts, comm_size)));
     _LEAVE();
   }
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoall(otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoall(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Alltoall");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
@@ -835,18 +817,20 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoallv(otf2_time_t start, otf2_time_t stop, int* sendcounts, mpi_type_t sendtype, int* recvcounts, mpi_type_t recvtype, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoallv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Alltoallv");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
-    int count = get_comm_size(comm);
+
+    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
+
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALLV,
-                       count_bytes(sendtype, array_sum(sendcounts, count)),
-                       count_bytes(recvtype, array_sum(recvcounts, count)));
+                       count_bytes(sendtype, array_sum(sendcounts, comm_size)),
+                       count_bytes(recvtype, array_sum(recvcounts, comm_size)));
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
     _ENTER("MPI_Reduce");
     UNKNOWN_COMM_TRAP();
 
@@ -857,7 +841,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_allreduce(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_allreduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Allreduce");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
@@ -868,12 +852,15 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce_scatter(otf2_time_t start, otf2_time_t stop, int* recvcounts, mpi_type_t type, comm_t comm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Reduce_scatter");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
+
+    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
+
     // TODO: double check the byte counts are accurate
-    int bytes = count_bytes(type, array_sum(recvcounts, get_comm_size(comm)));
+    int bytes = count_bytes(type, array_sum(recvcounts, comm_size));
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE_SCATTER,
                        bytes,
@@ -889,7 +876,7 @@ namespace dumpi {
     return true;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_union");
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
@@ -914,7 +901,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_difference(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_difference(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_difference");
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
@@ -942,7 +929,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_intersection(otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_intersection(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_intersection");
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
@@ -967,7 +954,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_incl(otf2_time_t start, otf2_time_t stop, int group, int count, int*ranks, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_incl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, const int*ranks, int newgroup) {
     _ENTER("MPI_Group_incl");
     UNKNOWN_GROUP_TRAP(group);
 
@@ -982,7 +969,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_excl(otf2_time_t start, otf2_time_t stop, int group, int count, int*ranks, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_excl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, const int*ranks, int newgroup) {
     _ENTER("MPI_Group_excl");
     UNKNOWN_GROUP_TRAP(group);
 
@@ -1003,7 +990,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_range_incl(otf2_time_t start, otf2_time_t stop, int group, int count, int**ranges, int newgroup) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_group_range_incl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, int**ranges, int newgroup) {
     _ENTER("MPI_Group_range_incl");
     UNKNOWN_GROUP_TRAP(group);
 
@@ -1034,7 +1021,7 @@ namespace dumpi {
     return true;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_dup(otf2_time_t start, otf2_time_t stop, comm_t comm, comm_t newcomm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_dup(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, comm_t newcomm) {
     _ENTER("MPI_Comm_dup");
     UNKNOWN_COMM_TRAP();
 
@@ -1045,7 +1032,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_group(otf2_time_t start, otf2_time_t stop, comm_t comm, int group) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group) {
     _ENTER("MPI_Comm_group");
     UNKNOWN_COMM_TRAP();
     _mpi_comm[comm].group = group;
@@ -1053,7 +1040,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_create(otf2_time_t start, otf2_time_t stop, comm_t comm, int group, comm_t newcomm) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group, comm_t newcomm) {
     _ENTER("MPI_Comm_create");
 
     UNKNOWN_COMM_TRAP();
@@ -1064,11 +1051,10 @@ namespace dumpi {
     nc.parent = comm;
     nc.id = newcomm;
 
-
     _LEAVE();
   }
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t comm, int ndims, int* dims, comm_t newcomm) {
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t comm, int ndims, const int* dims, comm_t newcomm) {
 //    _ENTER("MPI_Cart_create");
 //    UNKNOWN_COMM_TRAP();
 
@@ -1081,7 +1067,7 @@ namespace dumpi {
 //    _LEAVE();
 //  }
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t comm, const int* remain_dims, comm_t newcomm) {
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t comm, const const int* remain_dims, comm_t newcomm) {
 //    _ENTER("MPI_Cart_sub");
 //    UNKNOWN_COMM_TRAP();
 
@@ -1099,7 +1085,7 @@ namespace dumpi {
 //    _LEAVE();
 //  }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_contiguous(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_contiguous");
 
     if (!type_is_known(oldtype)){
@@ -1112,13 +1098,13 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hvector(int rank, otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_hvector");
     mpi_t_vector_inner("MPI_Type_hvector", count, blocklength, oldtype, newtype);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_vector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_vector(int rank, otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_vector");
     mpi_t_vector_inner("MPI_Type_vector", count, blocklength, oldtype, newtype);
     _LEAVE();
@@ -1132,25 +1118,25 @@ namespace dumpi {
     _type_sizes[newtype] = count_bytes(oldtype, blocklength) * count;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_indexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_indexed(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_indexed");
     mpi_t_indexed_inner("MPI_Type_indexed", count, lengths, oldtype, newtype);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hindexed(otf2_time_t start, otf2_time_t stop, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_hindexed(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_hindexed");
     mpi_t_indexed_inner("MPI_Type_hindexed", count, lengths, oldtype, newtype);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hindexed(otf2_time_t start, otf2_time_t stop, int count, int*lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hindexed(int rank, otf2_time_t start, otf2_time_t stop, int count, const int*lengths, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_hindexed");
     mpi_t_indexed_inner("MPI_Type_hindexed", count, lengths, oldtype, newtype);
     _LEAVE();
   }
 
-  void OTF2_Writer::mpi_t_indexed_inner(const char* name, int count, int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
+  void OTF2_Writer::mpi_t_indexed_inner(const char* name, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype) {
     if (!type_is_known(oldtype)){
       logger(OWV_ERROR, string(name) + " failed");
       return;
@@ -1159,19 +1145,19 @@ namespace dumpi {
     _type_sizes[newtype] = count_bytes(oldtype, array_sum(lengths, count));
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_struct(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
     _ENTER("MPI_Type_struct");
     mpi_t_struct_inner("MPI_Type_struct", count, blocklengths, oldtypes, newtype);
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_struct(otf2_time_t start, otf2_time_t stop, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_struct(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
     _ENTER("MPI_Type_create_struct");
     mpi_t_struct_inner("MPI_Type_create_struct", count, blocklengths, oldtypes, newtype);
     _LEAVE();
   }
 
-  void OTF2_Writer::mpi_t_struct_inner(const char* fname, int count, int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
+  void OTF2_Writer::mpi_t_struct_inner(const char* fname, int count, const int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype) {
     int sum = 0;
     for(int i = 0; i < count; i++) {
       if (!type_is_known(oldtypes[i])){
@@ -1184,7 +1170,7 @@ namespace dumpi {
     _type_sizes[newtype] = sum;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_subarray(otf2_time_t start, otf2_time_t stop, int ndims, int* subsizes, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_subarray(int rank, otf2_time_t start, otf2_time_t stop, int ndims, const int* subsizes, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_create_subarray");
 
     if (!type_is_known(oldtype)){
@@ -1197,7 +1183,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hvector(otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_type_create_hvector(int rank, otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_create_hvector");
     mpi_t_vector_inner("MPI_Type_create_hvector", count, blocklength, oldtype, newtype);
     _LEAVE();
@@ -1281,4 +1267,54 @@ namespace dumpi {
   int OTF2DefTable::operator[] (string string) { return map(string); }
   int OTF2DefTable::size() { return _counter; }
   bool OTF2DefTable::added_last_lookup() {return _added_last_lookup;}
+
+  int ArchiveContext::dispose(OTF2_Archive* archive) {
+    // close existing OTF2 event file if it is open
+    if (evt_writer != nullptr) {
+      OTF2_Archive_CloseEvtWriter(archive, evt_writer);
+      evt_writer = nullptr;
+    }
+
+    rank = -1;
+    event_count = 0;
+    int incomplete_count = irecv_requests.size();
+    irecv_requests.clear();
+    request_type.clear();
+    return incomplete_count;
+  }
+
+  // TODO replace this mess with lambdas
+  // I-event handling
+
+  void ArchiveContext::incomplete_call(int request_id, REQUEST_TYPE type) {
+    request_type[request_id] = type;
+  }
+
+  /*
+   * ISends and IRecvs begin when invoked, but important information about
+   * them are not recorded by OTF2 until they are completed, which occurs inside of Waits, Tests, etc.
+   * Returns the number of events generated
+   */
+  void ArchiveContext::complete_call(request_t request_id, uint64_t timestamp) {
+    auto t = request_type.find(request_id);
+    if (t == request_type.end()) {
+      printf("Error: request id (%i) not found\n", request_id);
+    }
+    else if (t->second == REQUEST_TYPE_ISEND) {
+      OTF2_EvtWriter_MpiIsendComplete(evt_writer, nullptr, timestamp, request_id);
+      event_count++;
+    }
+    else if (t->second == REQUEST_TYPE_IRECV) {
+      auto irecv_it = irecv_requests.find(request_id);
+      irecv_capture irecv = irecv_it->second;
+      if(irecv_it == irecv_requests.end()) {
+        printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
+      } else {
+        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+        irecv_requests.erase(irecv_it);
+        event_count++;
+      }
+    }
+    request_type.erase(t);
+  }
 }
