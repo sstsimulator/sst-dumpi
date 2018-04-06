@@ -136,7 +136,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           fprintf(stderr, "Invalid argument %c.\n", opt);
           break;
         }
-      if(tmp_str != nullptr) delete tmp_str;
+      if(tmp_str != nullptr) free(tmp_str);
     }
 
   if (!input_set) {
