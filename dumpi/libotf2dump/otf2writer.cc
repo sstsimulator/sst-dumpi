@@ -16,7 +16,7 @@
 
 #define GET_ARCHIVE_CONTEXT(rank) \
   CHECK_RANK(rank, _num_ranks);   \
-  ArchiveContext& ctx = fetch_context(rank);
+  RankContext& ctx = fetch_context(rank);
 
 // immediately returns an error code when the comm is unknown
 #define UNKNOWN_COMM_TRAP()                                \
@@ -30,11 +30,16 @@
     logger(OWV_ERROR, _fname + " failed");     \
     return OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP;}
 
+#define COMM_LAMBDA_BEGIN() comm_actions.push({.action = [=]() {
+
+#define COMM_LAMBDA_END() }, .end_time = stop});
+
 #define _ENTER(fname)                       \
   GET_ARCHIVE_CONTEXT(rank)                 \
-  logger(OWV_INFO, fname); fflush(stdout);  \
+  logger(OWV_INFO, fname);  \
   _start_time = std::min(_start_time, start);             \
   _stop_time = std::max(_stop_time, stop);               \
+  rank = (rank == RANK_UNDEF) ? _rank : rank;  \
   auto this_region = _region[string(fname)];\
   string _fname = fname;                    \
   OTF2_EvtWriter_Enter(ctx.evt_writer,         \
@@ -64,8 +69,7 @@ using std::string;
 using std::to_string;
 
 namespace dumpi {
-  OTF2_Writer::OTF2_Writer() {
-  }
+  OTF2_Writer::OTF2_Writer() {}
 
   string OTF2_Writer::get_otf2_directory() {
     return _directory;
@@ -174,14 +178,14 @@ namespace dumpi {
     }
   }
 
-  ArchiveContext& OTF2_Writer::fetch_context(int new_rank) {
+  RankContext& OTF2_Writer::fetch_context(int new_rank) {
     if (new_rank >= _num_ranks || new_rank < -1)
       logger(OWV_ERROR, string("Rank out of bounds: ") + to_string(new_rank));
     else if (new_rank == -1)
       // Use value from last call to 'set_rank()'
       return _archive_context[_rank];
 
-    ArchiveContext& ctx = _archive_context[new_rank];
+    RankContext& ctx = _archive_context[new_rank];
     if (ctx.rank == -1) {
       // When has not been initialized yet
       ctx.rank = new_rank;
@@ -209,6 +213,8 @@ namespace dumpi {
 
     check_otf2(OTF2_Archive_OpenDefFiles(_archive), "Opening definition files");
     OTF2_GlobalDefWriter* defwriter = OTF2_Archive_GetGlobalDefWriter(_archive);
+
+    unwind_comm_events();
 
     if (_unknown_comms.size() > 0) {
       string str = "Unknown communicators: [ ";
@@ -336,7 +342,7 @@ namespace dumpi {
                                     _num_ranks,
                                     world_list),
                                     "Writing MPI_COMM_WORLD group to global def file");
-    delete world_list;
+    delete [] world_list;
 
     check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
                                     COMM_SELF_GROUP_ID,
@@ -348,6 +354,7 @@ namespace dumpi {
                                     0),
                                     "Writing MPI_COMM_WORLD group to global def file");
 
+    // If the trace defines groups (ie with MPI_Comm_group), groups may be duplicated, only use the ones explicitly defined in
     for(auto group_it = _mpi_group.begin(); group_it != _mpi_group.end(); group_it++) {
       auto members = group_it->second;
       uint64_t* group_list = new uint64_t[members.size()];
@@ -362,7 +369,7 @@ namespace dumpi {
                                       members.size(),
                                       group_list),
                                       "Writing group to global def file");
-      delete group_list;
+      delete [] group_list;
     }
 
     // When no communicator manipulation occurs, mpi_group list will be empty because it is dynamically generated from MPI callbacks.
@@ -451,6 +458,14 @@ namespace dumpi {
     check_otf2(OTF2_Archive_CloseDefFiles(_archive), "Closing definition files");
   }
 
+  void OTF2_Writer::unwind_comm_events() {
+    while(comm_actions.size() > 0) {
+      comm_actions.top().action();
+      //printf("Comm Action at %lu\n", comm_actions.top().end_time);
+      comm_actions.pop();
+    }
+  }
+
   OTF2_WRITER_RESULT OTF2_Writer::close_archive() {
 
     // Clean up the event archive for each rank
@@ -484,6 +499,8 @@ namespace dumpi {
     mcs.group = group;
     mcs.parent = parent;
     mcs.name = name;
+    mcs.ndim = 0;
+    mcs.name = "";
 
     return OTF2_WRITER_SUCCESS;
   }
@@ -493,7 +510,7 @@ namespace dumpi {
     for(int i = 0; i < _num_ranks; i++) w_group.push_back(i);
     _mpi_group[COMM_WORLD_GROUP_ID] = w_group;
     _comm_world_id = id;
-    _mpi_comm[id] = {.name="MPI_COMM_WORLD", .parent=0, .id=id, .group=(int)COMM_WORLD_GROUP_ID};
+    _mpi_comm[id] = {.name="MPI_COMM_WORLD", .parent=OTF2_UNDEFINED_COMM, .id=id, .group=(int)COMM_WORLD_GROUP_ID};
     _unknown_comms.erase(id);
   }
 
@@ -513,23 +530,6 @@ namespace dumpi {
     _type_sizes[type] = size;
   }
 
-//  void OTF2_Writer::close_evt_file(int rank) {
-//    auto ctx_it = _archive_context.find(rank);
-
-//    if (ctx_it == _archive_context.end()) {
-//      logger(OWV_ERROR, string("Cannot close Archive for unknown rank ") + to_string(rank));
-//      return;
-//    }
-
-//    auto& ctx = ctx_it->second;
-
-//    // close existing OTF2 event file if it is open
-//    if (ctx._evt_writer != nullptr) {
-//      check_otf2(OTF2_Archive_CloseEvtWriter(_archive, ctx._evt_writer), "Closing event writer for current rank");
-//      ctx._evt_writer = nullptr;
-//    }
-//  }
-
   OTF2_WRITER_RESULT OTF2_Writer::set_rank(int rank) {
     CHECK_RANK(rank, _num_ranks);
 
@@ -542,7 +542,7 @@ namespace dumpi {
     return OTF2_WRITER_SUCCESS;
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_send_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_send_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
     CHECK_COMM();
     OTF2_EvtWriter_MpiSend(ctx.evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count);
     ctx.event_count++;
@@ -581,7 +581,7 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
     CHECK_COMM();
     ctx.incomplete_call(request, REQUEST_TYPE_ISEND);
     OTF2_EvtWriter_MpiIsend(ctx.evt_writer, nullptr, start, dest, comm, tag, count_bytes(type, count), request);
@@ -731,8 +731,6 @@ namespace dumpi {
     _ENTER("MPI_Gatherv");
     UNKNOWN_COMM_TRAP();
 
-    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
-
     int send_count = 0;
     int recv_count = 0;
 
@@ -761,8 +759,6 @@ namespace dumpi {
     UNKNOWN_COMM_TRAP();
     int send_count = 0;
     int recv_count = 0;
-
-    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
 
     if (ranks_equivalent(rank, root, comm))
       send_count = count_bytes(sendtype, array_sum(sendcounts, comm_size));
@@ -800,8 +796,6 @@ namespace dumpi {
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
-    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm) : comm_size;
-
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHERV,
                        count_bytes(sendtype, sendcount),
                        count_bytes(recvtype, array_sum(recvcounts, comm_size)));
@@ -821,8 +815,6 @@ namespace dumpi {
     _ENTER("MPI_Alltoallv");
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
-
-    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALLV,
                        count_bytes(sendtype, array_sum(sendcounts, comm_size)),
@@ -857,7 +849,7 @@ namespace dumpi {
     UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
-    comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
+    //comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
 
     // TODO: double check the byte counts are accurate
     int bytes = count_bytes(type, array_sum(recvcounts, comm_size));
@@ -866,6 +858,10 @@ namespace dumpi {
                        bytes,
                        bytes);
     _LEAVE();
+  }
+
+  std::vector<int>& OTF2_Writer::get_group(comm_t comm) {
+    return _mpi_group[_mpi_comm[comm].group];
   }
 
   bool OTF2_Writer::group_is_known(int group) {
@@ -1023,19 +1019,41 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_dup(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, comm_t newcomm) {
     _ENTER("MPI_Comm_dup");
-    UNKNOWN_COMM_TRAP();
 
-    auto c = _mpi_comm[newcomm];
-    c = _mpi_comm[comm];
-    c.parent = comm;
+    COMM_LAMBDA_BEGIN();
+    {
+        UNKNOWN_COMM_TRAP();
+        auto& c = _mpi_comm[newcomm];
+        // copy settings
+        c = _mpi_comm[comm];
+
+        // update other settings
+        c.parent = comm;
+        c.name = "";
+    }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group) {
     _ENTER("MPI_Comm_group");
-    UNKNOWN_COMM_TRAP();
-    _mpi_comm[comm].group = group;
+
+    if(rank == 0) {
+      printf(" ");
+    }
+
+    COMM_LAMBDA_BEGIN();
+    {
+      UNKNOWN_COMM_TRAP();
+      auto& cur_comm = _mpi_comm[comm];
+
+      // If the group id does not exist and the comm points to a different id, copy the auto-assigned group to that id
+      // Expected to happen because we don't know what the correct group id is unless a the trace queries it
+      if (group != cur_comm.group && _mpi_group.find(group) != _mpi_group.end()) _mpi_group[group] = _mpi_group[cur_comm.group];
+      cur_comm.group = group;
+    }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -1043,47 +1061,139 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group, comm_t newcomm) {
     _ENTER("MPI_Comm_create");
 
-    UNKNOWN_COMM_TRAP();
-    UNKNOWN_GROUP_TRAP(group);
+    COMM_LAMBDA_BEGIN();
+    {
+        UNKNOWN_COMM_TRAP();
+        UNKNOWN_GROUP_TRAP(group);
 
-    auto nc = _mpi_comm[newcomm];
-    nc.group = group;
-    nc.parent = comm;
-    nc.id = newcomm;
+        auto nc = _mpi_comm[newcomm];
+        nc.group = group;
+        nc.parent = comm;
+        nc.id = newcomm;
+        nc.name = "";
+    }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t comm, int ndims, const int* dims, comm_t newcomm) {
-//    _ENTER("MPI_Cart_create");
-//    UNKNOWN_COMM_TRAP();
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* dims, comm_t newcomm) {
+    _ENTER("MPI_Cart_create");
 
-//    // Copy the settings from the previous communicator.
-//    auto nc = _mpi_comm[newcomm];
-//    nc = _mpi_comm[comm];
-//    nc.ndims = ndims;
-//    for(int i = 0; i < ndims; i++) nc.dims.push_back(dims[i]);
+    // Need to capture the pointer's contents for the lambda
+    std::vector<int> dims_vect(dims, dims + ndim);
 
-//    _LEAVE();
-//  }
+    printf("MPI_Cart_create Rank %i, old comm %i, new comm %i, ndim %i, dims: ", _rank, comm, newcomm, ndim);
+    for(int i = 0; i < dims_vect.size(); i++) printf("%i ", dims_vect[i]);
+    printf("\n");
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t comm, const const int* remain_dims, comm_t newcomm) {
-//    _ENTER("MPI_Cart_sub");
-//    UNKNOWN_COMM_TRAP();
+    if (rank == 0) {
+      printf(" ");
+    }
 
-//    // For now, we will copy the settings from the previous communicator
-//    auto nc = _mpi_comm[newcomm];
-//    nc = _mpi_comm[comm];
+    COMM_LAMBDA_BEGIN();
+    {
+      UNKNOWN_COMM_TRAP();
+      // Only need to initialize once
+      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
 
+        auto& nc = _mpi_comm[newcomm];
+        // Copy the settings from the previous communicator.
+        nc = _mpi_comm[comm];
+        nc.ndim = ndim;
+        nc.name = "";
 
-//    _LEAVE();
-//  }
+        int cart_count = 1;
+        // Copy dimm metadata
+        nc.dims.clear();
+        for(int i = 0; i < ndim; i++) {
+          nc.dims.push_back(dims_vect[i]);
+          cart_count *= dims_vect[i];
+        }
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm) {
-//    _ENTER("MPI_Comm_split");
+        // when the new comm is smaller (due the the cart not fitting), make a new group.
+        auto& old_group = get_group(comm);
+        if (cart_count < old_group.size()) {
+          nc.group = MPI_Comm_Struct::get_uid();
+          _mpi_group[nc.group].assign(old_group.begin(), old_group.begin() + cart_count);
+        }
+     }
+   }
+   COMM_LAMBDA_END();
 
-//    _LEAVE();
-//  }
+   _LEAVE();
+  }
+
+  /* MPICH implementation
+        key = 0;
+        color = 0;
+        for (i = 0; i < ndims; i++) {
+            if (remain_dims[i]) {
+                key = (key * topo_ptr->topo.cart.dims[i]) + topo_ptr->topo.cart.position[i];
+            } else {
+                color = (color * topo_ptr->topo.cart.dims[i]) + topo_ptr->topo.cart.position[i];
+            }
+        }
+        mpi_errno = MPIR_Comm_split_impl(comm_ptr, color, key, &newcomm_ptr);
+   */
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm) {
+    _ENTER("MPI_Cart_sub");
+
+    // Capture the pointer's contents for the lambda
+    std::vector<int> remain_dims_vect(remain_dims, remain_dims + ndim);
+
+    printf("MPI_Cart_sub Rank %i, Old comm %i, Cart_sub_id %i, ndim %i, remain_dims: ", _rank, comm, newcomm, ndim);
+    for(int i = 0; i < remain_dims_vect.size(); i++) printf("%i ", remain_dims_vect[i]);
+    printf("\n");
+
+    if(rank == 0) {
+      printf(" ");
+    }
+    COMM_LAMBDA_BEGIN();
+    {
+      UNKNOWN_COMM_TRAP();
+      // Behaves like a comm_split... In fact, the mpich implementation uses a comm_split...
+
+      auto& oc = _mpi_comm[comm];
+      // initialize the comm's structure if not yet created
+      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
+        auto& nc = _mpi_comm[newcomm];
+        // copy the parent's settings
+        nc = oc;
+
+        // Update some settings
+        nc.id = newcomm;
+        nc.group = MPI_Comm_Struct::get_uid();
+        nc.name = "";
+        nc.dims.clear();
+        nc.parent = comm;
+        int rank_sum = 1;
+        for(int i = 0; i < oc.ndim; i++) {
+          if (remain_dims_vect[i]) {
+            rank_sum *= oc.dims[i];
+            nc.dims.push_back(oc.dims[i]);
+            nc.ndim++;
+          }
+        }
+
+        printf("Rank %i should have  %i members in comm %i\n", rank, rank_sum, newcomm);
+
+      }
+
+      // push this rank into the comm's group
+      // TODO do changes need to be made to maintain ordering
+      get_group(newcomm).push_back(rank);
+    }
+    COMM_LAMBDA_END();
+
+    _LEAVE();
+  }
+
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm) {
+    _ENTER("MPI_Comm_split");
+    logger(OWV_ERROR, "MPI_Comm_split NOT IMPLEMENTED");
+    _LEAVE();
+  }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_type_contiguous(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype) {
     _ENTER("MPI_Type_contiguous");
@@ -1202,7 +1312,7 @@ namespace dumpi {
       return false;
     }
 
-    auto group = _mpi_group[_mpi_comm[comm].group];
+    auto group = get_group(comm);
 
     if (comm_rank < 0 || comm_rank >= group.size()) {
       logger(OWV_WARN, string("Comm rank out of range!"));
@@ -1213,7 +1323,7 @@ namespace dumpi {
   }
 
   int OTF2_Writer::get_comm_rank(int world_rank, comm_t comm) {
-    auto rank_list = _mpi_group[_mpi_comm[comm].group];
+    auto& rank_list = get_group(comm);
 
     // slow, linear search...
     auto rank =  std::find(rank_list.begin(), rank_list.end(), world_rank);
@@ -1223,11 +1333,11 @@ namespace dumpi {
 
   int OTF2_Writer::get_comm_size(comm_t comm) {
     auto c = _mpi_comm[comm];
-    if (c.ndims == 0)
+    if (c.ndim == 0)
       return _mpi_group[c.group].size();
     else {
       int sum = 0;
-      for(int i = 0; i < c.ndims; i++) sum *= c.dims[i];
+      for(int i = 0; i < c.ndim; i++) sum *= c.dims[i];
       return sum;
     }
   }
@@ -1238,10 +1348,6 @@ namespace dumpi {
      return 4*count;
    } else return _type_sizes[type]*count;
   }
-
-//  void OTF2_Writer::skip_unused_calls(bool skip_unused) {
-//    _skip_unused_calls = skip_unused;
-//  }
 
   OTF2DefTable::OTF2DefTable() {}
   int OTF2DefTable::map(string string)
@@ -1268,7 +1374,7 @@ namespace dumpi {
   int OTF2DefTable::size() { return _counter; }
   bool OTF2DefTable::added_last_lookup() {return _added_last_lookup;}
 
-  int ArchiveContext::dispose(OTF2_Archive* archive) {
+  int RankContext::dispose(OTF2_Archive* archive) {
     // close existing OTF2 event file if it is open
     if (evt_writer != nullptr) {
       OTF2_Archive_CloseEvtWriter(archive, evt_writer);
@@ -1286,7 +1392,7 @@ namespace dumpi {
   // TODO replace this mess with lambdas
   // I-event handling
 
-  void ArchiveContext::incomplete_call(int request_id, REQUEST_TYPE type) {
+  void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
     request_type[request_id] = type;
   }
 
@@ -1295,7 +1401,7 @@ namespace dumpi {
    * them are not recorded by OTF2 until they are completed, which occurs inside of Waits, Tests, etc.
    * Returns the number of events generated
    */
-  void ArchiveContext::complete_call(request_t request_id, uint64_t timestamp) {
+  void RankContext::complete_call(request_t request_id, uint64_t timestamp) {
     auto t = request_type.find(request_id);
     if (t == request_type.end()) {
       printf("Error: request id (%i) not found\n", request_id);
@@ -1317,4 +1423,6 @@ namespace dumpi {
     }
     request_type.erase(t);
   }
+
+  int MPI_Comm_Struct::_ghost_uid = 1000000;
 }

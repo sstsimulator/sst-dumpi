@@ -136,7 +136,7 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(attr_get)                  { GENERIC_CALL("MPI_Attr_get"); };
   CBACK_INIT(attr_delete)               { GENERIC_CALL("MPI_Attr_delete"); };
   CBACK_INIT(topo_test)                 { GENERIC_CALL("MPI_Topo_test"); };
-  CBACK_INIT(cart_create)               { GENERIC_CALL("MPI_Cart_create"); };
+  CBACK_INIT(cart_create)               { MACRO_INIT(); otf2_writer.mpi_cart_create(ARGS, p.oldcomm, p.ndim, p.dims, p.newcomm); MACRO_RET(); };
   CBACK_INIT(dims_create)               { GENERIC_CALL("MPI_Dims_create"); };
   CBACK_INIT(graph_create)              { GENERIC_CALL("MPI_Graph_create"); };
   CBACK_INIT(graphdims_get)             { GENERIC_CALL("MPI_Graphdims_get"); };
@@ -148,7 +148,7 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(graph_neighbors_count)     { GENERIC_CALL("MPI_Graph_neighbors_count"); };
   CBACK_INIT(graph_neighbors)           { GENERIC_CALL("MPI_Graph_neighbors"); };
   CBACK_INIT(cart_shift)                { GENERIC_CALL("MPI_Cart_shift"); };
-  CBACK_INIT(cart_sub)                  { GENERIC_CALL("MPI_Cart_sub"); };
+  CBACK_INIT(cart_sub)                  { MACRO_INIT(); otf2_writer.mpi_cart_sub(ARGS, p.oldcomm, p.ndim, p.remain_dims, p.newcomm); MACRO_RET(); };
   CBACK_INIT(cart_map)                  { GENERIC_CALL("MPI_Cart_map"); };
   CBACK_INIT(graph_map)                 { GENERIC_CALL("MPI_Graph_map"); };
   CBACK_INIT(get_processor_name)        { GENERIC_CALL("MPI_Get_processor_name"); };

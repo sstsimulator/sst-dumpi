@@ -7,6 +7,8 @@
 #include <set>
 #include <unordered_map>
 #include <otf2/otf2.h>
+#include <functional>
+#include <queue>
 
 namespace dumpi {
 
@@ -73,20 +75,25 @@ namespace dumpi {
   };
 
   struct MPI_Comm_Struct {
-    MPI_Comm_Struct(): name(""), parent(0), id(0), ndims(0) {}
-    MPI_Comm_Struct(std::string name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndims(0){}
-    MPI_Comm_Struct(const char* name, int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndims(0){}
+    MPI_Comm_Struct(): name(""), parent(0), id(0), ndim(0) {}
+    MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
+    MPI_Comm_Struct(const char* name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
 
-    int parent;
+    unsigned int parent;
     int id;
     int group;
-    int ndims;
+    int ndim;
     std::vector<int> dims;
     std::string name;
+
+    // helper for getting a unique id for groups and comms whose IDs are not specified by the trace.
+    static int get_uid() {return ++_ghost_uid;}
+  private:
+    static int _ghost_uid;
   };
 
   /// Stores rank-specific states
-  struct ArchiveContext {
+  struct RankContext {
     int rank = -1;
     int event_count = 0;
     OTF2_EvtWriter* evt_writer = nullptr;
@@ -100,23 +107,11 @@ namespace dumpi {
     int dispose(OTF2_Archive* archive);
   };
 
-  /**
-   * @brief Used to gather information about MPI communicators and groups.
-   * This allivates the difficulty of tracking MPI_Comm_splits, which is a collective operation that does not contain much information about the result on any single rank.
-   */
-  class CommInterpreter {
-  public:
-    OTF2_WRITER_RESULT mpi_group_difference(int rank, int group1, int group2, int newgroup);
-    OTF2_WRITER_RESULT mpi_group_excl(int rank, int group, int count, const int*ranks, int newgroup);
-    OTF2_WRITER_RESULT mpi_group_incl(int rank, int group, int count, const int*ranks, int newgroup);
-    OTF2_WRITER_RESULT mpi_group_intersection(int rank, int group1, int group2, int newgroup);
-    OTF2_WRITER_RESULT mpi_group_range_incl(int rank, int group, int count, int**ranges, int newgroup);
-    //OTF2_WRITER_RESULT mpi_group_range_excl(int rank, int group, int count, const int**ranges, int newgroup);
-    OTF2_WRITER_RESULT mpi_group_union(int rank, int group1, int group2, int newgroup);
+  struct CommAction {
+    std::function<void()> action;
+    otf2_time_t end_time; // used to handle ordering
 
-    OTF2_WRITER_RESULT mpi_comm_dup(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, comm_t newcomm);
-    OTF2_WRITER_RESULT mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
-    OTF2_WRITER_RESULT mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
+    bool operator<(CommAction const &ca) const { return ca.end_time < end_time; }
   };
 
   /**
@@ -141,9 +136,6 @@ namespace dumpi {
     void register_null_request(request_t request);
     void set_verbosity(OTF2_WRITER_VERBOSITY verbosity);
     void set_clock_resolution(uint64_t ticks_per_second);
-
-    // Remove calls that SST/macro does not need for trace replay.
-    //void skip_unused_calls(bool);
 
     OTF2_WRITER_RESULT generic_call(int rank, otf2_time_t start, otf2_time_t stop, std::string name);
 
@@ -198,11 +190,11 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
     OTF2_WRITER_RESULT mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
 
-    //OTF2_WRITER_RESULT mpi_cart_create(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int ndims, const int* dims, comm_t newcomm);
-    //OTF2_WRITER_RESULT mpi_cart_sub(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, const int* remain_dims, comm_t newcomm);
+    OTF2_WRITER_RESULT mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int ndims, const int* dims, comm_t newcomm);
+    // cart_sub behaves like comm_split
+    OTF2_WRITER_RESULT mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm);
 
-    // TODO: need to know the result of comm_split before recording gatherv, scatterv, allgatherv, alltoallv, and reduce_scatter
-    //OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
+    OTF2_WRITER_RESULT mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
 
     // Depricated in MPI v2.0
     OTF2_WRITER_RESULT mpi_type_contiguous(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype);
@@ -218,7 +210,6 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_type_create_hvector(int rank, otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_hindexed(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
-
   private:
     bool ranks_equivalent(int world_rank, int comm_rank, comm_t comm);
     int get_comm_rank(int world_rank, comm_t comm);
@@ -227,23 +218,25 @@ namespace dumpi {
     void logger(OTF2_WRITER_VERBOSITY level, std::string);
     void logger(OTF2_WRITER_VERBOSITY level, const char *);
     void check_otf2(OTF2_ErrorCode status, const char* description);
-    ArchiveContext& fetch_context(int rank);
+    RankContext& fetch_context(int rank);
     //void close_evt_file(int rank);
     void write_def_files();
-    //std::vector<int>& create_shadow_group();
+    void unwind_comm_events();
 
     // Compact some redundant code
     template<typename T>
     int array_sum(const T* array, int count);
     uint64_t count_bytes(mpi_type_t type, uint64_t count);
 
+    std::vector<int>& get_group(comm_t comm);
+
     bool group_is_known(int group);
     bool comm_is_known(int comm);
     bool type_is_known(mpi_type_t type);
 
     // For MPI call variants
-    OTF2_WRITER_RESULT mpi_send_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
-    OTF2_WRITER_RESULT mpi_isend_inner(ArchiveContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
+    OTF2_WRITER_RESULT mpi_send_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
+    OTF2_WRITER_RESULT mpi_isend_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request);
     void mpi_t_struct_inner(const char* fname, int count, const int* blocklengths, mpi_type_t* oldtypes, mpi_type_t newtype);
     void mpi_t_vector_inner(const char* fname, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     void mpi_t_indexed_inner(const char* name, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
@@ -259,7 +252,7 @@ namespace dumpi {
     OTF2DefTable _string;
     OTF2DefTable _region;
 
-    std::map<int, ArchiveContext> _archive_context;
+    std::map<int, RankContext> _archive_context;
 
     OTF2_Archive* _archive = nullptr;
     OTF2_TimeStamp _start_time = ~0;
@@ -268,6 +261,9 @@ namespace dumpi {
     int _num_ranks = -1;
     int _comm_world_id = -1;
     request_t _null_request = -1;
+
+    // MPI calls that manipulate Comms and Groups are captured as lambdas and traced in order of when they ran.
+    std::priority_queue<CommAction> comm_actions;
 
     OTF2_WRITER_VERBOSITY _verbosity = OWV_NONE;
     uint64_t _clock_resolution = 0;

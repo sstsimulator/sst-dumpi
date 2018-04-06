@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
   libundumpi_clear_callbacks(&cback);
   set_callbacks(&cback);
 
-  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive) + "/*.bin").c_str());
+  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive.c_str()) + "/*.bin").c_str());
   int num_ranks = dumpi_bin_files.size();
   if (num_ranks == 0) {
     printf("Error: could not open dumpi archive\n");
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
   // Initialize the writer
   if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
-  writer.open_archive(opt.output_archive, num_ranks, true);
+  writer.open_archive(opt.output_archive.c_str(), num_ranks, true);
   writer.register_comm_world(DUMPI_COMM_WORLD);
   writer.register_null_request(DUMPI_REQUEST_NULL);
   writer.set_clock_resolution(1E9);
@@ -93,7 +93,10 @@ int main(int argc, char **argv) {
     undumpi_close(profile);
 
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
+    fflush(stdout);
   }
+  if (opt.print_progress) printf("Writing definition files\n");
+  fflush(stdout);
   writer.close_archive();
   return 0;
 }
@@ -106,6 +109,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
   assert(settings != NULL);
   memset(settings, 0, sizeof(d2o2opt));
   while((opt = getopt(argc, argv, "vhpi:o:")) != -1) {
+      char* tmp_str = nullptr;
       switch(opt) {
         case 'v':
           fprintf(stdout, "Setting output to verbose.\n");
@@ -116,11 +120,13 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           std::exit(0);
           break;
         case 'i':
-          settings->dumpi_archive = strdup(optarg);
+          tmp_str = strdup(optarg);
+          settings->dumpi_archive = tmp_str;
           input_set = true;
           break;
         case 'o':
-          settings->output_archive = strdup(optarg);
+          tmp_str = strdup(optarg);
+          settings->output_archive = tmp_str;
           output_set = true;
           break;
         case 'p':
@@ -130,6 +136,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           fprintf(stderr, "Invalid argument %c.\n", opt);
           break;
         }
+      if(tmp_str != nullptr) delete tmp_str;
     }
 
   if (!input_set) {
@@ -163,7 +170,7 @@ static void register_type_sizes(dumpi_profile *profile, dumpi::OTF2_Writer* writ
   for(int i = 0; i < sizes.count; i++)
     writer->register_type(i, sizes.size[i]);
 
-  delete[] sizes.size;
+  free(sizes.size);
 }
 
 // Returns a list of files that match a given pattern

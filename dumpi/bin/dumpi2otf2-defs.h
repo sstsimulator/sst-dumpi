@@ -15,10 +15,10 @@ extern "C" {
    */
   typedef struct d2o2opt {
     int verbose, help;
-    const char *dumpi_archive;
+    std::string dumpi_archive;
     std::string dumpi_meta;
     std::vector<std::string> dumpi_bin;
-    const char *output_archive;
+    std::string output_archive;
     bool print_progress = false;
   } d2o2opt;
 }
