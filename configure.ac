@@ -11,8 +11,8 @@ dnl   SST/macroscale directory.
 dnl
 
 dnl Version info, used both in library versioning and inside dumpi.
-m4_define([DUMPI_VERSION_TAG], 7)
-m4_define([DUMPI_SUBVERSION_TAG], 2)
+m4_define([DUMPI_VERSION_TAG], 8)
+m4_define([DUMPI_SUBVERSION_TAG], 0)
 m4_define([DUMPI_SUBSUBVERSION_TAG], 0)
 # Enable this for releases
 dnl m4_define([DUMPI_SNAPSHOT_TAG])
