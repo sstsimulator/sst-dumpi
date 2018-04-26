@@ -9,11 +9,15 @@
 #include <otf2/otf2.h>
 #include <functional>
 #include <queue>
+#include <list>
+
+// /home/sknigh/code/github/sst-dumpi/build-with-libdumpi/comm_split_example/trace
+// /home/sknigh/deleteme/dumpi-traces/cesar_Mocfe_256/
 
 namespace dumpi {
 
-  typedef int32_t request_t;
   typedef int32_t comm_t;
+  typedef int32_t request_t;
   typedef int16_t mpi_type_t;
   typedef uint64_t otf2_time_t;
 
@@ -114,6 +118,60 @@ namespace dumpi {
     bool operator<(CommAction const &ca) const { return ca.end_time < end_time; }
   };
 
+  // We can't use barriers, timestamps are not always trustworthy, and a given communicator can be split multiple times.
+  // A MPI_Comm_split collective can be identified by the parent communicator, and the number of times the rank has previously done a split collective on that communicator.
+  // Tracking a split is done to know when the children communicators are done constructing.
+  struct CommSplitIdentifier {
+  public:
+    comm_t id;
+    int split_number;
+  };
+
+  struct CommSplitIdentifierHasher {
+    long operator()(const dumpi::CommSplitIdentifier& csi) const
+    {
+        return (std::hash<dumpi::comm_t>()(csi.id) ^ std::hash<int>()(csi.split_number)) >> 1;
+    }
+  };
+
+  // Handles the correct ordering of ranks and communicators in a comm_split
+  class CommSplitConstructor {
+  public:
+    const std::set<comm_t> list_completed();
+    std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed_comm(comm_t comm);
+
+    int incomplete_comms();
+
+    void add_call(int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm);
+
+    //Remove new communicator metadata from memory
+    void clear(comm_t new_comm);
+
+  private:
+    struct RankMetadata {
+      int global_rank;
+      int parent_rank;
+      int key;
+    };
+
+    struct CommSplitContext {
+      CommSplitIdentifier split_id;
+      int parent_size;
+      int remaining_ranks;
+      int comm_id;
+    };
+
+    // Some legwork is done here to count the number of ranks that have participated in a given MPI_Comm_split reduction.
+    // Doing so allows the runtime to know exactly when one is finished, so child communicators can be constructed and the old metadata garbage collected.
+    //               <old_comm, parent_rank, number of calls>
+    std::unordered_map<comm_t, std::unordered_map<int, int>> comm_rank_split_number;
+    //std::unordered_map<comm_t, std::unordered_map<int, int>> comm_id_remap;
+    std::unordered_map<CommSplitIdentifier, CommSplitContext, CommSplitIdentifierHasher> incomplete_comm_splits;
+    std::set<comm_t> complete_comm_splits;
+    std::map<comm_t, std::list<RankMetadata>> new_comm_group;
+    std::unordered_map<comm_t, MPI_Comm_Struct> new_comm_metadata;
+  };
+
   /**
    * @brief The OTF2_Writer class makes emitting OTF2 traces a bit easier
    */
@@ -183,18 +241,13 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_group_incl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, const int*ranks, int newgroup);
     OTF2_WRITER_RESULT mpi_group_intersection(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
     OTF2_WRITER_RESULT mpi_group_range_incl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, int**ranges, int newgroup);
-    //OTF2_WRITER_RESULT mpi_group_range_excl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, const int**ranges, int newgroup);
     OTF2_WRITER_RESULT mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup);
 
     OTF2_WRITER_RESULT mpi_comm_dup(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, comm_t newcomm);
     OTF2_WRITER_RESULT mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group);
     OTF2_WRITER_RESULT mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int group, comm_t newcomm);
 
-    OTF2_WRITER_RESULT mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int ndims, const int* dims, comm_t newcomm);
-    // cart_sub behaves like comm_split
-    OTF2_WRITER_RESULT mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm);
-
-    OTF2_WRITER_RESULT mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm);
+    OTF2_WRITER_RESULT mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int key, int color, comm_t newcomm);
 
     // Depricated in MPI v2.0
     OTF2_WRITER_RESULT mpi_type_contiguous(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t oldtype, mpi_type_t newtype);
@@ -241,7 +294,6 @@ namespace dumpi {
     void mpi_t_vector_inner(const char* fname, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     void mpi_t_indexed_inner(const char* name, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
-
   private:
     std::string _directory;
     std::unordered_map<int, std::vector<int>> _mpi_group;
@@ -261,6 +313,7 @@ namespace dumpi {
     int _num_ranks = -1;
     int _comm_world_id = -1;
     request_t _null_request = -1;
+    CommSplitConstructor comm_split_constructor;
 
     // MPI calls that manipulate Comms and Groups are captured as lambdas and traced in order of when they ran.
     std::priority_queue<CommAction> comm_actions;
@@ -275,5 +328,7 @@ namespace dumpi {
     const uint64_t USER_DEF_COMM_GROUP_OFFSET = 3;
   };
 }
+
+bool operator==(const dumpi::CommSplitIdentifier& rhs, const dumpi::CommSplitIdentifier& lhs);
 
 #endif // OTF2WRITER_H

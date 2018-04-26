@@ -44,6 +44,7 @@ Questions? Contact sst-macro-help@sandia.gov
 
 #include <dumpi/bin/dumpi2otf2-defs.h>
 #include <dumpi/libundumpi/libundumpi.h>
+#include <dumpi/libotf2dump/otf2writer.h>
 
 #include <glob.h>
 #include <string.h>
@@ -78,7 +79,11 @@ int main(int argc, char **argv) {
 
   // Initialize the writer
   if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
-  writer.open_archive(opt.output_archive.c_str(), num_ranks, true);
+  if (writer.open_archive(opt.output_archive, num_ranks, true) != dumpi::OTF2_WRITER_SUCCESS) {
+    printf("Error opening the archive");
+    return 1;
+  }
+
   writer.register_comm_world(DUMPI_COMM_WORLD);
   writer.register_null_request(DUMPI_REQUEST_NULL);
   writer.set_clock_resolution(1E9);
@@ -121,7 +126,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           break;
         case 'i':
           tmp_str = strdup(optarg);
-          settings->dumpi_archive = tmp_str;
+          settings->dumpi_archive = std::string(tmp_str);
           input_set = true;
           break;
         case 'o':

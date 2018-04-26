@@ -1077,52 +1077,52 @@ namespace dumpi {
     _LEAVE();
   }
 
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* dims, comm_t newcomm) {
-    _ENTER("MPI_Cart_create");
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* dims, comm_t newcomm) {
+//    _ENTER("MPI_Cart_create");
 
-    // Need to capture the pointer's contents for the lambda
-    std::vector<int> dims_vect(dims, dims + ndim);
+//    // Need to capture the pointer's contents for the lambda
+//    std::vector<int> dims_vect(dims, dims + ndim);
 
-    printf("MPI_Cart_create Rank %i, old comm %i, new comm %i, ndim %i, dims: ", _rank, comm, newcomm, ndim);
-    for(int i = 0; i < dims_vect.size(); i++) printf("%i ", dims_vect[i]);
-    printf("\n");
+//    //printf("MPI_Cart_create Rank %i, old comm %i, new comm %i, ndim %i, dims: ", _rank, comm, newcomm, ndim);
+//    for(int i = 0; i < dims_vect.size(); i++) printf("%i ", dims_vect[i]);
+//    printf("\n");
 
-    if (rank == 0) {
-      printf(" ");
-    }
+//    if (rank == 0) {
+//      printf(" ");
+//    }
 
-    COMM_LAMBDA_BEGIN();
-    {
-      UNKNOWN_COMM_TRAP();
-      // Only need to initialize once
-      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
+//    COMM_LAMBDA_BEGIN();
+//    {
+//      UNKNOWN_COMM_TRAP();
+//      // Only need to initialize once
+//      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
 
-        auto& nc = _mpi_comm[newcomm];
-        // Copy the settings from the previous communicator.
-        nc = _mpi_comm[comm];
-        nc.ndim = ndim;
-        nc.name = "";
+//        auto& nc = _mpi_comm[newcomm];
+//        // Copy the settings from the previous communicator.
+//        nc = _mpi_comm[comm];
+//        nc.ndim = ndim;
+//        nc.name = "";
 
-        int cart_count = 1;
-        // Copy dimm metadata
-        nc.dims.clear();
-        for(int i = 0; i < ndim; i++) {
-          nc.dims.push_back(dims_vect[i]);
-          cart_count *= dims_vect[i];
-        }
+//        int cart_count = 1;
+//        // Copy dimm metadata
+//        nc.dims.clear();
+//        for(int i = 0; i < ndim; i++) {
+//          nc.dims.push_back(dims_vect[i]);
+//          cart_count *= dims_vect[i];
+//        }
 
-        // when the new comm is smaller (due the the cart not fitting), make a new group.
-        auto& old_group = get_group(comm);
-        if (cart_count < old_group.size()) {
-          nc.group = MPI_Comm_Struct::get_uid();
-          _mpi_group[nc.group].assign(old_group.begin(), old_group.begin() + cart_count);
-        }
-     }
-   }
-   COMM_LAMBDA_END();
+//        // when the new comm is smaller (due the the cart not fitting), make a new group.
+//        auto& old_group = get_group(comm);
+//        if (cart_count < old_group.size()) {
+//          nc.group = MPI_Comm_Struct::get_uid();
+//          _mpi_group[nc.group].assign(old_group.begin(), old_group.begin() + cart_count);
+//        }
+//     }
+//   }
+//   COMM_LAMBDA_END();
 
-   _LEAVE();
-  }
+//   _LEAVE();
+//  }
 
   /* MPICH implementation
         key = 0;
@@ -1136,62 +1136,89 @@ namespace dumpi {
         }
         mpi_errno = MPIR_Comm_split_impl(comm_ptr, color, key, &newcomm_ptr);
    */
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm) {
-    _ENTER("MPI_Cart_sub");
+//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm) {
+//    _ENTER("MPI_Cart_sub");
 
-    // Capture the pointer's contents for the lambda
-    std::vector<int> remain_dims_vect(remain_dims, remain_dims + ndim);
+//    // Capture the pointer's contents for the lambda
+//    std::vector<int> remain_dims_vect(remain_dims, remain_dims + ndim);
 
-    printf("MPI_Cart_sub Rank %i, Old comm %i, Cart_sub_id %i, ndim %i, remain_dims: ", _rank, comm, newcomm, ndim);
-    for(int i = 0; i < remain_dims_vect.size(); i++) printf("%i ", remain_dims_vect[i]);
-    printf("\n");
+//    //printf("MPI_Cart_sub Rank %i, Old comm %i, Cart_sub_id %i, ndim %i, remain_dims: ", _rank, comm, newcomm, ndim);
+//    for(int i = 0; i < remain_dims_vect.size(); i++) printf("%i ", remain_dims_vect[i]);
+//    printf("\n");
 
-    if(rank == 0) {
-      printf(" ");
-    }
+//    if(rank == 0) {
+//      printf(" ");
+//    }
+//    COMM_LAMBDA_BEGIN();
+//    {
+//      UNKNOWN_COMM_TRAP();
+//      // Behaves like a comm_split... In fact, the mpich implementation uses a comm_split...
+
+//      auto& oc = _mpi_comm[comm];
+//      // initialize the comm's structure if not yet created
+//      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
+//        auto& nc = _mpi_comm[newcomm];
+//        // copy the parent's settings
+//        nc = oc;
+
+//        // Update some settings
+//        nc.id = newcomm;
+//        nc.group = MPI_Comm_Struct::get_uid();
+//        nc.name = "";
+//        nc.dims.clear();
+//        nc.parent = comm;
+//        int rank_sum = 1;
+//        for(int i = 0; i < oc.ndim; i++) {
+//          if (remain_dims_vect[i]) {
+//            rank_sum *= oc.dims[i];
+//            nc.dims.push_back(oc.dims[i]);
+//            nc.ndim++;
+//          }
+//        }
+
+//        //printf("Rank %i should have  %i members in comm %i\n", rank, rank_sum, newcomm);
+
+//      }
+
+//      // push this rank into the comm's group
+//      // TODO do changes need to be made to maintain ordering
+//      get_group(newcomm).push_back(rank);
+//    }
+//    COMM_LAMBDA_END();
+
+//    _LEAVE();
+//  }
+
+  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int key, int color, comm_t newcomm) {
+    _ENTER("MPI_Comm_split");
+    printf("rank %i comm %i key %i\n", rank, newcomm, key);
+    //int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm
     COMM_LAMBDA_BEGIN();
     {
-      UNKNOWN_COMM_TRAP();
-      // Behaves like a comm_split... In fact, the mpich implementation uses a comm_split...
+      comm_split_constructor.add_call(get_comm_rank(rank, oldcomm), rank, key, oldcomm, get_comm_size(oldcomm), newcomm);
+      auto completed = comm_split_constructor.list_completed();
 
-      auto& oc = _mpi_comm[comm];
-      // initialize the comm's structure if not yet created
-      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
-        auto& nc = _mpi_comm[newcomm];
-        // copy the parent's settings
-        nc = oc;
+      // Check for finished communicators
+      for(auto c_it = completed.begin(); c_it != completed.end(); c_it++) {
 
-        // Update some settings
-        nc.id = newcomm;
+        // Extract the new communicator's information
+        auto c_tup = comm_split_constructor.get_completed_comm(*c_it);
+        MPI_Comm_Struct& mcs = std::get<0>(c_tup);
+        std::vector<int>& group_ranks = std::get<1>(c_tup);
+
+        // Create the comm
+        auto nc = _mpi_comm[mcs.id];
+        nc = mcs;
+
+        // Copy the group ranks
         nc.group = MPI_Comm_Struct::get_uid();
-        nc.name = "";
-        nc.dims.clear();
-        nc.parent = comm;
-        int rank_sum = 1;
-        for(int i = 0; i < oc.ndim; i++) {
-          if (remain_dims_vect[i]) {
-            rank_sum *= oc.dims[i];
-            nc.dims.push_back(oc.dims[i]);
-            nc.ndim++;
-          }
-        }
+        _mpi_group[nc.group] = group_ranks; // Copy constructor for the list
 
-        printf("Rank %i should have  %i members in comm %i\n", rank, rank_sum, newcomm);
-
+        // Clean up the split constructor
+        comm_split_constructor.clear(mcs.id);
       }
-
-      // push this rank into the comm's group
-      // TODO do changes need to be made to maintain ordering
-      get_group(newcomm).push_back(rank);
     }
     COMM_LAMBDA_END();
-
-    _LEAVE();
-  }
-
-  OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int color, int key, comm_t newcomm) {
-    _ENTER("MPI_Comm_split");
-    logger(OWV_ERROR, "MPI_Comm_split NOT IMPLEMENTED");
     _LEAVE();
   }
 
@@ -1424,5 +1451,84 @@ namespace dumpi {
     request_type.erase(t);
   }
 
+  const std::set<comm_t> CommSplitConstructor::list_completed() {
+    return complete_comm_splits;
+  }
+
+  std::tuple<MPI_Comm_Struct, std::vector<int>> CommSplitConstructor::get_completed_comm(comm_t comm) {
+
+    std::vector<int> out;
+    auto comms_it = new_comm_group.find(comm);
+
+    if (comms_it != new_comm_group.end()) {
+      auto& comm = comms_it->second;
+      for(auto comm_it = comm.begin(); comm_it != comm.end(); comm_it++)
+        out.push_back(comm_it->global_rank);
+    }
+
+    return std::make_tuple(new_comm_metadata[comm], out);
+  }
+
+  void CommSplitConstructor::add_call(int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm) {
+
+    CommSplitIdentifier csi = {old_comm, comm_rank_split_number[old_comm][parent_rank]++};
+    CommSplitContext* s_context_ptr = nullptr;
+    auto ics_it = incomplete_comm_splits.find(csi);
+
+    // Get a reference to the CommSplitContext, create it if necessary
+    if (ics_it != incomplete_comm_splits.end())
+      s_context_ptr = &(ics_it->second);
+    else {
+      s_context_ptr = &incomplete_comm_splits[csi];
+      s_context_ptr->split_id = csi;
+      s_context_ptr->parent_size = old_comm_size;
+      s_context_ptr->remaining_ranks = old_comm_size;
+      s_context_ptr->comm_id = MPI_Comm_Struct::get_uid();
+    }
+
+    // Initialize MPI_Comm_Struct if it doesn't exist yet.
+    auto comm_metadata_it = new_comm_metadata.find(new_comm);
+    if (comm_metadata_it == new_comm_metadata.end()) {
+      auto& c_struct = new_comm_metadata[new_comm];
+      c_struct.id = MPI_Comm_Struct::get_uid();
+      c_struct.parent = old_comm;
+    }
+
+    // Get a reference to an ordered list that contains the new communicator's ranks
+    auto& comm = new_comm_group[new_comm];
+
+    //Insert this rank before the first rank where (key is greator) OR (key is the same and parent rank is greater). Inserting on list.end() is valid!
+    auto comm_it = comm.begin();
+    while(comm_it != comm.end() && !(key > comm_it->key || (key == comm_it->key && parent_rank > comm_it->parent_rank))) comm_it++;
+    comm.insert(comm_it, {global_rank, parent_rank, key});
+
+    // When every rank has participated, mark this comm as completed
+    if(--s_context_ptr->remaining_ranks == 0)
+      complete_comm_splits.insert(new_comm);
+  }
+
+  void CommSplitConstructor::clear(comm_t new_comm) {
+    auto comm_it = new_comm_group.find(new_comm);
+
+    // TODO: use logger (pass in from parent class?)
+    if (comm_it == new_comm_group.end())
+      printf("Error: CommSplitConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
+    else {
+      new_comm_group.erase(comm_it);
+      complete_comm_splits.erase(new_comm);
+      new_comm_metadata.erase(new_comm);
+    }
+  }
+
+  int CommSplitConstructor::incomplete_comms() {
+    return incomplete_comm_splits.size();
+  }
+
   int MPI_Comm_Struct::_ghost_uid = 1000000;
+}
+
+namespace std {
+  bool operator==(const dumpi::CommSplitIdentifier& rhs, const dumpi::CommSplitIdentifier& lhs){
+    return lhs.id == rhs.id && lhs.split_number == rhs.split_number;
+  }
 }
