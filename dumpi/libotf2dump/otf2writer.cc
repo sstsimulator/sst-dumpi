@@ -6,8 +6,6 @@
 #include <cstring>
 #include <unordered_set>
 
-#define FIXME_COMM_SELF 1000
-
 #define CHECK_RANK(rank, _num_ranks) \
   if (rank < -1 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
 
@@ -76,7 +74,6 @@ namespace dumpi {
   }
 
   // OTF2 callbacks
-
   static OTF2_FlushType pre_flush( void* userData, OTF2_FileType fileType, OTF2_LocationRef location, void* callerData, bool final) { return OTF2_FLUSH; }
   static OTF2_TimeStamp post_flush(void* userData, OTF2_FileType fileType, OTF2_LocationRef location) { return 0; }
 
@@ -140,7 +137,6 @@ namespace dumpi {
           if (errno != EEXIST)
             return -1;
         }
-
         *p = '/';
       }
     }
@@ -208,7 +204,7 @@ namespace dumpi {
     // OTF2 Reference Example
     // https://silc.zih.tu-dresden.de/otf2-current/group__usage__writing__mpi.htm
 
-    // See ScoreP source for local def writer examples
+    // See ScoreP source for a local def writer in action
     //  vendor/otf2/src/tools/otf2_trace_gen/otf2_trace_gen.c
 
     check_otf2(OTF2_Archive_OpenDefFiles(_archive), "Opening definition files");
@@ -235,6 +231,7 @@ namespace dumpi {
     int EMPTY_STRING = _string[""];
     _string["MPI"];
     _string["MPI_COMM_WORLD"];
+    _string["MPI_COMM_SELF"];
     _string["LOCATIONS_GROUP"];
 
     for(int rank = 0; rank < _num_ranks; rank++) {
@@ -275,7 +272,6 @@ namespace dumpi {
                                        0                             /* source file */,
                                        0                             /* begin lno */,
                                        0                             /* end lno */ ), "Writing Region to global def file");
-
     }
 
     // SYSTEM_TREE_NODE
@@ -297,7 +293,7 @@ namespace dumpi {
                                               i,
                                               _string[rank_name],
                                               OTF2_LOCATION_GROUP_TYPE_PROCESS,
-                                              0 /* TODO, This should point to the node this rank ran on. Not necessary for sst/macro trace replay.*/),
+                                              0 /* This should point to the node this rank ran on. Not necessary for sst/macro trace replay.*/),
                                               "Writing Location Group to global def file");
     }
 
@@ -316,13 +312,25 @@ namespace dumpi {
                                          "Writing Location to global def file");
     }
 
+    // Here we emulate ScoreP's behavior: create a common preamble to every trace, and remap communicators as necesary
+    //    GROUP                                0  Name: "" <0>, Type: COMM_LOCATIONS, Paradigm: "MPI" <4>, Flags: NONE, 4 Members: "Master thread" <0>, "Master thread" <1>, "Master thread" <2>, "Master thread" <3>
+    //    GROUP                                1  Name: "" <0>, Type: COMM_GROUP, Paradigm: "MPI" <4>, Flags: NONE, 4 Members: 0 ("Master thread" <0>), 1 ("Master thread" <1>), 2 ("Master thread" <2>), 3 ("Master thread" <3>)
+    //    GROUP                                2  Name: "" <0>, Type: COMM_SELF, Paradigm: "MPI" <4>, Flags: NONE, 0 Members:
+    //    COMM                                 0  Name: "MPI_COMM_WORLD" <329>, Group: "" <1>, Parent: UNDEFINED
+    //    COMM                                 1  Name: "MPI_COMM_SELF" <334>, Group: "" <2>, Parent: UNDEFINED
+
     // GROUP
     logger(OWV_INFO, "Writing GROUPs to the def file");
+
+    if (_mpi_group.size() == 0)
+      logger(OWV_ERROR, "No communicator groups registered, did you forget to call register_comm_world() and register_comm_self()");
+
     // ScoreP behavior: Each COMM points to a GROUP def of type OTF2_GROUP_TYPE_COMM_GROUP.
     // Althout the GROUP defs enumerate their ranks, Each must point to a root group of type OTF2_GROUP_TYPE_COMM_LOCATIONS.
-    // ScoreP does not seem to nest groups, instead flattening each to the global LOCATIONS group.
+    // ScoreP does not seem to nest groups, instead flattening each to the global LOCATIONS group that points directly to the COMM_LOCATIONS group.
     uint64_t* world_list = new uint64_t[_num_ranks];
     for (int i = 0; i < _num_ranks; i++)  world_list[i] = i;
+
     check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
                                     COMM_LOCATIONS_GROUP_ID,
                                     _string["LOCATIONS_GROUP"],
@@ -333,35 +341,17 @@ namespace dumpi {
                                     world_list),
                                     "Writing Locations Group to global def file");
 
-    check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
-                                    COMM_WORLD_GROUP_ID,
-                                    EMPTY_STRING,
-                                    OTF2_GROUP_TYPE_COMM_GROUP,
-                                    OTF2_PARADIGM_MPI,
-                                    OTF2_GROUP_FLAG_NONE,
-                                    _num_ranks,
-                                    world_list),
-                                    "Writing MPI_COMM_WORLD group to global def file");
-    delete [] world_list;
-
-    check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
-                                    COMM_SELF_GROUP_ID,
-                                    EMPTY_STRING,
-                                    OTF2_GROUP_TYPE_COMM_GROUP,
-                                    OTF2_PARADIGM_MPI,
-                                    OTF2_GROUP_FLAG_NONE,
-                                    0,
-                                    0),
-                                    "Writing MPI_COMM_WORLD group to global def file");
-
-    // If the trace defines groups (ie with MPI_Comm_group), groups may be duplicated, only use the ones explicitly defined in
+    // If the trace defines groups (ie with MPI_Comm_group), groups may be duplicated, only use the ones explicitly used by the MPI groups
+    // Having non-contiguous group (integer) ID's makes otf2-print dump warnings. Not clear if it's an actual hazard.
     for(auto group_it = _mpi_group.begin(); group_it != _mpi_group.end(); group_it++) {
+      auto group_id = group_it->first;
       auto members = group_it->second;
       uint64_t* group_list = new uint64_t[members.size()];
       for (int i = 0; i < members.size(); i++)  group_list[i] = (uint64_t)members[i];
 
       check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
-                                      group_it->first + USER_DEF_COMM_GROUP_OFFSET,
+                                      //group_it->first + USER_DEF_COMM_GROUP_OFFSET,
+                                      group_id,
                                       EMPTY_STRING,
                                       OTF2_GROUP_TYPE_COMM_GROUP,
                                       OTF2_PARADIGM_MPI,
@@ -372,56 +362,14 @@ namespace dumpi {
       delete [] group_list;
     }
 
-    // When no communicator manipulation occurs, mpi_group list will be empty because it is dynamically generated from MPI callbacks.
-    // The trace needs to have at least one group for MPI_COMM_WORLD
-    if (_mpi_group.size() == 0) {
-      uint64_t* group_list = new uint64_t[_num_ranks];
-      for (int i = 0; i < _num_ranks; i++)  group_list[i] = i;
-
-      check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
-                                      0 + USER_DEF_COMM_GROUP_OFFSET,
-                                      EMPTY_STRING,
-                                      OTF2_GROUP_TYPE_COMM_GROUP,
-                                      OTF2_PARADIGM_MPI,
-                                      OTF2_GROUP_FLAG_NONE,
-                                      _num_ranks,
-                                      group_list),
-                                      "Writing group for MPI_COMM_WORLD go global def file");
-
-      delete group_list;
-    }
-
-//    GROUP                                0  Name: "" <0>, Type: COMM_LOCATIONS, Paradigm: "MPI" <4>, Flags: NONE, 4 Members: "Master thread" <0>, "Master thread" <1>, "Master thread" <2>, "Master thread" <3>
-//    GROUP                                1  Name: "" <0>, Type: COMM_GROUP, Paradigm: "MPI" <4>, Flags: NONE, 4 Members: 0 ("Master thread" <0>), 1 ("Master thread" <1>), 2 ("Master thread" <2>), 3 ("Master thread" <3>)
-//    GROUP                                2  Name: "" <0>, Type: COMM_SELF, Paradigm: "MPI" <4>, Flags: NONE, 0 Members:
-//    COMM                                 0  Name: "MPI_COMM_WORLD" <329>, Group: "" <1>, Parent: UNDEFINED
-//    COMM                                 1  Name: "MPI_COMM_SELF" <334>, Group: "" <2>, Parent: UNDEFINED
-
     // COMM
-    // Dealing with unset MPI_COMM_WORLD
-    if (_comm_world_id == -1) {
-      if (_unknown_comms.size() == 1) {
-        _comm_world_id = *_unknown_comms.begin();
-        _unknown_comms.clear();
-        logger(OWV_WARN, string("MPI_COMM_WORLD was not registered! One unregistered ID found, setting to MPI_COMM_WORLD to" + to_string(_comm_world_id)));
-      } else if (_unknown_comms.size() > 0) {
-        _comm_world_id = *_unknown_comms.begin();
-        _unknown_comms.erase(_unknown_comms.begin());
-        logger(OWV_ERROR, string("MPI_COMM_WORLD was not registered! Setting MPI_COMM_WORLD to" + to_string(_comm_world_id)));
-      } else {
-        logger(OWV_ERROR, string("MPI_COMM_WORLD was not registered! Your traces will not define an MPI_COMM_WORLD communicator"));
-      }
-    }
+    logger(OWV_INFO, "Writing COMMs to the def file");
 
-    // Callers are not expected to set MPI_COMM_WORLD using register_comm.
-    // As long as it was register_comm_world() was called, there is enough information to construct a communicator
-    if (_mpi_comm.find(_comm_world_id) == _mpi_comm.end())
-      check_otf2(OTF2_GlobalDefWriter_WriteComm(defwriter,
-                                                _comm_world_id,
-                                                _string["MPI_COMM_WORLD"],
-                                                COMM_WORLD_GROUP_ID,
-                                                OTF2_UNDEFINED_COMM),
-                                                "Writing MPI_COMM_WORLD to global def file");
+    if (_comm_world_id == -1)
+      logger(OWV_ERROR, "register_comm_world() not called");
+
+    if (_comm_self_id == -1)
+      logger(OWV_ERROR, "register_comm_self() not called");
 
     for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) {
       int comm_id = comm_it->first;
@@ -430,22 +378,27 @@ namespace dumpi {
       check_otf2(OTF2_GlobalDefWriter_WriteComm( defwriter,
                                       comm_id,
                                       _string[comm.name],
-                                      comm.id == _comm_world_id ? COMM_WORLD_GROUP_ID : comm.group + USER_DEF_COMM_GROUP_OFFSET,
-                                      comm.id == _comm_world_id ? OTF2_UNDEFINED_COMM : comm.parent),
+                                      comm.group,
+                                      comm.parent),
                                       "Writing a Communicator to global def file");
     }
 
-
-    // Register communicator mapping. Also essential for creating Local def files, which are not created automatically.
+    // local communicator -> global communicator mapping
+    // Even without mapping information, this step is essential for creating local def files, which are required by a valid trace.
     for(int r = 0; r < _num_ranks; r++) {
       OTF2_DefWriter* local_def_writer = OTF2_Archive_GetDefWriter(_archive, r);
 
-      // local COMM mappings
-      OTF2_IdMap* _mpi_comm_map = OTF2_IdMap_Create( OTF2_ID_MAP_SPARSE, 2 );
+      // Getting rank-local metadata
+      auto& rank_context = fetch_context(r);
 
-      // Each location uses its rank as the communicator id which maps to the global 0
-      check_otf2(OTF2_IdMap_AddIdPair( _mpi_comm_map, r, _comm_world_id ), "Adding MPI_COMM_WORLD to a mapping table");
-      check_otf2(OTF2_IdMap_AddIdPair( _mpi_comm_map, r + _num_ranks, FIXME_COMM_SELF ), "Adding MPI_COMM_SELF to a mapping table");
+      // initialize local COMM mappings table, include space for MPI_COMM_WORLD, MPI_COMM_SELF, and any user-defined communicators.
+      OTF2_IdMap* _mpi_comm_map = OTF2_IdMap_Create( OTF2_ID_MAP_SPARSE, rank_context.comm_mapping.size());
+
+      // "comm_mapping" is populated on every rank in a registered communicator
+      for(auto cm_it = rank_context.comm_mapping.begin(); cm_it != rank_context.comm_mapping.end(); cm_it++)
+        check_otf2(OTF2_IdMap_AddIdPair(_mpi_comm_map, cm_it->first, cm_it->second), "Adding a communicator to the Def mapping list");
+
+      // Serialize the table to a local def file
       check_otf2(OTF2_DefWriter_WriteMappingTable( local_def_writer,
                                         OTF2_MAPPING_COMM,
                                         _mpi_comm_map ),
@@ -468,6 +421,8 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::close_archive() {
 
+    write_def_files();
+
     // Clean up the event archive for each rank
     for( auto ac_it = _archive_context.begin(); ac_it != _archive_context.end(); ac_it++) {
       int rank = ac_it->second.rank;
@@ -480,7 +435,6 @@ namespace dumpi {
     _archive_context.clear();
 
     check_otf2(OTF2_Archive_CloseEvtFiles(_archive), "Closing all event files");
-    write_def_files();
     check_otf2(OTF2_Archive_Close(_archive), "Closing archive");
 
     _archive = nullptr;
@@ -507,10 +461,25 @@ namespace dumpi {
 
   void OTF2_Writer::register_comm_world(comm_t id) {
     std::vector<int> w_group;
-    for(int i = 0; i < _num_ranks; i++) w_group.push_back(i);
+    for(int i = 0; i < _num_ranks; i++) {
+      w_group.push_back(i);
+      fetch_context(i).comm_mapping[id] = MPI_COMM_WORLD_ID;
+    }
     _mpi_group[COMM_WORLD_GROUP_ID] = w_group;
     _comm_world_id = id;
-    _mpi_comm[id] = {.name="MPI_COMM_WORLD", .parent=OTF2_UNDEFINED_COMM, .id=id, .group=(int)COMM_WORLD_GROUP_ID};
+    _mpi_comm[MPI_COMM_WORLD_ID] = {.name="MPI_COMM_WORLD", .parent=OTF2_UNDEFINED_COMM, .id=MPI_COMM_WORLD_ID, .group=(int)COMM_WORLD_GROUP_ID};
+    _unknown_comms.erase(id);
+  }
+
+  void OTF2_Writer::register_comm_self(comm_t id) {
+    std::vector<int> s_group = {0};
+    for(int i = 0; i < _num_ranks; i++) {
+      fetch_context(i).comm_mapping[id] = MPI_COMM_SELF_ID;
+    }
+
+    _mpi_group[COMM_SELF_GROUP_ID] = s_group;
+    _comm_self_id = id;
+    _mpi_comm[MPI_COMM_SELF_ID] = {.name="MPI_COMM_SELF", .parent=OTF2_UNDEFINED_COMM, .id=MPI_COMM_SELF_ID, .group=(int)COMM_SELF_GROUP_ID};
     _unknown_comms.erase(id);
   }
 
@@ -868,8 +837,7 @@ namespace dumpi {
     if (_mpi_group.find(group) == _mpi_group.end()) {
       logger(OWV_WARN, string("Unknown group (") + to_string(group));
       return false;
-    }
-    return true;
+    } else return true;
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
@@ -1077,125 +1045,15 @@ namespace dumpi {
     _LEAVE();
   }
 
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* dims, comm_t newcomm) {
-//    _ENTER("MPI_Cart_create");
-
-//    // Need to capture the pointer's contents for the lambda
-//    std::vector<int> dims_vect(dims, dims + ndim);
-
-//    //printf("MPI_Cart_create Rank %i, old comm %i, new comm %i, ndim %i, dims: ", _rank, comm, newcomm, ndim);
-//    for(int i = 0; i < dims_vect.size(); i++) printf("%i ", dims_vect[i]);
-//    printf("\n");
-
-//    if (rank == 0) {
-//      printf(" ");
-//    }
-
-//    COMM_LAMBDA_BEGIN();
-//    {
-//      UNKNOWN_COMM_TRAP();
-//      // Only need to initialize once
-//      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
-
-//        auto& nc = _mpi_comm[newcomm];
-//        // Copy the settings from the previous communicator.
-//        nc = _mpi_comm[comm];
-//        nc.ndim = ndim;
-//        nc.name = "";
-
-//        int cart_count = 1;
-//        // Copy dimm metadata
-//        nc.dims.clear();
-//        for(int i = 0; i < ndim; i++) {
-//          nc.dims.push_back(dims_vect[i]);
-//          cart_count *= dims_vect[i];
-//        }
-
-//        // when the new comm is smaller (due the the cart not fitting), make a new group.
-//        auto& old_group = get_group(comm);
-//        if (cart_count < old_group.size()) {
-//          nc.group = MPI_Comm_Struct::get_uid();
-//          _mpi_group[nc.group].assign(old_group.begin(), old_group.begin() + cart_count);
-//        }
-//     }
-//   }
-//   COMM_LAMBDA_END();
-
-//   _LEAVE();
-//  }
-
-  /* MPICH implementation
-        key = 0;
-        color = 0;
-        for (i = 0; i < ndims; i++) {
-            if (remain_dims[i]) {
-                key = (key * topo_ptr->topo.cart.dims[i]) + topo_ptr->topo.cart.position[i];
-            } else {
-                color = (color * topo_ptr->topo.cart.dims[i]) + topo_ptr->topo.cart.position[i];
-            }
-        }
-        mpi_errno = MPIR_Comm_split_impl(comm_ptr, color, key, &newcomm_ptr);
-   */
-//  OTF2_WRITER_RESULT OTF2_Writer::mpi_cart_sub(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int ndim, const int* remain_dims, comm_t newcomm) {
-//    _ENTER("MPI_Cart_sub");
-
-//    // Capture the pointer's contents for the lambda
-//    std::vector<int> remain_dims_vect(remain_dims, remain_dims + ndim);
-
-//    //printf("MPI_Cart_sub Rank %i, Old comm %i, Cart_sub_id %i, ndim %i, remain_dims: ", _rank, comm, newcomm, ndim);
-//    for(int i = 0; i < remain_dims_vect.size(); i++) printf("%i ", remain_dims_vect[i]);
-//    printf("\n");
-
-//    if(rank == 0) {
-//      printf(" ");
-//    }
-//    COMM_LAMBDA_BEGIN();
-//    {
-//      UNKNOWN_COMM_TRAP();
-//      // Behaves like a comm_split... In fact, the mpich implementation uses a comm_split...
-
-//      auto& oc = _mpi_comm[comm];
-//      // initialize the comm's structure if not yet created
-//      if(_mpi_comm.find(newcomm) == _mpi_comm.end()) {
-//        auto& nc = _mpi_comm[newcomm];
-//        // copy the parent's settings
-//        nc = oc;
-
-//        // Update some settings
-//        nc.id = newcomm;
-//        nc.group = MPI_Comm_Struct::get_uid();
-//        nc.name = "";
-//        nc.dims.clear();
-//        nc.parent = comm;
-//        int rank_sum = 1;
-//        for(int i = 0; i < oc.ndim; i++) {
-//          if (remain_dims_vect[i]) {
-//            rank_sum *= oc.dims[i];
-//            nc.dims.push_back(oc.dims[i]);
-//            nc.ndim++;
-//          }
-//        }
-
-//        //printf("Rank %i should have  %i members in comm %i\n", rank, rank_sum, newcomm);
-
-//      }
-
-//      // push this rank into the comm's group
-//      // TODO do changes need to be made to maintain ordering
-//      get_group(newcomm).push_back(rank);
-//    }
-//    COMM_LAMBDA_END();
-
-//    _LEAVE();
-//  }
-
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int key, int color, comm_t newcomm) {
     _ENTER("MPI_Comm_split");
-    printf("rank %i comm %i key %i\n", rank, newcomm, key);
+    //printf("rank %i comm %i key %i\n", rank, newcomm, key);
     //int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm
     COMM_LAMBDA_BEGIN();
     {
-      comm_split_constructor.add_call(get_comm_rank(rank, oldcomm), rank, key, oldcomm, get_comm_size(oldcomm), newcomm);
+      // turn oldcomm (local communicator id) into a global communicator id
+      auto& gbl_oc = fetch_context(rank).comm_mapping[oldcomm];
+      comm_split_constructor.add_call(rank, get_comm_rank(rank, gbl_oc), key, color, gbl_oc, newcomm, get_comm_size(gbl_oc));
       auto completed = comm_split_constructor.list_completed();
 
       // Check for finished communicators
@@ -1207,12 +1065,19 @@ namespace dumpi {
         std::vector<int>& group_ranks = std::get<1>(c_tup);
 
         // Create the comm
-        auto nc = _mpi_comm[mcs.id];
+        auto& nc = _mpi_comm[mcs.id];
         nc = mcs;
 
         // Copy the group ranks
-        nc.group = MPI_Comm_Struct::get_uid();
+        nc.group = MPI_Comm_Struct::get_unique_group_id();
         _mpi_group[nc.group] = group_ranks; // Copy constructor for the list
+
+        // Copy over any rank-specific comm id remappings
+        auto comm_remap_vect = comm_split_constructor.get_comm_remapping(mcs.id);
+        for(int i = 0; i < comm_remap_vect.size(); i++) {
+          //           (world rank id          ).(local comm id                 ) ->(global comm id)
+          fetch_context(_mpi_group[nc.group][i]).comm_mapping[comm_remap_vect[i]] = mcs.id;
+        }
 
         // Clean up the split constructor
         comm_split_constructor.clear(mcs.id);
@@ -1416,7 +1281,6 @@ namespace dumpi {
     return incomplete_count;
   }
 
-  // TODO replace this mess with lambdas
   // I-event handling
 
   void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
@@ -1469,7 +1333,7 @@ namespace dumpi {
     return std::make_tuple(new_comm_metadata[comm], out);
   }
 
-  void CommSplitConstructor::add_call(int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm) {
+  void CommSplitConstructor::add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size) {
 
     CommSplitIdentifier csi = {old_comm, comm_rank_split_number[old_comm][parent_rank]++};
     CommSplitContext* s_context_ptr = nullptr;
@@ -1483,34 +1347,51 @@ namespace dumpi {
       s_context_ptr->split_id = csi;
       s_context_ptr->parent_size = old_comm_size;
       s_context_ptr->remaining_ranks = old_comm_size;
-      s_context_ptr->comm_id = MPI_Comm_Struct::get_uid();
     }
 
+    // Ensure the new communicator (identified by split id + color combo) has an unique id
+    auto& ctcid = s_context_ptr->color_to_comm_id[color];
+    if (ctcid == 0)
+      ctcid = MPI_Comm_Struct::get_unique_comm_id();
+
     // Initialize MPI_Comm_Struct if it doesn't exist yet.
-    auto comm_metadata_it = new_comm_metadata.find(new_comm);
+    auto comm_metadata_it = new_comm_metadata.find(ctcid);
     if (comm_metadata_it == new_comm_metadata.end()) {
-      auto& c_struct = new_comm_metadata[new_comm];
-      c_struct.id = MPI_Comm_Struct::get_uid();
+      auto& c_struct = new_comm_metadata[ctcid];
+      c_struct.id = ctcid;
       c_struct.parent = old_comm;
     }
 
     // Get a reference to an ordered list that contains the new communicator's ranks
-    auto& comm = new_comm_group[new_comm];
+    auto& comm = new_comm_group[ctcid];
 
-    //Insert this rank before the first rank where (key is greator) OR (key is the same and parent rank is greater). Inserting on list.end() is valid!
+    //Insert before the first rank where (the key is greator) OR (the key is the same and parent rank is greater). Inserting on list.end() is valid!
     auto comm_it = comm.begin();
     while(comm_it != comm.end() && !(key > comm_it->key || (key == comm_it->key && parent_rank > comm_it->parent_rank))) comm_it++;
-    comm.insert(comm_it, {global_rank, parent_rank, key});
+    comm.insert(comm_it, {global_rank, parent_rank, new_comm, ctcid, key});
 
-    // When every rank has participated, mark this comm as completed
+    // When every rank has participated, indicate all child communicators are complete
     if(--s_context_ptr->remaining_ranks == 0)
-      complete_comm_splits.insert(new_comm);
+      for (auto child_comms = s_context_ptr->color_to_comm_id.begin(); child_comms != s_context_ptr->color_to_comm_id.end(); child_comms++)
+        complete_comm_splits.insert(child_comms->second);
+  }
+
+  std::vector<comm_t> CommSplitConstructor::get_comm_remapping(comm_t new_comm) {
+    std::vector<comm_t> result;
+    auto ncg_it = new_comm_group.find(new_comm);
+
+    // Build up a list
+    if (ncg_it != new_comm_group.end()) {
+      for(auto local_comm = ncg_it->second.begin(); local_comm != ncg_it->second.end(); local_comm++)
+        result.push_back(local_comm->local_new_comm_id);
+    }
+
+    return result;
   }
 
   void CommSplitConstructor::clear(comm_t new_comm) {
     auto comm_it = new_comm_group.find(new_comm);
 
-    // TODO: use logger (pass in from parent class?)
     if (comm_it == new_comm_group.end())
       printf("Error: CommSplitConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
     else {
@@ -1524,7 +1405,8 @@ namespace dumpi {
     return incomplete_comm_splits.size();
   }
 
-  int MPI_Comm_Struct::_ghost_uid = 1000000;
+  int MPI_Comm_Struct::_comm_uid = OTF2_Writer::MPI_COMM_USER_OFFSET;
+  int MPI_Comm_Struct::_group_uid = OTF2_Writer::USER_DEF_COMM_GROUP_OFFSET;
 }
 
 namespace std {

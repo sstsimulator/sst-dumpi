@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
   }
 
   writer.register_comm_world(DUMPI_COMM_WORLD);
+  writer.register_comm_self(DUMPI_COMM_SELF);
   writer.register_null_request(DUMPI_REQUEST_NULL);
   writer.set_clock_resolution(1E9);
 

@@ -91,9 +91,11 @@ namespace dumpi {
     std::string name;
 
     // helper for getting a unique id for groups and comms whose IDs are not specified by the trace.
-    static int get_uid() {return ++_ghost_uid;}
+    static int get_unique_comm_id() {return _comm_uid++;}
+    static int get_unique_group_id() {return _group_uid++;}
   private:
-    static int _ghost_uid;
+    static int _comm_uid;
+    static int _group_uid;
   };
 
   /// Stores rank-specific states
@@ -103,6 +105,7 @@ namespace dumpi {
     OTF2_EvtWriter* evt_writer = nullptr;
     std::unordered_map<int, irecv_capture> irecv_requests;
     std::unordered_map<int, REQUEST_TYPE> request_type;
+    std::unordered_map<comm_t, comm_t> comm_mapping; // Tracks arbitary local communicator IDs
 
     void incomplete_call(int request_id, REQUEST_TYPE type);
     void complete_call(request_t request_id, uint64_t timestamp);
@@ -118,8 +121,8 @@ namespace dumpi {
     bool operator<(CommAction const &ca) const { return ca.end_time < end_time; }
   };
 
-  // We can't use barriers, timestamps are not always trustworthy, and a given communicator can be split multiple times.
-  // A MPI_Comm_split collective can be identified by the parent communicator, and the number of times the rank has previously done a split collective on that communicator.
+  // MPI_Comm_split is a collective that takes a parent collective and shards it into several children
+  // An instance of a split collective be identified across ranks by hashing the parent communicator, and the number of times the rank has previously done a split on that communicator.
   // Tracking a split is done to know when the children communicators are done constructing.
   struct CommSplitIdentifier {
   public:
@@ -139,10 +142,11 @@ namespace dumpi {
   public:
     const std::set<comm_t> list_completed();
     std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed_comm(comm_t comm);
+    std::vector<comm_t> get_comm_remapping(comm_t new_comm); // For a given communicator, creates a list that maps the ranks' arbitrary local communicator IDs to the global one
 
     int incomplete_comms();
 
-    void add_call(int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm);
+    void add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size);
 
     //Remove new communicator metadata from memory
     void clear(comm_t new_comm);
@@ -151,6 +155,8 @@ namespace dumpi {
     struct RankMetadata {
       int global_rank;
       int parent_rank;
+      comm_t local_new_comm_id;
+      comm_t global_new_comm_id;
       int key;
     };
 
@@ -158,14 +164,14 @@ namespace dumpi {
       CommSplitIdentifier split_id;
       int parent_size;
       int remaining_ranks;
-      int comm_id;
+      // A list of child communicators identified by the color parameter
+      std::unordered_map<int, comm_t> color_to_comm_id;
     };
 
-    // Some legwork is done here to count the number of ranks that have participated in a given MPI_Comm_split reduction.
-    // Doing so allows the runtime to know exactly when one is finished, so child communicators can be constructed and the old metadata garbage collected.
+    // Some legwork is done here to count the number of ranks that have participated in a given MPI_Comm_split reduction
+    // So the runtime knows when it finishes and propegate the information to child communicators.
     //               <old_comm, parent_rank, number of calls>
     std::unordered_map<comm_t, std::unordered_map<int, int>> comm_rank_split_number;
-    //std::unordered_map<comm_t, std::unordered_map<int, int>> comm_id_remap;
     std::unordered_map<CommSplitIdentifier, CommSplitContext, CommSplitIdentifierHasher> incomplete_comm_splits;
     std::set<comm_t> complete_comm_splits;
     std::map<comm_t, std::list<RankMetadata>> new_comm_group;
@@ -190,6 +196,7 @@ namespace dumpi {
     OTF2_WRITER_RESULT set_rank(int rank);
 
     void register_comm_world(comm_t id);
+    void register_comm_self(comm_t id);
     void register_type(mpi_type_t type, int size);
     void register_null_request(request_t request);
     void set_verbosity(OTF2_WRITER_VERBOSITY verbosity);
@@ -263,6 +270,16 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_type_create_hvector(int rank, otf2_time_t start, otf2_time_t stop, int count, int blocklength, mpi_type_t oldtype, mpi_type_t newtype);
     OTF2_WRITER_RESULT mpi_type_create_hindexed(int rank, otf2_time_t start, otf2_time_t stop, int count, const int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
+    // The first three Communicator groups are reserved.
+    static const uint64_t COMM_LOCATIONS_GROUP_ID = 0;
+    static const uint64_t COMM_WORLD_GROUP_ID = 1;
+    static const uint64_t COMM_SELF_GROUP_ID = 2;
+    static const uint64_t USER_DEF_COMM_GROUP_OFFSET = 3;
+
+    static const uint64_t MPI_COMM_WORLD_ID = 0;
+    static const uint64_t MPI_COMM_SELF_ID = 1;
+    static const uint64_t MPI_COMM_USER_OFFSET = 2;
+
   private:
     bool ranks_equivalent(int world_rank, int comm_rank, comm_t comm);
     int get_comm_rank(int world_rank, comm_t comm);
@@ -296,7 +313,7 @@ namespace dumpi {
 
   private:
     std::string _directory;
-    std::unordered_map<int, std::vector<int>> _mpi_group;
+    std::map<int, std::vector<int>> _mpi_group;
     std::map<int, MPI_Comm_Struct> _mpi_comm;
     std::unordered_map<mpi_type_t, int> _type_sizes;
     std::set<comm_t> _unknown_comms; // Comms that have shown up in the event files but have not been registered.
@@ -312,6 +329,7 @@ namespace dumpi {
     int _rank;
     int _num_ranks = -1;
     int _comm_world_id = -1;
+    int _comm_self_id = -1;
     request_t _null_request = -1;
     CommSplitConstructor comm_split_constructor;
 
@@ -321,11 +339,6 @@ namespace dumpi {
     OTF2_WRITER_VERBOSITY _verbosity = OWV_NONE;
     uint64_t _clock_resolution = 0;
 
-    // The first three COMM_GROUPS are reserved.
-    const uint64_t COMM_LOCATIONS_GROUP_ID = 0;
-    const uint64_t COMM_WORLD_GROUP_ID = 1;
-    const uint64_t COMM_SELF_GROUP_ID = 2;
-    const uint64_t USER_DEF_COMM_GROUP_OFFSET = 3;
   };
 }
 
