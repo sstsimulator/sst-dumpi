@@ -78,7 +78,8 @@ int main(int argc, char **argv) {
   }
 
   // Initialize the writer
-  if (opt.verbose == 1) writer.set_verbosity(dumpi::OWV_INFO);
+  if (opt.verbose == 1)
+    writer.set_verbosity(dumpi::OWV_WARN);
   if (writer.open_archive(opt.output_archive, num_ranks, true) != dumpi::OTF2_WRITER_SUCCESS) {
     printf("Error opening the archive");
     return 1;
@@ -86,6 +87,8 @@ int main(int argc, char **argv) {
 
   writer.register_comm_world(DUMPI_COMM_WORLD);
   writer.register_comm_self(DUMPI_COMM_SELF);
+  writer.register_comm_null(DUMPI_COMM_NULL);
+  writer.register_comm_error(DUMPI_COMM_ERROR);
   writer.register_null_request(DUMPI_REQUEST_NULL);
   writer.set_clock_resolution(1E9);
 

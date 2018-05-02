@@ -16,17 +16,21 @@
   CHECK_RANK(rank, _num_ranks);   \
   RankContext& ctx = fetch_context(rank);
 
-// immediately returns an error code when the comm is unknown
-#define UNKNOWN_COMM_TRAP()                                \
-  if (!comm_is_known(comm)) {                              \
-    logger(OWV_ERROR, _fname + " failed");                 \
-    return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;}
+//// immediately returns an error code when the comm is unknown
+//#define UNKNOWN_COMM_TRAP()                                \
+//  if (!comm_is_known(comm)) {                              \
+//    logger(OWV_ERROR, _fname + " failed");                 \
+//    return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;}
+
+#define UNKNOWN_COMM_TRAP()
 
 // immediately returns an error code when the group is unknown
-#define UNKNOWN_GROUP_TRAP(group)              \
-  if (!group_is_known(group)) {                \
-    logger(OWV_ERROR, _fname + " failed");     \
-    return OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP;}
+//#define UNKNOWN_GROUP_TRAP(group)              \
+//  if (!group_is_known(group)) {                \
+//    logger(OWV_ERROR, _fname + " failed");     \
+//    return OTF2_WRITER_ERROR_UKNOWN_MPI_GROUP;}
+
+#define UNKNOWN_GROUP_TRAP(group)
 
 #define COMM_LAMBDA_BEGIN() comm_actions.push({.action = [=]() {
 
@@ -371,6 +375,12 @@ namespace dumpi {
     if (_comm_self_id == -1)
       logger(OWV_ERROR, "register_comm_self() not called");
 
+    if (_comm_error_id == -1)
+      logger(OWV_ERROR, "register_comm_error() not called");
+
+    if (_comm_null_id == -1)
+      logger(OWV_ERROR, "register_comm_null() not called");
+
     for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) {
       int comm_id = comm_it->first;
       MPI_Comm_Struct& comm = comm_it->second;
@@ -481,6 +491,14 @@ namespace dumpi {
     _comm_self_id = id;
     _mpi_comm[MPI_COMM_SELF_ID] = {.name="MPI_COMM_SELF", .parent=OTF2_UNDEFINED_COMM, .id=MPI_COMM_SELF_ID, .group=(int)COMM_SELF_GROUP_ID};
     _unknown_comms.erase(id);
+  }
+
+  void OTF2_Writer::register_comm_error(comm_t id) {
+    _comm_error_id = id;
+  }
+
+  void OTF2_Writer::register_comm_null(comm_t id) {
+    _comm_null_id = id;
   }
 
   void OTF2_Writer::register_null_request(request_t request) {
@@ -835,7 +853,7 @@ namespace dumpi {
 
   bool OTF2_Writer::group_is_known(int group) {
     if (_mpi_group.find(group) == _mpi_group.end()) {
-      logger(OWV_WARN, string("Unknown group (") + to_string(group));
+      logger(OWV_WARN, string("Unknown group (") + to_string(group) + ")");
       return false;
     } else return true;
   }
@@ -845,11 +863,14 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[group1].begin();
-    auto g2_it = _mpi_group[group2].begin();
-    auto g1_end = _mpi_group[group1].end();
-    auto g2_end = _mpi_group[group2].end();
-    auto dest = std::back_inserter(_mpi_group[newgroup]);
+    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+    auto global_id = MPI_Comm_Struct::get_unique_group_id();
+    auto dest = std::back_inserter(_mpi_group[global_id]);
+
+    ctx.group_map[newgroup] = global_id;
 
     // Set Union
     while (true)
@@ -870,11 +891,14 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[group1].begin();
-    auto g2_it = _mpi_group[group2].begin();
-    auto g1_end = _mpi_group[group1].end();
-    auto g2_end = _mpi_group[group2].end();
-    auto dest = std::back_inserter(_mpi_group[newgroup]);
+    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+    auto global_id = MPI_Comm_Struct::get_unique_group_id();
+    auto dest = std::back_inserter(_mpi_group[global_id]);
+
+    ctx.group_map[newgroup] = global_id;
 
     // Set Difference
     while (g1_it != g1_end) {
@@ -898,11 +922,14 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[group1].begin();
-    auto g2_it = _mpi_group[group2].begin();
-    auto g1_end = _mpi_group[group1].end();
-    auto g2_end = _mpi_group[group2].end();
-    auto dest = std::back_inserter(_mpi_group[newgroup]);
+    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+    auto global_id = MPI_Comm_Struct::get_unique_group_id();
+    auto dest = std::back_inserter(_mpi_group[global_id]);
+
+    ctx.group_map[newgroup] = global_id;
 
     // Set Intersection
     while (g1_it!=g1_end && g2_it!=g2_end)
@@ -922,13 +949,23 @@ namespace dumpi {
     _ENTER("MPI_Group_incl");
     UNKNOWN_GROUP_TRAP(group);
 
-    auto old_group = _mpi_group[group];
-    auto new_group = _mpi_group[newgroup];
-    int g_size = old_group.size();
-    for (int i = 0; i < count; i++) {
-      if (ranks[i] >= g_size) logger(OWV_ERROR, string("MPI_Group_incl found ranks out of bounds!"));
-      else new_group.push_back(old_group[ranks[i]]);
+    std::vector<int> r_vec(ranks, ranks + count);
+
+    COMM_LAMBDA_BEGIN();
+    {
+      GET_ARCHIVE_CONTEXT(rank);
+      auto old_group = _mpi_group[ctx.group_map[group]];
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      ctx.group_map[newgroup] = global_id;
+      auto new_group = _mpi_group[global_id];
+
+      int g_size = old_group.size();
+      for (int i = 0; i < count; i++) {
+        if (r_vec[i] >= g_size) logger(OWV_ERROR, string("MPI_Group_incl found ranks out of bounds! " + to_string(ranks[i]) + " >= " + to_string(g_size)));
+        else new_group.push_back(old_group[r_vec[i]]);
+      }
     }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -937,8 +974,10 @@ namespace dumpi {
     _ENTER("MPI_Group_excl");
     UNKNOWN_GROUP_TRAP(group);
 
-    auto old_group = _mpi_group[group];
-    auto new_group = _mpi_group[newgroup];
+    auto old_group = _mpi_group[ctx.group_map[group]];
+    auto global_id = MPI_Comm_Struct::get_unique_group_id();
+    ctx.group_map[newgroup] = global_id;
+    auto new_group = _mpi_group[global_id];
 
     for (int i = 0; i < old_group.size(); i++) {
       bool exclude = false;
@@ -958,8 +997,10 @@ namespace dumpi {
     _ENTER("MPI_Group_range_incl");
     UNKNOWN_GROUP_TRAP(group);
 
-    auto old_group = _mpi_group[group];
-    auto new_group = _mpi_group[newgroup];
+    auto old_group = _mpi_group[ctx.group_map[group]];
+    auto global_id = MPI_Comm_Struct::get_unique_group_id();
+    ctx.group_map[newgroup] = global_id;
+    auto new_group = _mpi_group[global_id];
 
     _mpi_group[newgroup] = _mpi_group[group];
     for (int i = 0; i < count; i++)
@@ -991,13 +1032,11 @@ namespace dumpi {
     COMM_LAMBDA_BEGIN();
     {
         UNKNOWN_COMM_TRAP();
-        auto& c = _mpi_comm[newcomm];
-        // copy settings
-        c = _mpi_comm[comm];
-
-        // update other settings
-        c.parent = comm;
-        c.name = "";
+        // Alias the existing global comm reference.
+        // Duplication was intened for library writers to handle asynchronus calls without leaking.
+        // Not useful information for endpoint model simulations, but it may be useful for profiling.
+        auto& ctx = fetch_context(rank);
+        ctx.comm_mapping[newcomm] = ctx.comm_mapping[comm];
     }
     COMM_LAMBDA_END();
 
@@ -1007,19 +1046,13 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_group(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group) {
     _ENTER("MPI_Comm_group");
 
-    if(rank == 0) {
-      printf(" ");
-    }
-
     COMM_LAMBDA_BEGIN();
     {
       UNKNOWN_COMM_TRAP();
-      auto& cur_comm = _mpi_comm[comm];
+      GET_ARCHIVE_CONTEXT(rank);
 
-      // If the group id does not exist and the comm points to a different id, copy the auto-assigned group to that id
-      // Expected to happen because we don't know what the correct group id is unless a the trace queries it
-      if (group != cur_comm.group && _mpi_group.find(group) != _mpi_group.end()) _mpi_group[group] = _mpi_group[cur_comm.group];
-      cur_comm.group = group;
+      // The comm points to a group at creation, alias this rank to that one.
+      ctx.group_map[group] = _mpi_comm[ctx.comm_mapping[comm]].group;
     }
     COMM_LAMBDA_END();
 
@@ -1031,14 +1064,32 @@ namespace dumpi {
 
     COMM_LAMBDA_BEGIN();
     {
-        UNKNOWN_COMM_TRAP();
-        UNKNOWN_GROUP_TRAP(group);
+      if (newcomm != _comm_null_id && newcomm != _comm_error_id) {
+        GET_ARCHIVE_CONTEXT(rank);
+        auto& gbl_comm = ctx.comm_mapping[comm];
+        comm_create_constructor.add_call(rank, get_comm_rank(rank, gbl_comm), gbl_comm, _mpi_group[ctx.group_map[group]].size(), newcomm);
 
-        auto nc = _mpi_comm[newcomm];
-        nc.group = group;
-        nc.parent = comm;
-        nc.id = newcomm;
-        nc.name = "";
+        auto completed = comm_create_constructor.list_completed();
+        for(auto c_it = completed.begin(); c_it != completed.end(); c_it++) {
+          // Extract the new communicator's information
+          auto c_tup = comm_split_constructor.get_completed(*c_it);
+          MPI_Comm_Struct& mcs = std::get<0>(c_tup);
+
+          // Create the new comm
+          auto& nc = _mpi_comm[mcs.id];
+          nc = mcs;
+
+          // Assign the group (this rank will have a correct reference)
+          nc.group = ctx.group_map[group];
+
+          // Copy over any rank-specific comm id remappings
+          auto comm_remap_vect = comm_create_constructor.get_remapping(mcs.id);
+          for(int i = 0; i < comm_remap_vect.size(); i++) {
+            //           (world rank id          ).(local comm id                 ) ->(global comm id)
+            fetch_context(_mpi_group[nc.group][i]).comm_mapping[comm_remap_vect[i]] = mcs.id;
+          }
+        }
+      }
     }
     COMM_LAMBDA_END();
 
@@ -1047,8 +1098,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_split(int rank, otf2_time_t start, otf2_time_t stop, comm_t oldcomm, int key, int color, comm_t newcomm) {
     _ENTER("MPI_Comm_split");
-    //printf("rank %i comm %i key %i\n", rank, newcomm, key);
-    //int parent_rank, int global_rank, int key, comm_t old_comm, int old_comm_size, comm_t new_comm
     COMM_LAMBDA_BEGIN();
     {
       // turn oldcomm (local communicator id) into a global communicator id
@@ -1060,7 +1109,7 @@ namespace dumpi {
       for(auto c_it = completed.begin(); c_it != completed.end(); c_it++) {
 
         // Extract the new communicator's information
-        auto c_tup = comm_split_constructor.get_completed_comm(*c_it);
+        auto c_tup = comm_split_constructor.get_completed(*c_it);
         MPI_Comm_Struct& mcs = std::get<0>(c_tup);
         std::vector<int>& group_ranks = std::get<1>(c_tup);
 
@@ -1073,7 +1122,7 @@ namespace dumpi {
         _mpi_group[nc.group] = group_ranks; // Copy constructor for the list
 
         // Copy over any rank-specific comm id remappings
-        auto comm_remap_vect = comm_split_constructor.get_comm_remapping(mcs.id);
+        auto comm_remap_vect = comm_split_constructor.get_remapping(mcs.id);
         for(int i = 0; i < comm_remap_vect.size(); i++) {
           //           (world rank id          ).(local comm id                 ) ->(global comm id)
           fetch_context(_mpi_group[nc.group][i]).comm_mapping[comm_remap_vect[i]] = mcs.id;
@@ -1315,11 +1364,7 @@ namespace dumpi {
     request_type.erase(t);
   }
 
-  const std::set<comm_t> CommSplitConstructor::list_completed() {
-    return complete_comm_splits;
-  }
-
-  std::tuple<MPI_Comm_Struct, std::vector<int>> CommSplitConstructor::get_completed_comm(comm_t comm) {
+  std::tuple<MPI_Comm_Struct, std::vector<int>> CommSplitConstructor::get_completed(comm_t comm) {
 
     std::vector<int> out;
     auto comms_it = new_comm_group.find(comm);
@@ -1335,16 +1380,15 @@ namespace dumpi {
 
   void CommSplitConstructor::add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size) {
 
-    CommSplitIdentifier csi = {old_comm, comm_rank_split_number[old_comm][parent_rank]++};
+    CommEventIdentifier cei = {.comm_event_type=CET_COMM_SPLIT, .id=old_comm, .event_number=event_counter[old_comm][parent_rank]++};
     CommSplitContext* s_context_ptr = nullptr;
-    auto ics_it = incomplete_comm_splits.find(csi);
+    auto ics_it = incomplete_comm_splits.find(cei);
 
-    // Get a reference to the CommSplitContext, create it if necessary
+    // Get a reference to the context, create it if necessary
     if (ics_it != incomplete_comm_splits.end())
       s_context_ptr = &(ics_it->second);
     else {
-      s_context_ptr = &incomplete_comm_splits[csi];
-      s_context_ptr->split_id = csi;
+      s_context_ptr = &incomplete_comm_splits[cei];
       s_context_ptr->parent_size = old_comm_size;
       s_context_ptr->remaining_ranks = old_comm_size;
     }
@@ -1368,15 +1412,21 @@ namespace dumpi {
     //Insert before the first rank where (the key is greator) OR (the key is the same and parent rank is greater). Inserting on list.end() is valid!
     auto comm_it = comm.begin();
     while(comm_it != comm.end() && !(key > comm_it->key || (key == comm_it->key && parent_rank > comm_it->parent_rank))) comm_it++;
-    comm.insert(comm_it, {global_rank, parent_rank, new_comm, ctcid, key});
+    RankMetadata rmd;
+    rmd.global_rank=global_rank;
+    rmd.parent_rank=parent_rank;
+    rmd.local_new_comm_id=new_comm;
+    rmd.global_new_comm_id=ctcid;
+    rmd.key=key;
+    comm.insert(comm_it, rmd);
 
     // When every rank has participated, indicate all child communicators are complete
     if(--s_context_ptr->remaining_ranks == 0)
       for (auto child_comms = s_context_ptr->color_to_comm_id.begin(); child_comms != s_context_ptr->color_to_comm_id.end(); child_comms++)
-        complete_comm_splits.insert(child_comms->second);
+        completed.insert(child_comms->second);
   }
 
-  std::vector<comm_t> CommSplitConstructor::get_comm_remapping(comm_t new_comm) {
+  std::vector<comm_t> CommSplitConstructor::get_remapping(comm_t new_comm) {
     std::vector<comm_t> result;
     auto ncg_it = new_comm_group.find(new_comm);
 
@@ -1396,13 +1446,74 @@ namespace dumpi {
       printf("Error: CommSplitConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
     else {
       new_comm_group.erase(comm_it);
-      complete_comm_splits.erase(new_comm);
+      completed.erase(new_comm);
       new_comm_metadata.erase(new_comm);
     }
   }
 
-  int CommSplitConstructor::incomplete_comms() {
-    return incomplete_comm_splits.size();
+  std::tuple<MPI_Comm_Struct, std::vector<int>> CommCreateConstructor::get_completed(comm_t comm) {
+    std::vector<int> out;
+    auto comms_it = new_comm_group.find(comm);
+
+    if (comms_it != new_comm_group.end()) {
+      auto& comm = comms_it->second;
+      for(auto comm_it = comm.begin(); comm_it != comm.end(); comm_it++)
+        out.push_back(comm_it->global_rank);
+    }
+
+    return std::make_tuple(new_comm_metadata[comm], out);
+  }
+
+  void CommCreateConstructor::add_call(int global_rank, int parent_rank, comm_t comm, int group_size, comm_t new_comm) {
+    CommEventIdentifier cei = {.comm_event_type=CET_COMM_CREATE, .id=comm, .event_number=event_counter[comm][parent_rank]};
+    CommCreateContext* c_ctx_ptr = nullptr;
+    auto icc_it = incomplete_comm_creates.find(cei);
+
+    // Get a reference to the context, create if necessary
+    if (icc_it != incomplete_comm_creates.end())
+      c_ctx_ptr = &(icc_it->second);
+    else {
+      c_ctx_ptr = &incomplete_comm_creates[cei];
+      c_ctx_ptr->remaining_ranks = group_size;
+      c_ctx_ptr->global_id = MPI_Comm_Struct::get_unique_comm_id();
+
+      auto& c_struct = new_comm_metadata[c_ctx_ptr->global_id];
+      c_struct.id = c_ctx_ptr->global_id;
+      c_struct.parent = comm;
+    }
+
+    RankMetadata rmd;
+    rmd.global_rank = global_rank;
+    rmd.local_comm_id = new_comm;
+    new_comm_group[c_ctx_ptr->global_id].push_back(rmd);
+
+    if (--c_ctx_ptr->remaining_ranks == 0)
+      completed.insert(c_ctx_ptr->global_id);
+  }
+
+  void CommCreateConstructor::clear(comm_t new_comm) {
+    auto comm_it1 = new_comm_group.find(new_comm);
+
+    if (comm_it1 == new_comm_group.end()) {
+      printf("Error: CommCreateConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
+    } else {
+      new_comm_group.erase(comm_it1);
+      completed.erase(new_comm);
+      new_comm_metadata.erase(new_comm);
+    }
+  }
+
+  std::vector<comm_t> CommCreateConstructor::get_remapping(comm_t new_comm) {
+    std::vector<comm_t> result;
+    auto ncg_it = new_comm_group.find(new_comm);
+
+    // Build up a list
+    if (ncg_it != new_comm_group.end()) {
+      for(auto local_comm = ncg_it->second.begin(); local_comm != ncg_it->second.end(); local_comm++)
+        result.push_back(local_comm->local_comm_id);
+    }
+
+    return result;
   }
 
   int MPI_Comm_Struct::_comm_uid = OTF2_Writer::MPI_COMM_USER_OFFSET;
@@ -1410,7 +1521,7 @@ namespace dumpi {
 }
 
 namespace std {
-  bool operator==(const dumpi::CommSplitIdentifier& rhs, const dumpi::CommSplitIdentifier& lhs){
-    return lhs.id == rhs.id && lhs.split_number == rhs.split_number;
+  bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs){
+    return lhs.id == rhs.id && lhs.event_number == rhs.event_number && lhs.comm_event_type == rhs.comm_event_type;
   }
 }

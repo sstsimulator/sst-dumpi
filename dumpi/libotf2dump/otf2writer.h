@@ -11,9 +11,6 @@
 #include <queue>
 #include <list>
 
-// /home/sknigh/code/github/sst-dumpi/build-with-libdumpi/comm_split_example/trace
-// /home/sknigh/deleteme/dumpi-traces/cesar_Mocfe_256/
-
 namespace dumpi {
 
   typedef int32_t comm_t;
@@ -46,6 +43,11 @@ namespace dumpi {
   enum REQUEST_TYPE {
     REQUEST_TYPE_ISEND = 0,
     REQUEST_TYPE_IRECV
+  };
+
+  enum COMM_EVENT_TYPE {
+    CET_COMM_SPLIT = 0,
+    CET_COMM_CREATE
   };
 
   struct irecv_capture {
@@ -106,6 +108,7 @@ namespace dumpi {
     std::unordered_map<int, irecv_capture> irecv_requests;
     std::unordered_map<int, REQUEST_TYPE> request_type;
     std::unordered_map<comm_t, comm_t> comm_mapping; // Tracks arbitary local communicator IDs
+    std::unordered_map<int, int> group_map; // maps arbitrary local group IDs go global ones (which an arbitrary construct created when comms are created).
 
     void incomplete_call(int request_id, REQUEST_TYPE type);
     void complete_call(request_t request_id, uint64_t timestamp);
@@ -124,44 +127,83 @@ namespace dumpi {
   // MPI_Comm_split is a collective that takes a parent collective and shards it into several children
   // An instance of a split collective be identified across ranks by hashing the parent communicator, and the number of times the rank has previously done a split on that communicator.
   // Tracking a split is done to know when the children communicators are done constructing.
-  struct CommSplitIdentifier {
+  struct CommEventIdentifier {
   public:
+    COMM_EVENT_TYPE comm_event_type;
     comm_t id;
-    int split_number;
+    int event_number;
   };
 
-  struct CommSplitIdentifierHasher {
-    long operator()(const dumpi::CommSplitIdentifier& csi) const
+  struct CommEventIdentifierHasher {
+    long operator()(const dumpi::CommEventIdentifier& csi) const
     {
-        return (std::hash<dumpi::comm_t>()(csi.id) ^ std::hash<int>()(csi.split_number)) >> 1;
+        return (std::hash<dumpi::comm_t>()(csi.id) ^ std::hash<int>()(csi.event_number) ^ std::hash<COMM_EVENT_TYPE>()(csi.comm_event_type));
     }
   };
 
-  // Handles the correct ordering of ranks and communicators in a comm_split
-  class CommSplitConstructor {
+  // A base class for collectives that build communicators or groups. Used in
+  // the formation of mappings between local rank identifiers and global communicator groups
+  template<typename T>
+  class CollectiveIdRemapper {
   public:
-    const std::set<comm_t> list_completed();
-    std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed_comm(comm_t comm);
-    std::vector<comm_t> get_comm_remapping(comm_t new_comm); // For a given communicator, creates a list that maps the ranks' arbitrary local communicator IDs to the global one
+    const std::set<T> list_completed() {return completed; }
+    virtual std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(T new_id) = 0;
+    virtual std::vector<T> get_remapping(T new_id) = 0;
+    virtual void clear(T new_id) = 0;
 
-    int incomplete_comms();
+  protected:
+    std::set<T> completed;
+    std::unordered_map<T, std::unordered_map<int, int>> event_counter;
 
-    void add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size);
-
-    //Remove new communicator metadata from memory
-    void clear(comm_t new_comm);
-
-  private:
     struct RankMetadata {
+    public:
       int global_rank;
       int parent_rank;
       comm_t local_new_comm_id;
       comm_t global_new_comm_id;
+    };
+  };
+
+  class CommCreateConstructor : public CollectiveIdRemapper<comm_t> {
+  public:
+    std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(comm_t comm);
+    std::vector<comm_t> get_remapping(comm_t new_comm); // For a given communicator, creates a list that maps the ranks' arbitrary local communicator IDs to the global one
+    void clear(comm_t new_comm);
+    void add_call(int global_rank, int parent_rank, comm_t comm, int group_size, comm_t new_comm);
+
+  private:
+    //struct RankMetadata : public CollectiveIdRemapper<comm_t>::RankMetadata {};
+
+    struct CommCreateContext {
+      int remaining_ranks;
+      comm_t global_id = -1;
+    };
+
+    struct RankMetadata {
+    public:
+      int global_rank;
+      comm_t local_comm_id;
+    };
+
+    std::unordered_map<CommEventIdentifier, CommCreateContext, CommEventIdentifierHasher> incomplete_comm_creates;
+    std::unordered_map<comm_t, MPI_Comm_Struct> new_comm_metadata;
+    std::map<comm_t, std::vector<RankMetadata>> new_comm_group;
+  };
+
+  // Handles the correct ordering of ranks and communicators in a comm_split
+  class CommSplitConstructor : public CollectiveIdRemapper<comm_t> {
+  public:
+    std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(comm_t comm);
+    std::vector<comm_t> get_remapping(comm_t new_comm); // For a given communicator, creates a list that maps the ranks' arbitrary local communicator IDs to the global one
+    void clear(comm_t new_comm);
+
+    void add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size);
+  private:
+    struct RankMetadata : public CollectiveIdRemapper<comm_t>::RankMetadata {
       int key;
     };
 
     struct CommSplitContext {
-      CommSplitIdentifier split_id;
       int parent_size;
       int remaining_ranks;
       // A list of child communicators identified by the color parameter
@@ -170,10 +212,7 @@ namespace dumpi {
 
     // Some legwork is done here to count the number of ranks that have participated in a given MPI_Comm_split reduction
     // So the runtime knows when it finishes and propegate the information to child communicators.
-    //               <old_comm, parent_rank, number of calls>
-    std::unordered_map<comm_t, std::unordered_map<int, int>> comm_rank_split_number;
-    std::unordered_map<CommSplitIdentifier, CommSplitContext, CommSplitIdentifierHasher> incomplete_comm_splits;
-    std::set<comm_t> complete_comm_splits;
+    std::unordered_map<CommEventIdentifier, CommSplitContext, CommEventIdentifierHasher> incomplete_comm_splits;
     std::map<comm_t, std::list<RankMetadata>> new_comm_group;
     std::unordered_map<comm_t, MPI_Comm_Struct> new_comm_metadata;
   };
@@ -197,6 +236,8 @@ namespace dumpi {
 
     void register_comm_world(comm_t id);
     void register_comm_self(comm_t id);
+    void register_comm_error(comm_t id);
+    void register_comm_null(comm_t id);
     void register_type(mpi_type_t type, int size);
     void register_null_request(request_t request);
     void set_verbosity(OTF2_WRITER_VERBOSITY verbosity);
@@ -330,8 +371,11 @@ namespace dumpi {
     int _num_ranks = -1;
     int _comm_world_id = -1;
     int _comm_self_id = -1;
+    int _comm_error_id = -1;
+    int _comm_null_id = -1;
     request_t _null_request = -1;
     CommSplitConstructor comm_split_constructor;
+    CommCreateConstructor comm_create_constructor;
 
     // MPI calls that manipulate Comms and Groups are captured as lambdas and traced in order of when they ran.
     std::priority_queue<CommAction> comm_actions;
@@ -342,6 +386,6 @@ namespace dumpi {
   };
 }
 
-bool operator==(const dumpi::CommSplitIdentifier& rhs, const dumpi::CommSplitIdentifier& lhs);
+bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs);
 
 #endif // OTF2WRITER_H
