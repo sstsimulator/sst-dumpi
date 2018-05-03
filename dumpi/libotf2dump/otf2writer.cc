@@ -345,17 +345,26 @@ namespace dumpi {
                                     world_list),
                                     "Writing Locations Group to global def file");
 
-    // If the trace defines groups (ie with MPI_Comm_group), groups may be duplicated, only use the ones explicitly used by the MPI groups
-    // Having non-contiguous group (integer) ID's makes otf2-print dump warnings. Not clear if it's an actual hazard.
-    for(auto group_it = _mpi_group.begin(); group_it != _mpi_group.end(); group_it++) {
-      auto group_id = group_it->first;
-      auto members = group_it->second;
+    delete[] world_list;
+
+    // The runtime will create duplicate comm groups, only use the ones referenced by communicators
+
+    // Having non-contiguous group (integer) ID's makes otf2-print dump warnings. "otf2-print: warning: out of order Comm definition"
+    // At this point all of the comm's and groups have been realized, and a last second remapping will solve the above warning
+    std::map<int, int> group_id_map;
+    int group_map_inc = 1;
+
+    //for(auto group_it = _mpi_group.begin(); group_it != _mpi_group.end(); group_it++) {
+    for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) {
+      auto group_id = comm_it->second.group;
+      auto& members = _mpi_group[group_id];
+      group_id_map[group_id] = group_map_inc;
       uint64_t* group_list = new uint64_t[members.size()];
       for (int i = 0; i < members.size(); i++)  group_list[i] = (uint64_t)members[i];
 
       check_otf2(OTF2_GlobalDefWriter_WriteGroup(defwriter,
                                       //group_it->first + USER_DEF_COMM_GROUP_OFFSET,
-                                      group_id,
+                                      group_map_inc++,
                                       EMPTY_STRING,
                                       OTF2_GROUP_TYPE_COMM_GROUP,
                                       OTF2_PARADIGM_MPI,
@@ -363,6 +372,7 @@ namespace dumpi {
                                       members.size(),
                                       group_list),
                                       "Writing group to global def file");
+
       delete [] group_list;
     }
 
@@ -388,7 +398,7 @@ namespace dumpi {
       check_otf2(OTF2_GlobalDefWriter_WriteComm( defwriter,
                                       comm_id,
                                       _string[comm.name],
-                                      comm.group,
+                                      group_id_map[comm.group],
                                       comm.parent),
                                       "Writing a Communicator to global def file");
     }
@@ -858,6 +868,7 @@ namespace dumpi {
     } else return true;
   }
 
+  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_union");
     UNKNOWN_GROUP_TRAP(group1);
@@ -886,6 +897,7 @@ namespace dumpi {
     _LEAVE();
   }
 
+  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_difference(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_difference");
     UNKNOWN_GROUP_TRAP(group1);
@@ -917,6 +929,7 @@ namespace dumpi {
     _LEAVE();
   }
 
+  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_intersection(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_intersection");
     UNKNOWN_GROUP_TRAP(group1);
@@ -954,10 +967,10 @@ namespace dumpi {
     COMM_LAMBDA_BEGIN();
     {
       GET_ARCHIVE_CONTEXT(rank);
-      auto old_group = _mpi_group[ctx.group_map[group]];
+      auto& old_group = _mpi_group[ctx.group_map[group]];
       auto global_id = MPI_Comm_Struct::get_unique_group_id();
       ctx.group_map[newgroup] = global_id;
-      auto new_group = _mpi_group[global_id];
+      auto& new_group = _mpi_group[global_id];
 
       int g_size = old_group.size();
       for (int i = 0; i < count; i++) {
@@ -970,6 +983,7 @@ namespace dumpi {
     _LEAVE();
   }
 
+  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_excl(int rank, otf2_time_t start, otf2_time_t stop, int group, int count, const int*ranks, int newgroup) {
     _ENTER("MPI_Group_excl");
     UNKNOWN_GROUP_TRAP(group);
@@ -1072,7 +1086,7 @@ namespace dumpi {
         auto completed = comm_create_constructor.list_completed();
         for(auto c_it = completed.begin(); c_it != completed.end(); c_it++) {
           // Extract the new communicator's information
-          auto c_tup = comm_split_constructor.get_completed(*c_it);
+          auto c_tup = comm_create_constructor.get_completed(*c_it);
           MPI_Comm_Struct& mcs = std::get<0>(c_tup);
 
           // Create the new comm

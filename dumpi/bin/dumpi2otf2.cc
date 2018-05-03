@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
   }
 
   // Initialize the writer
-  if (opt.verbose == 1)
-    writer.set_verbosity(dumpi::OWV_WARN);
+  writer.set_verbosity(opt.verbose ? dumpi::OWV_INFO : dumpi::OWV_WARN);
+
   if (writer.open_archive(opt.output_archive, num_ranks, true) != dumpi::OTF2_WRITER_SUCCESS) {
     printf("Error opening the archive");
     return 1;
