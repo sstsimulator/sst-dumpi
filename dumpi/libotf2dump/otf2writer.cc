@@ -1,5 +1,4 @@
 #include <dumpi/libotf2dump/otf2writer.h>
-#include <otf2/otf2.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <limits.h>
@@ -9,20 +8,11 @@
 #define CHECK_RANK(rank, _num_ranks) \
   if (rank < -1 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
 
-#define CHECK_COMM() \
-  if (comm != _comm_world_id && _mpi_comm.find(comm) == _mpi_comm.end()) _unknown_comms.insert(comm);
-
 #define GET_ARCHIVE_CONTEXT(rank) \
   CHECK_RANK(rank, _num_ranks);   \
   RankContext& ctx = fetch_context(rank);
 
-//// immediately returns an error code when the comm is unknown
-//#define UNKNOWN_COMM_TRAP()                                \
-//  if (!comm_is_known(comm)) {                              \
-//    logger(OWV_ERROR, _fname + " failed");                 \
-//    return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;}
-
-#define UNKNOWN_COMM_TRAP()
+#define COMM_NULL_OR_ERROR(comm) (comm == _comm_null_id || comm == _comm_error_id)
 
 // immediately returns an error code when the group is unknown
 //#define UNKNOWN_GROUP_TRAP(group)              \
@@ -62,7 +52,6 @@
 #define UNDEFINED_ROOT int root = -1;
 
 #define COLLECTIVE_WRAPPER(collective, sent, received)                                                \
-  CHECK_COMM();                                                                                       \
   OTF2_EvtWriter_MpiCollectiveBegin(ctx.evt_writer, nullptr, start);                                      \
   OTF2_EvtWriter_MpiCollectiveEnd(ctx.evt_writer, nullptr, stop, collective, comm, root, sent, received); \
   ctx.event_count += 2;
@@ -540,7 +529,6 @@ namespace dumpi {
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_send_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag) {
-    CHECK_COMM();
     OTF2_EvtWriter_MpiSend(ctx.evt_writer, nullptr, start, dest, comm, tag, _type_sizes[type]*count);
     ctx.event_count++;
     return OTF2_WRITER_SUCCESS;
@@ -572,14 +560,12 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_recv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag) {
     _ENTER("MPI_Recv");
-    CHECK_COMM();
     OTF2_EvtWriter_MpiRecv(ctx.evt_writer, nullptr, start, source, comm, tag, count_bytes(type, count));
     ctx.event_count++;
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_isend_inner(RankContext& ctx, otf2_time_t start, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag, request_t request) {
-    CHECK_COMM();
     ctx.incomplete_call(request, REQUEST_TYPE_ISEND);
     OTF2_EvtWriter_MpiIsend(ctx.evt_writer, nullptr, start, dest, comm, tag, count_bytes(type, count), request);
     ctx.event_count++;
@@ -612,8 +598,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irecv");
-    CHECK_COMM();
-    //logger(OWV_INFO, string("  MPI irecv request ") + to_string(request));
     ctx.irecv_requests[request] = {count, type, source, tag, comm, request};
     ctx.incomplete_call(request, REQUEST_TYPE_IRECV);
     OTF2_EvtWriter_MpiIrecvRequest(ctx.evt_writer, nullptr, start, request);
@@ -692,7 +676,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_barrier(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm) {
     _ENTER("MPI_Barrier");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BARRIER, 0, 0);
     _LEAVE();
@@ -700,7 +683,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
     _ENTER("MPI_Bcast");
-    UNKNOWN_COMM_TRAP();
     int bytes = count_bytes(type, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BCAST,
                        ranks_equivalent(rank, root, comm) ? bytes : 0,
@@ -710,13 +692,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Gather");
-    UNKNOWN_COMM_TRAP();
-
-    int send_count = 0;
-    int recv_count = 0;
-
-    if (ranks_equivalent(rank, root, comm)) recv_count = count_bytes(recvtype, recvcount);
-    else send_count = count_bytes(sendtype, sendcount);
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_GATHER,
                        sendcount,
@@ -726,7 +701,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Gatherv");
-    UNKNOWN_COMM_TRAP();
 
     int send_count = 0;
     int recv_count = 0;
@@ -744,7 +718,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Scatter");
-    UNKNOWN_COMM_TRAP();
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTER,
                        (ranks_equivalent(rank, root, comm)) ? count_bytes(sendtype, sendcount) : 0,
                        (ranks_equivalent(rank, root, comm)) ? 0 : count_bytes(recvtype, recvcount));
@@ -753,7 +726,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm) {
     _ENTER("MPI_Scatterv");
-    UNKNOWN_COMM_TRAP();
     int send_count = 0;
     int recv_count = 0;
 
@@ -770,7 +742,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm) {
     _ENTER("MPI_Scan");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCAN,
                        count_bytes(datatype, count),
@@ -780,7 +751,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_allgather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Allgather");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHER,
                        count_bytes(sendtype, sendcount),
@@ -790,7 +760,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_allgatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Allgatherv");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHERV,
@@ -800,7 +769,6 @@ namespace dumpi {
   }
   OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoall(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Alltoall");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALL,
                        count_bytes(sendtype, sendcount),
@@ -810,7 +778,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoallv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Alltoallv");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALLV,
@@ -821,7 +788,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm) {
     _ENTER("MPI_Reduce");
-    UNKNOWN_COMM_TRAP();
 
     int sent = count_bytes(type, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE,
@@ -832,7 +798,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_allreduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Allreduce");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
     int bytes = count_bytes(type, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLREDUCE,
@@ -843,7 +808,6 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Reduce_scatter");
-    UNKNOWN_COMM_TRAP();
     UNDEFINED_ROOT
 
     //comm_size = (comm_size == COMM_SIZE_NONE) ? get_comm_size(comm): comm_size;
@@ -874,26 +838,31 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
-    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
-    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
-    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
-    auto global_id = MPI_Comm_Struct::get_unique_group_id();
-    auto dest = std::back_inserter(_mpi_group[global_id]);
-
-    ctx.group_map[newgroup] = global_id;
-
-    // Set Union
-    while (true)
+    COMM_LAMBDA_BEGIN();
     {
-      if (g1_it==g1_end) { std::copy(g2_it,g2_end,dest); break; }
-      if (g2_it==g2_end) { std::copy(g1_it,g1_end,dest); break; }
+      GET_ARCHIVE_CONTEXT(rank);
+      auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+      auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+      auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+      auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      auto dest = std::back_inserter(_mpi_group[global_id]);
 
-      if (*g1_it<*g2_it) { *dest = *g1_it; ++g1_it; }
-      else if (*g2_it<*g1_it) { *dest = *g2_it; ++g2_it; }
-      else { *dest = *g1_it; ++g1_it; ++g2_it; }
-      ++dest;
+      ctx.group_map[newgroup] = global_id;
+
+      // Set Union
+      while (true)
+      {
+        if (g1_it==g1_end) { std::copy(g2_it,g2_end,dest); break; }
+        if (g2_it==g2_end) { std::copy(g1_it,g1_end,dest); break; }
+
+        if (*g1_it<*g2_it) { *dest = *g1_it; ++g1_it; }
+        else if (*g2_it<*g1_it) { *dest = *g2_it; ++g2_it; }
+        else { *dest = *g1_it; ++g1_it; ++g2_it; }
+        ++dest;
+      }
     }
+    COMM_LAMBDA_END();
     _LEAVE();
   }
 
@@ -903,28 +872,33 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
-    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
-    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
-    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
-    auto global_id = MPI_Comm_Struct::get_unique_group_id();
-    auto dest = std::back_inserter(_mpi_group[global_id]);
+    COMM_LAMBDA_BEGIN();
+    {
+      GET_ARCHIVE_CONTEXT(rank);
+      auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+      auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+      auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+      auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      auto dest = std::back_inserter(_mpi_group[global_id]);
 
-    ctx.group_map[newgroup] = global_id;
+      ctx.group_map[newgroup] = global_id;
 
-    // Set Difference
-    while (g1_it != g1_end) {
-      if (g2_it == g2_end) { std::copy(g1_it, g1_end, dest); break; }
+      // Set Difference
+      while (g1_it != g1_end) {
+        if (g2_it == g2_end) { std::copy(g1_it, g1_end, dest); break; }
 
-      if (*g1_it < *g2_it) {
-        *dest++ = *g1_it++;
-      } else {
-        if (! (*g2_it < *g1_it)) {
-          ++g1_it;
+        if (*g1_it < *g2_it) {
+          *dest++ = *g1_it++;
+        } else {
+          if (! (*g2_it < *g1_it)) {
+            ++g1_it;
+          }
+          ++g2_it;
         }
-        ++g2_it;
       }
     }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -935,25 +909,30 @@ namespace dumpi {
     UNKNOWN_GROUP_TRAP(group1);
     UNKNOWN_GROUP_TRAP(group2);
 
-    auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
-    auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
-    auto g1_end = _mpi_group[ctx.group_map[group1]].end();
-    auto g2_end = _mpi_group[ctx.group_map[group2]].end();
-    auto global_id = MPI_Comm_Struct::get_unique_group_id();
-    auto dest = std::back_inserter(_mpi_group[global_id]);
-
-    ctx.group_map[newgroup] = global_id;
-
-    // Set Intersection
-    while (g1_it!=g1_end && g2_it!=g2_end)
+    COMM_LAMBDA_BEGIN();
     {
-      if (*g1_it<*g2_it) ++g1_it;
-      else if (*g2_it<*g1_it) ++g2_it;
-      else {
-        *dest = *g1_it;
-        ++dest; ++g1_it; ++g2_it;
+      GET_ARCHIVE_CONTEXT(rank);
+      auto g1_it = _mpi_group[ctx.group_map[group1]].begin();
+      auto g2_it = _mpi_group[ctx.group_map[group2]].begin();
+      auto g1_end = _mpi_group[ctx.group_map[group1]].end();
+      auto g2_end = _mpi_group[ctx.group_map[group2]].end();
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      auto dest = std::back_inserter(_mpi_group[global_id]);
+
+      ctx.group_map[newgroup] = global_id;
+
+      // Set Intersection
+      while (g1_it!=g1_end && g2_it!=g2_end)
+      {
+        if (*g1_it<*g2_it) ++g1_it;
+        else if (*g2_it<*g1_it) ++g2_it;
+        else {
+          *dest = *g1_it;
+          ++dest; ++g1_it; ++g2_it;
+        }
       }
     }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -988,21 +967,22 @@ namespace dumpi {
     _ENTER("MPI_Group_excl");
     UNKNOWN_GROUP_TRAP(group);
 
-    auto old_group = _mpi_group[ctx.group_map[group]];
-    auto global_id = MPI_Comm_Struct::get_unique_group_id();
-    ctx.group_map[newgroup] = global_id;
-    auto new_group = _mpi_group[global_id];
+    std::vector<int> r_vec(ranks, ranks + count);
 
-    for (int i = 0; i < old_group.size(); i++) {
-      bool exclude = false;
-      for (int j = 0; j < count; j++) {
-        if (ranks[j] == i) {
-          exclude = true;
-          break;
-        }
+    COMM_LAMBDA_BEGIN();
+    {
+      GET_ARCHIVE_CONTEXT(rank);
+      auto& old_group = _mpi_group[ctx.group_map[group]];
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      ctx.group_map[newgroup] = global_id;
+      auto& new_group = _mpi_group[global_id];
+
+      for(auto og_it = old_group.begin(); og_it != old_group.end(); og_it++) {
+        if(std::find(r_vec.begin(), r_vec.end(), *og_it) == r_vec.end())
+          new_group.push_back(*og_it);
       }
-      if (!exclude) new_group.push_back(old_group[ranks[i]]);
     }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -1011,15 +991,19 @@ namespace dumpi {
     _ENTER("MPI_Group_range_incl");
     UNKNOWN_GROUP_TRAP(group);
 
-    auto old_group = _mpi_group[ctx.group_map[group]];
-    auto global_id = MPI_Comm_Struct::get_unique_group_id();
-    ctx.group_map[newgroup] = global_id;
-    auto new_group = _mpi_group[global_id];
+    COMM_LAMBDA_BEGIN();
+    {
+      GET_ARCHIVE_CONTEXT(rank);
+      auto& old_group = _mpi_group[ctx.group_map[group]];
+      auto global_id = MPI_Comm_Struct::get_unique_group_id();
+      ctx.group_map[newgroup] = global_id;
+      auto& new_group = _mpi_group[global_id];
 
-    _mpi_group[newgroup] = _mpi_group[group];
-    for (int i = 0; i < count; i++)
-      for(int j = ranges[i][0]; j < ranges[i][1]; j+=ranges[i][2])
-         _mpi_group[newgroup].push_back(old_group[j]);
+      for (int i = 0; i < count; i++)
+        for(int j = ranges[i][0]; j < ranges[i][1]; j+=ranges[i][2])
+           new_group.push_back(old_group[j]);
+    }
+    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -1045,10 +1029,9 @@ namespace dumpi {
 
     COMM_LAMBDA_BEGIN();
     {
-        UNKNOWN_COMM_TRAP();
         // Alias the existing global comm reference.
         // Duplication was intened for library writers to handle asynchronus calls without leaking.
-        // Not useful information for endpoint model simulations, but it may be useful for profiling.
+        // Not useful information for endpoint model simulations, but it may affect profiling.
         auto& ctx = fetch_context(rank);
         ctx.comm_mapping[newcomm] = ctx.comm_mapping[comm];
     }
@@ -1062,7 +1045,6 @@ namespace dumpi {
 
     COMM_LAMBDA_BEGIN();
     {
-      UNKNOWN_COMM_TRAP();
       GET_ARCHIVE_CONTEXT(rank);
 
       // The comm points to a group at creation, alias this rank to that one.
@@ -1076,12 +1058,14 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_comm_create(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm, int group, comm_t newcomm) {
     _ENTER("MPI_Comm_create");
 
-    COMM_LAMBDA_BEGIN();
-    {
-      if (newcomm != _comm_null_id && newcomm != _comm_error_id) {
+    if (!COMM_NULL_OR_ERROR(newcomm)) {
+      COMM_LAMBDA_BEGIN();
+      {
+        // Ranks that participate in an MPI_Comm_create but do not fit in the group will return MPI_COMM_NULL
         GET_ARCHIVE_CONTEXT(rank);
         auto& gbl_comm = ctx.comm_mapping[comm];
-        comm_create_constructor.add_call(rank, get_comm_rank(rank, gbl_comm), gbl_comm, _mpi_group[ctx.group_map[group]].size(), newcomm);
+        auto& group_vect = _mpi_group[ctx.group_map[group]];
+        comm_create_constructor.add_call(rank, get_comm_rank(rank, gbl_comm), gbl_comm, group_vect.size(), hash_group(group_vect), newcomm);
 
         auto completed = comm_create_constructor.list_completed();
         for(auto c_it = completed.begin(); c_it != completed.end(); c_it++) {
@@ -1102,10 +1086,11 @@ namespace dumpi {
             //           (world rank id          ).(local comm id                 ) ->(global comm id)
             fetch_context(_mpi_group[nc.group][i]).comm_mapping[comm_remap_vect[i]] = mcs.id;
           }
+          comm_create_constructor.clear(*c_it);
         }
       }
+      COMM_LAMBDA_END();
     }
-    COMM_LAMBDA_END();
 
     _LEAVE();
   }
@@ -1304,6 +1289,16 @@ namespace dumpi {
    } else return _type_sizes[type]*count;
   }
 
+  unsigned long OTF2_Writer::hash_group(std::vector<int>& group) {
+    unsigned long hash = ~0;
+    std::hash<int> hasher;
+
+    for(auto rank = group.begin(); rank != group.end(); rank++)
+      hash ^= hasher(*rank) + 0x9e3779b9 + (hash<<6) + (hash>>2);
+
+    return hash;
+  }
+
   OTF2DefTable::OTF2DefTable() {}
   int OTF2DefTable::map(string string)
   {
@@ -1345,7 +1340,6 @@ namespace dumpi {
   }
 
   // I-event handling
-
   void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
     request_type[request_id] = type;
   }
@@ -1478,16 +1472,16 @@ namespace dumpi {
     return std::make_tuple(new_comm_metadata[comm], out);
   }
 
-  void CommCreateConstructor::add_call(int global_rank, int parent_rank, comm_t comm, int group_size, comm_t new_comm) {
-    CommEventIdentifier cei = {.comm_event_type=CET_COMM_CREATE, .id=comm, .event_number=event_counter[comm][parent_rank]};
+  void CommCreateConstructor::add_call(int global_rank, int parent_rank, comm_t comm, int group_size, unsigned long group_hash, comm_t new_comm) {
+    CommCreateIdentifier cci = {.id=comm, .event_number=event_counter[comm][group_hash][parent_rank]++, .group_hash=group_hash};
     CommCreateContext* c_ctx_ptr = nullptr;
-    auto icc_it = incomplete_comm_creates.find(cei);
+    auto icc_it = incomplete_comm_creates.find(cci);
 
     // Get a reference to the context, create if necessary
     if (icc_it != incomplete_comm_creates.end())
       c_ctx_ptr = &(icc_it->second);
     else {
-      c_ctx_ptr = &incomplete_comm_creates[cei];
+      c_ctx_ptr = &incomplete_comm_creates[cci];
       c_ctx_ptr->remaining_ranks = group_size;
       c_ctx_ptr->global_id = MPI_Comm_Struct::get_unique_comm_id();
 
@@ -1537,5 +1531,9 @@ namespace dumpi {
 namespace std {
   bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs){
     return lhs.id == rhs.id && lhs.event_number == rhs.event_number && lhs.comm_event_type == rhs.comm_event_type;
+  }
+
+  bool operator==(const dumpi::CommCreateIdentifier& rhs, const dumpi::CommCreateIdentifier& lhs){
+    return lhs.id == rhs.id && lhs.event_number == rhs.event_number && lhs.group_hash == rhs.group_hash;
   }
 }
