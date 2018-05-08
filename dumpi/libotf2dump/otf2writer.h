@@ -167,7 +167,7 @@ namespace dumpi {
     static const uint64_t MPI_COMM_USER_OFFSET = 2;
 
   private:
-    bool ranks_equivalent(int world_rank, int comm_rank, comm_t comm);
+    bool ranks_equivalent(int world_rank, int comm_rank, comm_t comm, RankContext* ctx = nullptr);
     int get_comm_rank(int world_rank, comm_t comm);
     int get_comm_size(comm_t comm);
     int mk_archive_dir(const char *path);

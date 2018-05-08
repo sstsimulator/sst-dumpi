@@ -97,18 +97,20 @@ int main(int argc, char **argv) {
   // Loop over trace files. Dumpi creates one trace file per MPI rank
   // The first pass constructs information about Communicators, Groups, and type sizes.
   writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM);
-  if (opt.print_progress) printf("First pass\n");
+  if (opt.print_progress) printf("Identifying Communicators, Groups, and types\n");
   for(int rank = 0; rank < num_ranks; rank++) {
     profile = undumpi_open(dumpi_bin_files[rank].c_str());
     writer.set_rank(rank);
+    // TODO, types are rank-specific, easiest to put them into a hash_map
     register_type_sizes(profile, &writer);
     undumpi_read_stream(profile, &first_pass_cback, (void*)&writer);
     undumpi_close(profile);
 
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
+    fflush(stdout);
   }
 
-  // The second pass records event files
+  // The second pass records MPI events and their parameters
   if (opt.print_progress) printf("\nWriting event files\n");
   for(int rank = 0; rank < num_ranks; rank++) {
     writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM_COMPLETE);
@@ -120,7 +122,7 @@ int main(int argc, char **argv) {
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
     fflush(stdout);
   }
-  if (opt.print_progress) printf("Writing definition files\n");
+  if (opt.print_progress) printf("\nWriting definition files\n");
   fflush(stdout);
   writer.close_archive();
   return 0;

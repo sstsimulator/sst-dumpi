@@ -42,7 +42,7 @@
     ctx.event_count++;                        \
   }
 
-#define _LEAVE()                          \
+#define _LEAVE() {                         \
   if(_comm_mode != COMM_MODE_BUILD_COMM) { \
     OTF2_EvtWriter_Leave(ctx.evt_writer,  \
                          nullptr,         \
@@ -50,7 +50,7 @@
                          this_region);    \
     ctx.event_count++;                    \
   }                                       \
-  return OTF2_WRITER_SUCCESS;
+  return OTF2_WRITER_SUCCESS;}
 
 // All collectives are recorded with the same function in OTF2. Some collectives don't have a root, so some calls need a bogus parameter.
 #define UNDEFINED_ROOT int root = -1;
@@ -427,7 +427,6 @@ namespace dumpi {
   void OTF2_Writer::unwind_comm_events() {
     while(_comm_actions.size() > 0) {
       _comm_actions.top().action();
-      //printf("Comm Action at %lu\n", _comm_actions.top().end_time);
       _comm_actions.pop();
     }
   }
@@ -516,6 +515,7 @@ namespace dumpi {
     _clock_resolution = ticks_per_second;
   }
 
+  // TODO type sizes should be rank specific.
   void OTF2_Writer::register_type(mpi_type_t type, int size) {
     _type_sizes[type] = size;
   }
@@ -610,9 +610,6 @@ namespace dumpi {
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::generic_call(int rank, otf2_time_t start, otf2_time_t stop, string name) {
-    if (stop < start) {
-      printf("ERROR, end happened before start\n");
-    }
     _ENTER(name);
     _LEAVE();
   }
@@ -689,7 +686,7 @@ namespace dumpi {
     _ENTER("MPI_Bcast");
 
     if (_comm_mode == COMM_MODE_NONE)
-      is_root = ranks_equivalent(rank, root, comm);
+      is_root = ranks_equivalent(rank, root, comm, &ctx);
     else if (_comm_mode == COMM_MODE_BUILD_COMM)
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
@@ -704,7 +701,7 @@ namespace dumpi {
     _ENTER("MPI_Gather");
 
     if (_comm_mode == COMM_MODE_NONE)
-      is_root = ranks_equivalent(rank, root, comm);
+      is_root = ranks_equivalent(rank, root, comm, &ctx);
     else if (_comm_mode == COMM_MODE_BUILD_COMM)
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
@@ -721,7 +718,7 @@ namespace dumpi {
     int recv_count = 0;
 
     if (_comm_mode == COMM_MODE_NONE)
-      is_root = ranks_equivalent(rank, root, comm);
+      is_root = ranks_equivalent(rank, root, comm, &ctx);
     else if (_comm_mode == COMM_MODE_BUILD_COMM)
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
@@ -740,7 +737,7 @@ namespace dumpi {
     _ENTER("MPI_Scatter");
 
     if (_comm_mode == COMM_MODE_NONE)
-      is_root = ranks_equivalent(rank, root, comm);
+      is_root = ranks_equivalent(rank, root, comm, &ctx);
     else if (_comm_mode == COMM_MODE_BUILD_COMM)
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
@@ -756,7 +753,7 @@ namespace dumpi {
     int recv_count = 0;
 
     if (_comm_mode == COMM_MODE_NONE)
-      is_root = ranks_equivalent(rank, root, comm);
+      is_root = ranks_equivalent(rank, root, comm, &ctx);
     else if (_comm_mode == COMM_MODE_BUILD_COMM)
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
@@ -824,7 +821,7 @@ namespace dumpi {
     int sent = count_bytes(type, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE,
                        sent,
-                       ranks_equivalent(rank, root, comm) ? sent : 0);
+                       ranks_equivalent(rank, root, comm, &ctx) ? sent : 0);
     _LEAVE();
   }
 
@@ -1297,13 +1294,23 @@ namespace dumpi {
     return sum;
   }
 
-  bool OTF2_Writer::ranks_equivalent(int world_rank, int comm_rank, comm_t comm) {
+  bool OTF2_Writer::ranks_equivalent(int world_rank, int comm_rank, comm_t comm, RankContext* ctx) {
+
+    // When the mapping is done on a context, translate the communicator into a global reference
+    if (ctx != nullptr) {
+      if (ctx->comm_mapping.find(comm) == ctx->comm_mapping.end()) {
+        logger(OWV_WARN, "Rank " + to_string(ctx->rank) + " does not have a comm mapping for " + to_string(comm));
+        return false;
+      }
+      comm = ctx->comm_mapping[comm];
+    }
+
     if (!comm_is_known(comm)) {
       logger(OWV_WARN, string("Cannot compare ranks for an unknown communicator"));
       return false;
     }
 
-    auto group = get_group(comm);
+    auto& group = get_group(comm);
 
     if (comm_rank < 0 || comm_rank >= group.size()) {
       logger(OWV_WARN, string("Comm rank out of range!"));
@@ -1576,6 +1583,12 @@ namespace dumpi {
   }
 
   void OTF2_Writer::set_comm_mode(COMM_MODE comm_mode) {
+    if (_comm_mode == COMM_MODE_BUILD_COMM && comm_mode == COMM_MODE_BUILD_COMM_COMPLETE)
+      // This step realizes communicators and groups whose information is cached lambda queues.
+      // The queues are necessary because comms and groups are dependent on collectives, which
+      // may require all trace files to be read.
+      unwind_comm_events();
+
     _comm_mode = comm_mode;
   }
 
