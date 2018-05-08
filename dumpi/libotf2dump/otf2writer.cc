@@ -1351,8 +1351,8 @@ namespace dumpi {
     unsigned long hash = ~0;
     std::hash<int> hasher;
 
-    for(auto rank = group.begin(); rank != group.end(); rank++)
-      hash ^= hasher(*rank) + 0x9e3779b9 + (hash<<6) + (hash>>2);
+    for(auto rank : group)
+      hash ^= hasher(rank) + 0x9e3779b9 + (hash<<6) + (hash>>2);
 
     return hash;
   }
@@ -1498,8 +1498,8 @@ namespace dumpi {
 
     // Build up a list
     if (ncg_it != new_comm_group.end()) {
-      for(auto local_comm = ncg_it->second.begin(); local_comm != ncg_it->second.end(); local_comm++)
-        result.push_back(local_comm->local_new_comm_id);
+      for(auto& local_comm : ncg_it->second)
+        result.push_back(local_comm.local_new_comm_id);
     }
 
     return result;
@@ -1523,8 +1523,8 @@ namespace dumpi {
 
     if (comms_it != new_comm_group.end()) {
       auto& comm = comms_it->second;
-      for(auto comm_it = comm.begin(); comm_it != comm.end(); comm_it++)
-        out.push_back(comm_it->global_rank);
+      for(auto& _comm : comm)
+        out.push_back(_comm.global_rank);
     }
 
     return std::make_tuple(new_comm_metadata[comm], out);
@@ -1575,8 +1575,8 @@ namespace dumpi {
 
     // Build up a list
     if (ncg_it != new_comm_group.end()) {
-      for(auto local_comm = ncg_it->second.begin(); local_comm != ncg_it->second.end(); local_comm++)
-        result.push_back(local_comm->local_comm_id);
+      for(auto& local_comm : ncg_it->second)
+        result.push_back(local_comm.local_comm_id);
     }
 
     return result;
