@@ -35,6 +35,8 @@
  *    - Local def files are written to map local communicator identities to global ones.
  *    - File handles are closed
  *
+ * TODO: update for new write modes.
+ *
  * PERFORNANCE LIMITATIONS
  * Much of the runtime consists of pipelining application activity to event files on disk, and will
  * scale linearly with the runtime's scale.
@@ -83,6 +85,9 @@ namespace dumpi {
     void set_verbosity(OTF2_WRITER_VERBOSITY verbosity);
     void set_clock_resolution(uint64_t ticks_per_second);
 
+    // Enter a state where only MPI_Comm_* and MPI_Group_* calls are registered before any calls that may
+    void set_comm_mode(COMM_MODE);
+
     OTF2_WRITER_RESULT generic_call(int rank, otf2_time_t start, otf2_time_t stop, std::string name);
 
     OTF2_WRITER_RESULT mpi_send(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t dest, int comm, uint32_t tag);
@@ -114,13 +119,13 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_alltoall(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_alltoallv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_barrier(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm);
-    OTF2_WRITER_RESULT mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, bool is_root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm);
-    OTF2_WRITER_RESULT mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
     OTF2_WRITER_RESULT mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
     //OTF2_WRITER_RESULT mpi_exscan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
 
@@ -216,13 +221,14 @@ namespace dumpi {
     int _comm_error_id = -1;
     int _comm_null_id = -1;
     request_t _null_request = -1;
-    CommSplitConstructor comm_split_constructor;
-    CommCreateConstructor comm_create_constructor;
+    CommSplitConstructor _comm_split_constructor;
+    CommCreateConstructor _comm_create_constructor;
 
     // MPI calls that manipulate Comms and Groups are captured as lambdas and traced in order of when they ran.
-    std::priority_queue<CommAction> comm_actions;
+    std::priority_queue<CommAction> _comm_actions;
 
     OTF2_WRITER_VERBOSITY _verbosity = OWV_NONE;
+    COMM_MODE _comm_mode = COMM_MODE_NONE;
     uint64_t _clock_resolution = 0;
   };
 }

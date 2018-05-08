@@ -9,6 +9,7 @@
 extern "C" {
   /** Define all our callbacks. */
   void set_callbacks(libundumpi_callbacks *cbacks);
+  void set_first_pass_callbacks(libundumpi_callbacks *cbacks);
 
   /**
    * Program options struct.

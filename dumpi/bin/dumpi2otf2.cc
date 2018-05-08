@@ -61,14 +61,16 @@ static std::vector<int> get_type_sizes(dumpi_profile*);
 
 int main(int argc, char **argv) {
   dumpi_profile *profile;
-  libundumpi_callbacks cback;
+  libundumpi_callbacks first_pass_cback, second_cback;
   d2o2opt opt;
   dumpi::OTF2_Writer writer;
 
   if(parse_cli_options(argc, argv, &opt) == 0) return 1;
 
-  libundumpi_clear_callbacks(&cback);
-  set_callbacks(&cback);
+  libundumpi_clear_callbacks(&first_pass_cback);
+  libundumpi_clear_callbacks(&second_cback);
+  set_first_pass_callbacks(&first_pass_cback);
+  set_callbacks(&second_cback);
 
   auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive.c_str()) + "/*.bin").c_str());
   int num_ranks = dumpi_bin_files.size();
@@ -93,12 +95,26 @@ int main(int argc, char **argv) {
   writer.set_clock_resolution(1E9);
 
   // Loop over trace files. Dumpi creates one trace file per MPI rank
+  // The first pass constructs information about Communicators, Groups, and type sizes.
+  writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM);
+  if (opt.print_progress) printf("First pass\n");
   for(int rank = 0; rank < num_ranks; rank++) {
     profile = undumpi_open(dumpi_bin_files[rank].c_str());
     writer.set_rank(rank);
     register_type_sizes(profile, &writer);
+    undumpi_read_stream(profile, &first_pass_cback, (void*)&writer);
+    undumpi_close(profile);
 
-    undumpi_read_stream(profile, &cback, (void*)&writer);
+    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
+  }
+
+  // The second pass records event files
+  if (opt.print_progress) printf("\nWriting event files\n");
+  for(int rank = 0; rank < num_ranks; rank++) {
+    writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM_COMPLETE);
+    profile = undumpi_open(dumpi_bin_files[rank].c_str());
+    writer.set_rank(rank);
+    undumpi_read_stream(profile, &second_cback, (void*)&writer);
     undumpi_close(profile);
 
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);

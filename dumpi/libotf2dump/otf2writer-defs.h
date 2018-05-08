@@ -15,6 +15,11 @@ typedef int32_t request_t;
 typedef int16_t mpi_type_t;
 typedef uint64_t otf2_time_t;
 
+// TODO replace with C++ exceptions?
+/**
+ * @brief The OTF2_WRITER_RESULT enum
+ * Used to classify errors
+ */
 enum OTF2_WRITER_RESULT {
   OTF2_WRITER_SUCCESS = 0,
   OTF2_WRITER_ERROR_DIRECTORY_ALREADY_EXISTS,
@@ -29,6 +34,35 @@ enum OTF2_WRITER_RESULT {
   OTF2_WRITER_ERROR_UKNOWN_MPI_TYPE
 };
 
+/**
+ * @brief COMM_MODE is used to distinguish between two comm/group recording
+ * strategies for building the trace. Unlike Score-P, creating OTF2 archives
+ * from trace sources will not have a backing runtime to collect information
+ * about groups and communicators on demand. i.e. MPI_Gather needs to know
+ * about the communicator to determine the root rank before calculating the
+ * number of bytes received.
+ *
+ * For a trace-to-trace conversion, set COMM_MODE_BUILD_COMM and run MPI_Comm_*
+ * and MPI_Group_* to build up comm/group metadata. Then set the mode to
+ * COMM_MODE_BUILD_COMM_COMPLETE to begin recording event files.
+ *
+ * In situations where communicators are expected to be well defined by a
+ * runtime backing (i.e. in a simulator) use COMM_MODE_NONE to bypass these behaviors.
+ */
+enum COMM_MODE {
+  /// Build metadata on communicators and groups, do not record events.
+  COMM_MODE_BUILD_COMM,
+  /// Done registering communicators and groups, record events and to not build
+  /// metadata from communicator and group calls
+  COMM_MODE_BUILD_COMM_COMPLETE,
+  /// Group information is expected to be available before any
+  COMM_MODE_NONE
+};
+
+/**
+ * @brief The OTF2_WRITER_VERBOSITY enum
+ * Determines output verbosity. All output is written to standard out.
+ */
 enum OTF2_WRITER_VERBOSITY {
   OWV_NONE = 0,
   OWV_ABORT,
@@ -37,16 +71,28 @@ enum OTF2_WRITER_VERBOSITY {
   OWV_INFO
 };
 
+/**
+ * @brief The REQUEST_TYPE enum
+ * Internal structure for async MPI calls
+ */
 enum REQUEST_TYPE {
   REQUEST_TYPE_ISEND = 0,
   REQUEST_TYPE_IRECV
 };
 
+/**
+ * @brief The COMM_EVENT_TYPE enum
+ * Internal structure for MPI_Comm_split and MPI_Comm_create collectives
+ */
 enum COMM_EVENT_TYPE {
   CET_COMM_SPLIT = 0,
   CET_COMM_CREATE
 };
 
+/**
+ * @brief The irecv_capture struct
+ * Internal structure for async MPI calls
+ */
 struct irecv_capture {
   uint64_t count;
   int  type;
@@ -57,7 +103,9 @@ struct irecv_capture {
 };
 
 /**
- * @brief The OTF2DefTable class maps an incrementing id to a string, which it can later retrieve.
+ * @brief The OTF2DefTable class
+ * Maps an incrementing id to a string. Helps def file creation, which
+ * requires a mapping
  */
 class OTF2DefTable {
 public:
@@ -77,6 +125,10 @@ private:
   bool _added_last_lookup;
 };
 
+/**
+ * @brief The MPI_Comm_Struct struct
+ * Internal structure for MPI_Comm_split and MPI_Comm_create collectives
+ */
 struct MPI_Comm_Struct {
   MPI_Comm_Struct(): name(""), parent(0), id(0), ndim(0) {}
   MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
@@ -97,7 +149,7 @@ private:
   static int _group_uid;
 };
 
-/// Stores rank-specific states
+/// Stores rank-local data
 struct RankContext {
   int rank = -1;
   int event_count = 0;
@@ -114,6 +166,11 @@ struct RankContext {
   int dispose(OTF2_Archive* archive);
 };
 
+/**
+ * @brief The CommAction struct
+ * A lambda container used in the ordered reconstruction of MPI comm/group
+ * collectives.
+ */
 struct CommAction {
   std::function<void()> action;
   otf2_time_t end_time; // used to handle ordering
@@ -121,9 +178,14 @@ struct CommAction {
   bool operator<(CommAction const &ca) const { return ca.end_time < end_time; }
 };
 
-// MPI_Comm_split is a collective that takes a parent collective and shards it into several children
-// An instance of a split collective be identified across ranks by hashing the parent communicator, and the number of times the rank has previously done a split on that communicator.
-// Tracking a split is done to know when the children communicators are done constructing.
+/**
+ * @brief The CommEventIdentifier struct
+ * MPI_Comm_split takes a parent collective and shards it into several children
+ * An instance of a split collective can be identified across ranks by hasing
+ * the parent communicator, and the number of times the rank has previously
+ * done a split on that communicator. All participating ranks in the split
+ * must finish before the new child communicators are realized.
+ */
 struct CommEventIdentifier {
 public:
   COMM_EVENT_TYPE comm_event_type;
@@ -131,6 +193,10 @@ public:
   int event_number;
 };
 
+/**
+ * @brief The CommEventIdentifierHasher struct
+ * Used in generating hashes for CommEventIdentifier for stl containers
+ */
 struct CommEventIdentifierHasher {
   long operator()(const dumpi::CommEventIdentifier& csi) const
   {
@@ -138,12 +204,20 @@ struct CommEventIdentifierHasher {
   }
 };
 
+/**
+ * @brief The CommCreateIdentifier struct
+ * Used to uniquely identify ranks participating in a given MPI_Comm_create
+ */
 struct CommCreateIdentifier {
   comm_t id;
   int event_number;
   unsigned long group_hash;
 };
 
+/**
+ * @brief The CommCreateIdentifierHasher struct
+ * Used in generating hashes for CommCreateIdentifier for stl containers
+ */
 struct CommCreateIdentifierHasher {
   long operator()(const dumpi::CommCreateIdentifier& cci) const
   {
@@ -153,8 +227,11 @@ struct CommCreateIdentifierHasher {
   }
 };
 
-// A base class for collectives that build communicators or groups. Used in
-// the formation of mappings between local rank identifiers and global communicator groups
+/**
+ * Base class for collectives that build communicators or groups. Used in
+ * the formation of mappings between local rank identifiers and global
+ * communicator groups
+ */
 template<typename T>
 class CollectiveIdRemapper {
 public:
@@ -165,7 +242,6 @@ public:
 
 protected:
   std::set<T> completed;
-  //std::unordered_map<T, std::unordered_map<int, int>> event_counter;
 
   struct RankMetadata {
   public:
@@ -176,6 +252,10 @@ protected:
   };
 };
 
+/**
+ * Handles the correct ordering of ranks and creation of the child communicator
+ * in an MPI_Comm_create
+ */
 class CommCreateConstructor : public CollectiveIdRemapper<comm_t> {
 public:
   std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(comm_t comm);
@@ -184,7 +264,6 @@ public:
   void add_call(int global_rank, int parent_rank, comm_t comm, int group_size, unsigned long group_hash, comm_t new_comm);
 
 private:
-  //struct RankMetadata : public CollectiveIdRemapper<comm_t>::RankMetadata {};
 
   struct CommCreateContext {
     int remaining_ranks;
@@ -203,7 +282,10 @@ private:
   std::unordered_map<comm_t, std::unordered_map<int, std::unordered_map<int, int>>> event_counter;
 };
 
-// Handles the correct ordering of ranks and communicators in a comm_split
+/**
+ * Handles the correct ordering of ranks and creation of child communicators
+ * in an MPI_Comm_split
+ */
 class CommSplitConstructor : public CollectiveIdRemapper<comm_t> {
 public:
   std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(comm_t comm);
