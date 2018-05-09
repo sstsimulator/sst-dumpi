@@ -8,6 +8,8 @@
 #include <functional>
 #include <set>
 #include <list>
+#include <string>
+
 
 namespace dumpi {
 typedef int32_t comm_t;
@@ -191,6 +193,12 @@ public:
   COMM_EVENT_TYPE comm_event_type;
   comm_t id;
   int event_number;
+
+  bool operator==(const CommEventIdentifier& rhs) const {
+    return comm_event_type == rhs.comm_event_type
+           && id == rhs.id
+           && event_number == rhs.event_number;
+  }
 };
 
 /**
@@ -212,6 +220,10 @@ struct CommCreateIdentifier {
   comm_t id;
   int event_number;
   unsigned long group_hash;
+
+  bool operator==(const CommCreateIdentifier& rhs) const {
+    return id == rhs.id && event_number == rhs.event_number && group_hash == rhs.group_hash;
+  }
 };
 
 /**

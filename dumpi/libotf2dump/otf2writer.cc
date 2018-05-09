@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <cstring>
 #include <unordered_set>
+#include <functional>
 
 #define CHECK_RANK(rank, _num_ranks) \
   if (rank < -1 || rank >= _num_ranks) return OTF2_WRITER_ERROR_NO_RANK_SET;
@@ -24,7 +25,7 @@
 
 #define COMM_LAMBDA_BEGIN() _comm_actions.push({.action = [=]() {
 
-#define COMM_LAMBDA_END() }, .end_time = stop});
+#define COMM_LAMBDA_END() return OTF2_WRITER_SUCCESS; }, .end_time = stop});
 
 #define _ENTER(fname)                         \
   GET_ARCHIVE_CONTEXT(rank)                   \
@@ -237,7 +238,7 @@ namespace dumpi {
     }
 
     for(int i = 0; i < _region.size(); i++) _string[_region[i]];
-    for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) comm_it->second.name;
+    for(auto comm_it = _mpi_comm.begin(); comm_it != _mpi_comm.end(); comm_it++) _string[comm_it->second.name];
 
     // STRINGS
     logger(OWV_INFO, "Writing STRINGs to the def file");
@@ -479,7 +480,13 @@ namespace dumpi {
     }
     _mpi_group[COMM_WORLD_GROUP_ID] = w_group;
     _comm_world_id = id;
-    _mpi_comm[MPI_COMM_WORLD_ID] = {.name="MPI_COMM_WORLD", .parent=OTF2_UNDEFINED_COMM, .id=MPI_COMM_WORLD_ID, .group=(int)COMM_WORLD_GROUP_ID};
+
+    auto& comm = _mpi_comm[MPI_COMM_WORLD_ID];
+    comm.parent=OTF2_UNDEFINED_COMM;
+    comm.id=MPI_COMM_WORLD_ID;
+    comm.group=(int)COMM_WORLD_GROUP_ID;
+    comm.name="MPI_COMM_WORLD";
+
     _unknown_comms.erase(id);
   }
 
@@ -491,7 +498,13 @@ namespace dumpi {
 
     _mpi_group[COMM_SELF_GROUP_ID] = s_group;
     _comm_self_id = id;
-    _mpi_comm[MPI_COMM_SELF_ID] = {.name="MPI_COMM_SELF", .parent=OTF2_UNDEFINED_COMM, .id=MPI_COMM_SELF_ID, .group=(int)COMM_SELF_GROUP_ID};
+
+    auto& comm = _mpi_comm[MPI_COMM_SELF_ID];
+    comm.parent=OTF2_UNDEFINED_COMM;
+    comm.id=MPI_COMM_SELF_ID;
+    comm.group=(int)COMM_SELF_GROUP_ID;
+    comm.name="MPI_COMM_SELF";
+
     _unknown_comms.erase(id);
   }
 
