@@ -119,13 +119,13 @@ namespace dumpi {
     OTF2_WRITER_RESULT mpi_alltoall(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_alltoallv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, comm_t comm);
     OTF2_WRITER_RESULT mpi_barrier(int rank, otf2_time_t start, otf2_time_t stop, comm_t comm);
-    OTF2_WRITER_RESULT mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, bool is_root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_bcast(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_gather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_gatherv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, int sendcount, mpi_type_t sendtype, const int* recvcounts, mpi_type_t recvtype, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm);
-    OTF2_WRITER_RESULT mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
-    OTF2_WRITER_RESULT mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, bool is_root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatter(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
+    OTF2_WRITER_RESULT mpi_scatterv(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* sendcounts, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, int root, comm_t comm);
     OTF2_WRITER_RESULT mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
     //OTF2_WRITER_RESULT mpi_exscan(otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm);
 

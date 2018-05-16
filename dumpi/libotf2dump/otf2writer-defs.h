@@ -326,7 +326,7 @@ private:
 };
 }
 
-bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs);
-bool operator==(const dumpi::CommCreateIdentifier& rhs, const dumpi::CommCreateIdentifier& lhs);
+//bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs);
+//bool operator==(const dumpi::CommCreateIdentifier& rhs, const dumpi::CommCreateIdentifier& lhs);
 
 #endif // OTF2WRITERDEFS_H

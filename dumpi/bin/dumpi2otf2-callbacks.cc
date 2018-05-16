@@ -92,11 +92,11 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(unpack)                    { GENERIC_CALL("MPI_Unpack"); };
   CBACK_INIT(pack_size)                 { GENERIC_CALL("MPI_Pack_size"); };
   CBACK_INIT(barrier)                   { MACRO_INIT(); otf2_writer.mpi_barrier(ARGS, p.comm); MACRO_RET(); };
-  CBACK_INIT(bcast)                     { MACRO_INIT(); otf2_writer.mpi_bcast(ARGS, p.count, p.datatype, p.root, PARAM_IGNORED, p.comm); MACRO_RET(); };
-  CBACK_INIT(gather)                    { MACRO_INIT(); otf2_writer.mpi_gather(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, PARAM_IGNORED, p.comm); MACRO_RET(); };
-  CBACK_INIT(gatherv)                   { MACRO_INIT(); otf2_writer.mpi_gatherv(ARGS, p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.root, PARAM_IGNORED, p.comm); MACRO_RET(); };
-  CBACK_INIT(scatter)                   { MACRO_INIT(); otf2_writer.mpi_scatter(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, PARAM_IGNORED, p.comm); MACRO_RET(); };
-  CBACK_INIT(scatterv)                  { MACRO_INIT(); otf2_writer.mpi_scatterv(ARGS, p.commsize, p.sendcounts, p.sendtype, p.recvcount, p.recvtype, p.root, PARAM_IGNORED, p.comm); MACRO_RET(); };
+  CBACK_INIT(bcast)                     { MACRO_INIT(); otf2_writer.mpi_bcast(ARGS, p.count, p.datatype, p.root, p.comm); MACRO_RET(); };
+  CBACK_INIT(gather)                    { MACRO_INIT(); otf2_writer.mpi_gather(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
+  CBACK_INIT(gatherv)                   { MACRO_INIT(); otf2_writer.mpi_gatherv(ARGS, p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.root, p.comm); MACRO_RET(); };
+  CBACK_INIT(scatter)                   { MACRO_INIT(); otf2_writer.mpi_scatter(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
+  CBACK_INIT(scatterv)                  { MACRO_INIT(); otf2_writer.mpi_scatterv(ARGS, p.commsize, p.sendcounts, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
   CBACK_INIT(allgather)                 { MACRO_INIT(); otf2_writer.mpi_allgather(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); MACRO_RET(); };
   CBACK_INIT(allgatherv)                { MACRO_INIT(); otf2_writer.mpi_allgatherv(ARGS, p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.comm); MACRO_RET(); };
   CBACK_INIT(alltoall)                  { MACRO_INIT(); otf2_writer.mpi_alltoall(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); MACRO_RET(); };
