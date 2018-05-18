@@ -1,3 +1,47 @@
+/**
+Copyright 2009-2017 National Technology and Engineering Solutions of Sandia,
+LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government
+retains certain rights in this software.
+
+Sandia National Laboratories is a multimission laboratory managed and operated
+by National Technology and Engineering Solutions of Sandia, LLC., a wholly
+owned subsidiary of Honeywell International, Inc., for the U.S. Department of
+Energy's National Nuclear Security Administration under contract DE-NA0003525.
+
+Copyright (c) 2009-2017, NTESS
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Sandia Corporation nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Questions? Contact sst-macro-help@sandia.gov
+*/
+
 #include <dumpi/libotf2dump/otf2writer.h>
 #include <sys/stat.h>
 #include <algorithm>
@@ -1352,231 +1396,6 @@ namespace dumpi {
     return hash;
   }
 
-  OTF2DefTable::OTF2DefTable() {}
-  int OTF2DefTable::map(string string)
-  {
-    auto it = _map.find(string);
-    _added_last_lookup = false;
-    if ( it != _map.end()) return it->second;
-    _map.insert(std::make_pair(string, _counter));
-    _added_last_lookup = true;
-    return _counter++;
-  }
-
-  const string OTF2DefTable::map(int index) {
-    // Finds the string corresponding to the given int.
-    for (auto elem = _map.begin(); elem != _map.end(); elem++)
-      if (elem->second == index)
-        return elem->first;
-    return string();
-  }
-
-  const string OTF2DefTable::operator[] (int index) { return map(index); }
-  int OTF2DefTable::operator[] (const char* index) { return map(string(index));}
-  int OTF2DefTable::operator[] (string string) { return map(string); }
-  int OTF2DefTable::size() { return _counter; }
-  bool OTF2DefTable::added_last_lookup() {return _added_last_lookup;}
-
-  int RankContext::dispose(OTF2_Archive* archive) {
-    // close existing OTF2 event file if it is open
-    if (evt_writer != nullptr) {
-      OTF2_Archive_CloseEvtWriter(archive, evt_writer);
-      evt_writer = nullptr;
-    }
-
-    rank = -1;
-    event_count = 0;
-    int incomplete_count = irecv_requests.size();
-    irecv_requests.clear();
-    request_type.clear();
-    return incomplete_count;
-  }
-
-  // I-event handling
-  void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
-    request_type[request_id] = type;
-  }
-
-  /*
-   * ISends and IRecvs begin when invoked, but important information about
-   * them are not recorded by OTF2 until they are completed, which occurs inside of Waits, Tests, etc.
-   * Returns the number of events generated
-   */
-  void RankContext::complete_call(request_t request_id, uint64_t timestamp) {
-    auto t = request_type.find(request_id);
-    if (t == request_type.end()) {
-      printf("Error: request id (%i) not found\n", request_id);
-    }
-    else if (t->second == REQUEST_TYPE_ISEND) {
-      OTF2_EvtWriter_MpiIsendComplete(evt_writer, nullptr, timestamp, request_id);
-      event_count++;
-    }
-    else if (t->second == REQUEST_TYPE_IRECV) {
-      auto irecv_it = irecv_requests.find(request_id);
-      irecv_capture irecv = irecv_it->second;
-      if(irecv_it == irecv_requests.end()) {
-        printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
-      } else {
-        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
-        irecv_requests.erase(irecv_it);
-        event_count++;
-      }
-    }
-    request_type.erase(t);
-  }
-
-  std::tuple<MPI_Comm_Struct, std::vector<int>> CommSplitConstructor::get_completed(comm_t comm) {
-
-    std::vector<int> out;
-    auto comms_it = new_comm_group.find(comm);
-
-    if (comms_it != new_comm_group.end()) {
-      auto& comm = comms_it->second;
-      for(auto comm_it = comm.begin(); comm_it != comm.end(); comm_it++)
-        out.push_back(comm_it->global_rank);
-    }
-
-    return std::make_tuple(new_comm_metadata[comm], out);
-  }
-
-  void CommSplitConstructor::add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size) {
-
-    CommEventIdentifier cei = {.comm_event_type=CET_COMM_SPLIT, .id=old_comm, .event_number=event_counter[old_comm][parent_rank]++};
-    CommSplitContext* s_context_ptr = nullptr;
-    auto ics_it = incomplete_comm_splits.find(cei);
-
-    // Get a reference to the context, create it if necessary
-    if (ics_it != incomplete_comm_splits.end())
-      s_context_ptr = &(ics_it->second);
-    else {
-      s_context_ptr = &incomplete_comm_splits[cei];
-      s_context_ptr->parent_size = old_comm_size;
-      s_context_ptr->remaining_ranks = old_comm_size;
-    }
-
-    // Ensure the new communicator (identified by split id + color combo) has an unique id
-    auto& ctcid = s_context_ptr->color_to_comm_id[color];
-    if (ctcid == 0)
-      ctcid = MPI_Comm_Struct::get_unique_comm_id();
-
-    // Initialize MPI_Comm_Struct if it doesn't exist yet.
-    auto comm_metadata_it = new_comm_metadata.find(ctcid);
-    if (comm_metadata_it == new_comm_metadata.end()) {
-      auto& c_struct = new_comm_metadata[ctcid];
-      c_struct.id = ctcid;
-      c_struct.parent = old_comm;
-    }
-
-    // Get a reference to an ordered list that contains the new communicator's ranks
-    auto& comm = new_comm_group[ctcid];
-
-    //Insert before the first rank where (the key is greator) OR (the key is the same and parent rank is greater). Inserting on list.end() is valid!
-    auto comm_it = comm.begin();
-    while(comm_it != comm.end() && !(key > comm_it->key || (key == comm_it->key && parent_rank > comm_it->parent_rank))) comm_it++;
-    RankMetadata rmd;
-    rmd.global_rank=global_rank;
-    rmd.parent_rank=parent_rank;
-    rmd.local_new_comm_id=new_comm;
-    rmd.global_new_comm_id=ctcid;
-    rmd.key=key;
-    comm.insert(comm_it, rmd);
-
-    // When every rank has participated, indicate all child communicators are complete
-    if(--s_context_ptr->remaining_ranks == 0)
-      for (auto child_comms = s_context_ptr->color_to_comm_id.begin(); child_comms != s_context_ptr->color_to_comm_id.end(); child_comms++)
-        completed.insert(child_comms->second);
-  }
-
-  std::vector<comm_t> CommSplitConstructor::get_remapping(comm_t new_comm) {
-    std::vector<comm_t> result;
-    auto ncg_it = new_comm_group.find(new_comm);
-
-    // Build up a list
-    if (ncg_it != new_comm_group.end()) {
-      for(auto& local_comm : ncg_it->second)
-        result.push_back(local_comm.local_new_comm_id);
-    }
-
-    return result;
-  }
-
-  void CommSplitConstructor::clear(comm_t new_comm) {
-    auto comm_it = new_comm_group.find(new_comm);
-
-    if (comm_it == new_comm_group.end())
-      printf("Error: CommSplitConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
-    else {
-      new_comm_group.erase(comm_it);
-      completed.erase(new_comm);
-      new_comm_metadata.erase(new_comm);
-    }
-  }
-
-  std::tuple<MPI_Comm_Struct, std::vector<int>> CommCreateConstructor::get_completed(comm_t comm) {
-    std::vector<int> out;
-    auto comms_it = new_comm_group.find(comm);
-
-    if (comms_it != new_comm_group.end()) {
-      auto& comm = comms_it->second;
-      for(auto& _comm : comm)
-        out.push_back(_comm.global_rank);
-    }
-
-    return std::make_tuple(new_comm_metadata[comm], out);
-  }
-
-  void CommCreateConstructor::add_call(int global_rank, int parent_rank, comm_t comm, int group_size, unsigned long group_hash, comm_t new_comm) {
-    CommCreateIdentifier cci = {.id=comm, .event_number=event_counter[comm][group_hash][parent_rank]++, .group_hash=group_hash};
-    CommCreateContext* c_ctx_ptr = nullptr;
-    auto icc_it = incomplete_comm_creates.find(cci);
-
-    // Get a reference to the context, create if necessary
-    if (icc_it != incomplete_comm_creates.end())
-      c_ctx_ptr = &(icc_it->second);
-    else {
-      c_ctx_ptr = &incomplete_comm_creates[cci];
-      c_ctx_ptr->remaining_ranks = group_size;
-      c_ctx_ptr->global_id = MPI_Comm_Struct::get_unique_comm_id();
-
-      auto& c_struct = new_comm_metadata[c_ctx_ptr->global_id];
-      c_struct.id = c_ctx_ptr->global_id;
-      c_struct.parent = comm;
-    }
-
-    RankMetadata rmd;
-    rmd.global_rank = global_rank;
-    rmd.local_comm_id = new_comm;
-    new_comm_group[c_ctx_ptr->global_id].push_back(rmd);
-
-    if (--c_ctx_ptr->remaining_ranks == 0)
-      completed.insert(c_ctx_ptr->global_id);
-  }
-
-  void CommCreateConstructor::clear(comm_t new_comm) {
-    auto comm_it1 = new_comm_group.find(new_comm);
-
-    if (comm_it1 == new_comm_group.end()) {
-      printf("Error: CommCreateConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
-    } else {
-      new_comm_group.erase(comm_it1);
-      completed.erase(new_comm);
-      new_comm_metadata.erase(new_comm);
-    }
-  }
-
-  std::vector<comm_t> CommCreateConstructor::get_remapping(comm_t new_comm) {
-    std::vector<comm_t> result;
-    auto ncg_it = new_comm_group.find(new_comm);
-
-    // Build up a list
-    if (ncg_it != new_comm_group.end()) {
-      for(auto& local_comm : ncg_it->second)
-        result.push_back(local_comm.local_comm_id);
-    }
-
-    return result;
-  }
-
   void OTF2_Writer::set_comm_mode(COMM_MODE comm_mode) {
     if (_comm_mode == COMM_MODE_BUILD_COMM && comm_mode == COMM_MODE_BUILD_COMM_COMPLETE)
       // This step realizes communicators and groups whose information is cached lambda queues.
@@ -1590,13 +1409,3 @@ namespace dumpi {
   int MPI_Comm_Struct::_comm_uid = OTF2_Writer::MPI_COMM_USER_OFFSET;
   int MPI_Comm_Struct::_group_uid = OTF2_Writer::USER_DEF_COMM_GROUP_OFFSET;
 }
-
-//namespace std {
-//  bool operator==(const dumpi::CommEventIdentifier& rhs, const dumpi::CommEventIdentifier& lhs){
-//    return lhs.id == rhs.id && lhs.event_number == rhs.event_number && lhs.comm_event_type == rhs.comm_event_type;
-//  }
-//
-//  bool operator==(const dumpi::CommCreateIdentifier& rhs, const dumpi::CommCreateIdentifier& lhs){
-//    return lhs.id == rhs.id && lhs.event_number == rhs.event_number && lhs.group_hash == rhs.group_hash;
-//  }
-//}

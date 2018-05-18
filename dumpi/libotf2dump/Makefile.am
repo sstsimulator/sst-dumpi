@@ -15,6 +15,13 @@ library_includedir=$(includedir)/dumpi/libotf2dump
 library_include_HEADERS = \
                       otf2writer.h otf2writer-defs.h
 lib_LTLIBRARIES = libotf2dump.la
-libotf2dump_la_SOURCES = otf2writer.cc
+
+libotf2dump_la_SOURCES = \
+                      otf2writer.cc \
+                      otf2deftable.cc \
+                      rankcontext.cc \
+                      commsplitconstructor.cc \
+                      commcreateconstructor.cc
+
 libotf2dump_la_LDFLAGS = -version-info @DUMPI_LIBVERSION@
 libotf2dump_la_LIBADD = ../common/libdumpi_common.la
