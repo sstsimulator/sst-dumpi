@@ -1,9 +1,9 @@
 C
 C  This file is part of DUMPI: 
 C               The MPI profiling library from the SST suite.
-C  Copyright (c) 2009 Sandia Corporation.
+C  Copyright (c) 2009-2018 Sandia Corporation.
 C  This software is distributed under the BSD License.
-C  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+C  Under the terms of Contract DE-NA0003525 with Sandia Corporation,
 C  the U.S. Government retains certain rights in this software.
 C  For more information, see the LICENSE file in the top 
 C  SST/macroscale directory.
