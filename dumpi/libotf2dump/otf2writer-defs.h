@@ -252,7 +252,7 @@ public:
 struct CommEventIdentifierHasher {
   long operator()(const dumpi::CommEventIdentifier& csi) const
   {
-      return (std::hash<dumpi::comm_t>()(csi.id) ^ std::hash<int>()(csi.event_number) ^ std::hash<COMM_EVENT_TYPE>()(csi.comm_event_type));
+      return (std::hash<dumpi::comm_t>()(csi.id) ^ std::hash<int>()(csi.event_number) ^ std::hash<int>()(csi.comm_event_type));
   }
 };
 

@@ -111,7 +111,32 @@ using std::string;
 using std::to_string;
 
 namespace dumpi {
-  OTF2_Writer::OTF2_Writer() {}
+  OTF2_Writer::OTF2_Writer() :
+    _directory(""),
+    _mpi_group(),
+    _mpi_comm(),
+    _type_sizes(),
+    _unknown_comms(),
+    _string(),
+    _region(),
+    _archive_context(),
+    _archive(nullptr),
+    _start_time(~0),
+    _stop_time(0),
+    _rank(0),
+    _num_ranks(-1),
+    _comm_world_id(-1),
+    _comm_self_id(-1),
+    _comm_error_id(-1),
+    _comm_null_id(-1),
+    _null_request(-1),
+    _comm_split_constructor(),
+    _comm_create_constructor(),
+    _comm_actions(),
+    _verbosity(OWV_NONE),
+    _comm_mode(COMM_MODE_NONE),
+    _clock_resolution(1)
+  {}
 
   string OTF2_Writer::get_otf2_directory() {
     return _directory;
@@ -134,8 +159,8 @@ namespace dumpi {
     struct stat sb;
 
     // test if directory already exists
-    if (stat(path.c_str(), &sb) == 0 )
-        return OTF2_WRITER_ERROR_DIRECTORY_ALREADY_EXISTS;
+    // if (stat(path.c_str(), &sb) == 0 )
+    //     return OTF2_WRITER_ERROR_DIRECTORY_ALREADY_EXISTS;
 
     mk_archive_dir(path.c_str());
 
