@@ -30,6 +30,7 @@ namespace dumpi {
     auto t = request_type.find(request_id);
     if (t == request_type.end()) {
       printf("Error: request id (%i) not found\n", request_id);
+      return;
     }
     else if (t->second == REQUEST_TYPE_ISEND) {
       OTF2_EvtWriter_MpiIsendComplete(evt_writer, nullptr, timestamp, request_id);
