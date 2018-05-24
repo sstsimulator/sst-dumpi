@@ -39,22 +39,10 @@ libundumpi-install: libundumpi
 	cd dumpi/libundumpi && make install
 endif
 
-if WITH_OTF2
-libotf2dump:
-	cd dumpi/libotf2dump && make
-
-libotf2dump-install: libotf2dump
-	cd dumpi/libotf2dump && make install
-endif
-
 if WITH_BIN
 dumpi2ascii:
 	cd dumpi/libundumpi && make
 	cd dumpi/bin && make dumpi2ascii
-
-dumpi2otf2: libotf2dump
-	cd dumpi/libundumpi && make
-	cd dumpi/bin && make dumpi2otf2
 endif
 
 if WITH_TEST
