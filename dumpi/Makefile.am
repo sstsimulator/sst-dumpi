@@ -19,6 +19,10 @@ if WITH_LIBUNDUMPI
   SUBDIRS += libundumpi
 endif
 
+if WITH_OTF2
+  SUBDIRS += libotf2dump
+endif
+
 if WITH_BIN
   SUBDIRS += bin
 endif
