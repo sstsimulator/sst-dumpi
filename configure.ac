@@ -137,6 +137,7 @@ AC_CONFIG_FILES([
  dumpi/common/Makefile
  dumpi/libdumpi/Makefile
  dumpi/libundumpi/Makefile
+ dumpi/libotf2dump/Makefile
  dumpi/bin/Makefile
  dumpi/test/Makefile
  tests/Makefile
