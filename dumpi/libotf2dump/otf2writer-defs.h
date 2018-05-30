@@ -176,9 +176,9 @@ private:
  * Internal structure for MPI_Comm_split and MPI_Comm_create collectives
  */
 struct MPI_Comm_Struct {
-  MPI_Comm_Struct(): name(""), parent(0), id(0), ndim(0) {}
-  MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
-  MPI_Comm_Struct(const char* name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
+  MPI_Comm_Struct(): parent(0), id(0), group(0), ndim(0), name("") {}
+  MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : parent(parent), id(id), group(group), ndim(0), name(name) {}
+  MPI_Comm_Struct(const char* name, unsigned int parent, int id, int group) : parent(parent), id(id), group(group), ndim(0), name(name) {}
 
   unsigned int parent;
   int id;
