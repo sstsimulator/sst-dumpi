@@ -42,7 +42,7 @@ namespace dumpi {
       if(irecv_it == irecv_requests.end()) {
         printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
       } else {
-        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.bytes_sent, request_id);
         irecv_requests.erase(irecv_it);
         event_count++;
       }

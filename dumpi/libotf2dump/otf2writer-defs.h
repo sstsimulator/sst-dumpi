@@ -140,8 +140,7 @@ enum COMM_EVENT_TYPE {
  * Internal structure for async MPI calls
  */
 struct irecv_capture {
-  uint64_t count;
-  int  type;
+  uint64_t bytes_sent;
   uint32_t source;
   uint32_t tag;
   int comm;

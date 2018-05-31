@@ -686,7 +686,7 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irecv");
-    ctx.irecv_requests[request] = {count, type, source, tag, comm, request};
+    ctx.irecv_requests[request] = {count_bytes(type, count), source, tag, comm, request};
     ctx.incomplete_call(request, REQUEST_TYPE_IRECV);
     OTF2_EvtWriter_MpiIrecvRequest(ctx.evt_writer, nullptr, start, request);
     ctx.event_count++;
