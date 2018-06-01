@@ -777,7 +777,7 @@ namespace dumpi {
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BCAST,
                        is_root ? bytes * get_comm_size(comm) : 0, // scorep multiplies the root's send by comm size
-                       is_root ? 0 : bytes);
+                       bytes);
     _LEAVE();
   }
 
@@ -840,7 +840,7 @@ namespace dumpi {
   OTF2_WRITER_RESULT OTF2_Writer::mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm) {
     _ENTER("MPI_Scan");
     UNDEFINED_ROOT
-    int comm_rank = get_comm_rank(comm);
+    int comm_rank = get_comm_rank(comm, rank);
     int bytes = count_bytes(datatype, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCAN,
                        (get_comm_size(comm) - comm_rank - 1) * bytes,
@@ -905,12 +905,13 @@ namespace dumpi {
     _LEAVE();
   }
 
+
   OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Reduce_scatter");
     UNDEFINED_ROOT
 
-    int sent = count_bytes(type, count);
-    int recv = comm_size * recv_counts[get_comm_rank(comm, rank)] + get_type_size(type);
+    int sent = count_bytes(type, comm_size);
+    int recv = comm_size * recvcounts[get_comm_rank(comm, rank)] * _type_sizes[type];
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE_SCATTER,
                        sent,
@@ -929,7 +930,6 @@ namespace dumpi {
     } else return true;
   }
 
-  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_union");
 
