@@ -512,7 +512,8 @@ namespace dumpi {
       int rank = ac_it->second.rank;
       int incomplete = ac_it->second.dispose(_archive);
       if (incomplete > 0) {
-        logger(OWV_WARN, string("") + string("Closing archive with ") + to_string(incomplete) + string(" incomplete MPI calls on rank ") + to_string(rank));
+        logger(OWV_ERROR, string("") + string("Closing archive with ") + to_string(incomplete) + string(" incomplete MPI calls on rank ") + to_string(rank));
+        logger(OWV_ERROR, string("Make sure the program does not have dangling calls to MPI_Isend or MPI_Irecv"));
       }
     }
 
