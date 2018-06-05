@@ -255,6 +255,7 @@ namespace dumpi {
       // When has not been initialized yet
       ctx.rank = new_rank;
       ctx.evt_writer = OTF2_Archive_GetEvtWriter(_archive, new_rank);
+      ctx.null_request = _null_request;
     }
     return ctx;
   }
@@ -449,9 +450,6 @@ namespace dumpi {
 
     if (_comm_self_id == -1)
       logger(OWV_ERROR, "register_comm_self() not called");
-
-    if (_comm_error_id == -1)
-      logger(OWV_ERROR, "register_comm_error() not called");
 
     if (_comm_null_id == -1)
       logger(OWV_ERROR, "register_comm_null() not called");

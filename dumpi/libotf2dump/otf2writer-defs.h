@@ -198,6 +198,7 @@ private:
 struct RankContext {
   int rank = -1;
   int event_count = 0;
+  int null_request = -1;
   OTF2_EvtWriter* evt_writer = nullptr;
   std::unordered_map<int, irecv_capture> irecv_requests;
   std::unordered_map<int, REQUEST_TYPE> request_type;
