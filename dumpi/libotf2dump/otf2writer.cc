@@ -255,6 +255,7 @@ namespace dumpi {
       // When has not been initialized yet
       ctx.rank = new_rank;
       ctx.evt_writer = OTF2_Archive_GetEvtWriter(_archive, new_rank);
+      ctx.null_request = _null_request;
     }
     return ctx;
   }
@@ -450,9 +451,6 @@ namespace dumpi {
     if (_comm_self_id == -1)
       logger(OWV_ERROR, "register_comm_self() not called");
 
-    if (_comm_error_id == -1)
-      logger(OWV_ERROR, "register_comm_error() not called");
-
     if (_comm_null_id == -1)
       logger(OWV_ERROR, "register_comm_null() not called");
 
@@ -512,7 +510,8 @@ namespace dumpi {
       int rank = ac_it->second.rank;
       int incomplete = ac_it->second.dispose(_archive);
       if (incomplete > 0) {
-        logger(OWV_WARN, string("") + string("Closing archive with ") + to_string(incomplete) + string(" incomplete MPI calls on rank ") + to_string(rank));
+        logger(OWV_ERROR, string("") + string("Closing archive with ") + to_string(incomplete) + string(" incomplete MPI calls on rank ") + to_string(rank));
+        logger(OWV_ERROR, string("Make sure the program does not have dangling calls to MPI_Isend or MPI_Irecv"));
       }
     }
 
@@ -686,7 +685,7 @@ namespace dumpi {
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_irecv(int rank, otf2_time_t start, otf2_time_t stop, mpi_type_t type, uint64_t count, uint32_t source, int comm, uint32_t tag, request_t request) {
     _ENTER("MPI_Irecv");
-    ctx.irecv_requests[request] = {count, type, source, tag, comm, request};
+    ctx.irecv_requests[request] = {count_bytes(type, count), source, tag, comm, request};
     ctx.incomplete_call(request, REQUEST_TYPE_IRECV);
     OTF2_EvtWriter_MpiIrecvRequest(ctx.evt_writer, nullptr, start, request);
     ctx.event_count++;
@@ -773,11 +772,11 @@ namespace dumpi {
       return OTF2_WRITER_ERROR_UKNOWN_MPI_COMM;
 
     bool is_root = ranks_equivalent(rank, root, comm, &ctx);
-
     int bytes = count_bytes(type, count);
+
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_BCAST,
-                       is_root ? bytes : 0,
-                       is_root ? 0 : bytes);
+                       is_root ? bytes * get_comm_size(comm) : 0, // scorep multiplies the root's send by comm size
+                       bytes);
     _LEAVE();
   }
 
@@ -790,8 +789,8 @@ namespace dumpi {
     bool is_root = ranks_equivalent(rank, root, comm, &ctx);
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_GATHER,
-                       is_root ? 0 : count_bytes(sendtype, sendcount),
-                       is_root ? count_bytes(recvtype, recvcount) : 0);
+                       count_bytes(sendtype, sendcount),
+                       count_bytes(recvtype, recvcount) * get_comm_size(comm)); // scorep multiplies the root receive by comm size
     _LEAVE();
   }
 
@@ -804,7 +803,7 @@ namespace dumpi {
     bool is_root = ranks_equivalent(rank, root, comm, &ctx);
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_GATHERV,
-                       is_root ? 0 : count_bytes(sendtype, sendcount),
+                       count_bytes(sendtype, sendcount),
                        is_root ? count_bytes(recvtype, array_sum(recvcounts, comm_size)) : 0);
     _LEAVE();
   }
@@ -818,8 +817,8 @@ namespace dumpi {
     bool is_root = ranks_equivalent(rank, root, comm, &ctx);
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTER,
-                       is_root ? count_bytes(sendtype, sendcount) : 0,
-                       is_root ? 0 : count_bytes(recvtype, recvcount));
+                       is_root ? count_bytes(sendtype, sendcount) * get_comm_size(comm) : 0, // scorep multiplies the root rank's send by commm size
+                       count_bytes(recvtype, recvcount));
     _LEAVE();
   }
 
@@ -833,25 +832,28 @@ namespace dumpi {
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCATTERV,
                        is_root ? count_bytes(sendtype, array_sum(sendcounts, comm_size)) : 0,
-                       is_root ? 0 : count_bytes(recvtype, recvcount));
+                       count_bytes(recvtype, recvcount));
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_scan(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t datatype, comm_t comm) {
     _ENTER("MPI_Scan");
     UNDEFINED_ROOT
+    int comm_rank = get_comm_rank(comm, rank);
+    int bytes = count_bytes(datatype, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_SCAN,
-                       count_bytes(datatype, count),
-                       count_bytes(datatype, count));
+                       (get_comm_size(comm) - comm_rank - 1) * bytes,
+                       (comm_rank + 1) * bytes);
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_allgather(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Allgather");
     UNDEFINED_ROOT
+    int comm_size =  get_comm_size(comm);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHER,
-                       count_bytes(sendtype, sendcount),
-                       count_bytes(recvtype, recvcount));
+                       comm_size * count_bytes(sendtype, sendcount),
+                       comm_size * count_bytes(recvtype, recvcount));
     _LEAVE();
   }
 
@@ -859,16 +861,17 @@ namespace dumpi {
     _ENTER("MPI_Allgatherv");
     UNDEFINED_ROOT
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLGATHERV,
-                       count_bytes(sendtype, sendcount),
+                       comm_size * count_bytes(sendtype, sendcount),
                        count_bytes(recvtype, array_sum(recvcounts, comm_size)));
     _LEAVE();
   }
   OTF2_WRITER_RESULT OTF2_Writer::mpi_alltoall(int rank, otf2_time_t start, otf2_time_t stop, int sendcount, mpi_type_t sendtype, int recvcount, mpi_type_t recvtype, comm_t comm) {
     _ENTER("MPI_Alltoall");
     UNDEFINED_ROOT
+    int transmitted = get_comm_size(comm) * count_bytes(recvtype, recvcount);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLTOALL,
-                       count_bytes(sendtype, sendcount),
-                       count_bytes(recvtype, recvcount));
+                       transmitted,
+                       transmitted);
     _LEAVE();
   }
 
@@ -887,30 +890,31 @@ namespace dumpi {
     int sent = count_bytes(type, count);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE,
                        sent,
-                       ranks_equivalent(rank, root, comm, &ctx) ? sent : 0);
+                       ranks_equivalent(rank, root, comm, &ctx) ? sent * get_comm_size(comm) : 0);
     _LEAVE();
   }
 
   OTF2_WRITER_RESULT OTF2_Writer::mpi_allreduce(int rank, otf2_time_t start, otf2_time_t stop, int count, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Allreduce");
     UNDEFINED_ROOT
-    int bytes = count_bytes(type, count);
+    int bytes = count_bytes(type, count) * get_comm_size(comm);
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_ALLREDUCE,
                        bytes,
                        bytes);
     _LEAVE();
   }
 
+
   OTF2_WRITER_RESULT OTF2_Writer::mpi_reduce_scatter(int rank, otf2_time_t start, otf2_time_t stop, int comm_size, const int* recvcounts, mpi_type_t type, comm_t comm) {
     _ENTER("MPI_Reduce_scatter");
     UNDEFINED_ROOT
 
-    // TODO: double check the byte counts are accurate
-    int bytes = count_bytes(type, array_sum(recvcounts, comm_size));
+    int sent = count_bytes(type, comm_size);
+    int recv = comm_size * recvcounts[get_comm_rank(comm, rank)] * _type_sizes[type];
 
     COLLECTIVE_WRAPPER(OTF2_COLLECTIVE_OP_REDUCE_SCATTER,
-                       bytes,
-                       bytes);
+                       sent,
+                       recv);
     _LEAVE();
   }
 
@@ -925,7 +929,6 @@ namespace dumpi {
     } else return true;
   }
 
-  // TODO wrap in lambda
   OTF2_WRITER_RESULT OTF2_Writer::mpi_group_union(int rank, otf2_time_t start, otf2_time_t stop, int group1, int group2, int newgroup) {
     _ENTER("MPI_Group_union");
 

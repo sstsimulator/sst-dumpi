@@ -140,8 +140,7 @@ enum COMM_EVENT_TYPE {
  * Internal structure for async MPI calls
  */
 struct irecv_capture {
-  uint64_t count;
-  int  type;
+  uint64_t bytes_sent;
   uint32_t source;
   uint32_t tag;
   int comm;
@@ -176,9 +175,9 @@ private:
  * Internal structure for MPI_Comm_split and MPI_Comm_create collectives
  */
 struct MPI_Comm_Struct {
-  MPI_Comm_Struct(): name(""), parent(0), id(0), ndim(0) {}
-  MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
-  MPI_Comm_Struct(const char* name, unsigned int parent, int id, int group) : name(name), parent(parent), id(id), group(group), ndim(0){}
+  MPI_Comm_Struct(): parent(0), id(0), group(0), ndim(0), name("") {}
+  MPI_Comm_Struct(std::string name, unsigned int parent, int id, int group) : parent(parent), id(id), group(group), ndim(0), name(name) {}
+  MPI_Comm_Struct(const char* name, unsigned int parent, int id, int group) : parent(parent), id(id), group(group), ndim(0), name(name) {}
 
   unsigned int parent;
   int id;
@@ -199,6 +198,7 @@ private:
 struct RankContext {
   int rank = -1;
   int event_count = 0;
+  int null_request = -1;
   OTF2_EvtWriter* evt_writer = nullptr;
   std::unordered_map<int, irecv_capture> irecv_requests;
   std::unordered_map<int, REQUEST_TYPE> request_type;

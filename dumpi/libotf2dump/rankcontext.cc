@@ -18,7 +18,8 @@ namespace dumpi {
 
   // I-event handling
   void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
-    request_type[request_id] = type;
+    if (request_id != null_request)
+      request_type[request_id] = type;
   }
 
   /*
@@ -29,7 +30,8 @@ namespace dumpi {
   void RankContext::complete_call(request_t request_id, uint64_t timestamp) {
     auto t = request_type.find(request_id);
     if (t == request_type.end()) {
-      printf("Error: request id (%i) not found\n", request_id);
+      if (request_id != null_request)
+        printf("Error: request id (%i) not found\n", request_id);
       return;
     }
     else if (t->second == REQUEST_TYPE_ISEND) {
@@ -42,7 +44,7 @@ namespace dumpi {
       if(irecv_it == irecv_requests.end()) {
         printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
       } else {
-        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.count, request_id);
+        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.bytes_sent, request_id);
         irecv_requests.erase(irecv_it);
         event_count++;
       }
