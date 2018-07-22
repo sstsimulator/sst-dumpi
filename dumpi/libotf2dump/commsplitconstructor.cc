@@ -59,16 +59,21 @@ namespace dumpi {
     return std::make_tuple(new_comm_metadata[comm], out);
   }
 
-  void CommSplitConstructor::add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size) {
+  void CommSplitConstructor::add_call(int global_rank, int parent_rank, int key, int color,
+                                      comm_t old_comm, comm_t new_comm, int old_comm_size) {
 
-    CommEventIdentifier cei = {.comm_event_type=CET_COMM_SPLIT, .id=old_comm, .event_number=event_counter[old_comm][parent_rank]++};
+    CommEventIdentifier cei = {
+       .comm_event_type=CET_COMM_SPLIT,
+      .id=old_comm,
+      .event_number=event_counter[old_comm][parent_rank]++
+    };
     CommSplitContext* s_context_ptr = nullptr;
     auto ics_it = incomplete_comm_splits.find(cei);
 
     // Get a reference to the context, create it if necessary
-    if (ics_it != incomplete_comm_splits.end())
+    if (ics_it != incomplete_comm_splits.end()){
       s_context_ptr = &(ics_it->second);
-    else {
+    } else {
       s_context_ptr = &incomplete_comm_splits[cei];
       s_context_ptr->parent_size = old_comm_size;
       s_context_ptr->remaining_ranks = old_comm_size;
@@ -76,8 +81,9 @@ namespace dumpi {
 
     // Ensure the new communicator (identified by split id + color combo) has an unique id
     auto& ctcid = s_context_ptr->color_to_comm_id[color];
-    if (ctcid == 0)
+    if (ctcid == 0){
       ctcid = MPI_Comm_Struct::get_unique_comm_id();
+    }
 
     // Initialize MPI_Comm_Struct if it doesn't exist yet.
     auto comm_metadata_it = new_comm_metadata.find(ctcid);
@@ -114,7 +120,7 @@ namespace dumpi {
 
     // Build up a list
     if (ncg_it != new_comm_group.end()) {
-      for(auto& local_comm : ncg_it->second)
+      for (auto& local_comm : ncg_it->second)
         result.push_back(local_comm.local_new_comm_id);
     }
 
@@ -124,9 +130,9 @@ namespace dumpi {
   void CommSplitConstructor::clear(comm_t new_comm) {
     auto comm_it = new_comm_group.find(new_comm);
 
-    if (comm_it == new_comm_group.end())
+    if (comm_it == new_comm_group.end()){
       printf("Error: CommSplitConstructer tried to erase a communicator (%i) that does not exist\n", new_comm);
-    else {
+    } else {
       new_comm_group.erase(comm_it);
       completed.erase(new_comm);
       new_comm_metadata.erase(new_comm);

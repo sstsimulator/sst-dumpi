@@ -16,7 +16,7 @@ extern "C" {
    */
   typedef struct d2o2opt {
     int verbose, help;
-    std::string dumpi_archive;
+    std::string dumpi_folder;
     std::string dumpi_meta;
     std::vector<std::string> dumpi_bin;
     std::string output_archive;

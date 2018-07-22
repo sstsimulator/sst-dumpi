@@ -45,11 +45,13 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <dumpi/bin/dumpi2otf2-defs.h>
 #include <dumpi/libundumpi/libundumpi.h>
 #include <dumpi/libotf2dump/otf2writer.h>
+#include <dumpi/bin/metadata.h>
 
 #include <glob.h>
 #include <string.h>
 #include <getopt.h>
 #include <assert.h>
+#include <cstdlib>
 
 static int parse_cli_options(int argc, char **argv, d2o2opt *opt);
 static std::vector<std::string> glob_files(const char* path);
@@ -59,9 +61,25 @@ static void mk_archive_dir(const char* path);
 static void print_usage();
 static std::vector<int> get_type_sizes(dumpi_profile*);
 
+/** These are stateless lambdas and can be global variables */
+static libundumpi_callbacks first_pass_cback, second_cback;
+
+int run_second_pass(dumpi::OTF2_Writer& writer, int rank, dumpi::metadata& md)
+{
+  writer.register_comm_world(DUMPI_COMM_WORLD);
+  writer.register_comm_self(DUMPI_COMM_SELF);
+  writer.register_comm_null(DUMPI_COMM_NULL);
+  writer.register_comm_error(DUMPI_COMM_ERROR);
+  writer.register_null_request(DUMPI_REQUEST_NULL);
+  writer.set_clock_resolution(1E9);
+  auto profile = undumpi_open(md.tracename(rank).c_str());
+  undumpi_read_stream(profile, &second_cback, (void*)&writer);
+  undumpi_close(profile);
+  return 0;
+}
+
 int main(int argc, char **argv) {
   dumpi_profile *profile;
-  libundumpi_callbacks first_pass_cback, second_cback;
   d2o2opt opt;
   dumpi::OTF2_Writer writer;
 
@@ -72,59 +90,74 @@ int main(int argc, char **argv) {
   set_first_pass_callbacks(&first_pass_cback);
   set_callbacks(&second_cback);
 
-  auto dumpi_bin_files = glob_files((std::string(opt.dumpi_archive.c_str()) + "/*.bin").c_str());
-  int num_ranks = dumpi_bin_files.size();
-  if (num_ranks == 0) {
-    printf("Error: could not open dumpi archive\n");
-    return 2;
+  if (opt.dumpi_meta.empty()){
+    fprintf(stderr, "Must specify input DUMPI meta file (-i)\n");
+    return 1;
   }
+
+  dumpi::metadata md(opt.dumpi_meta);
 
   // Initialize the writer
   writer.set_verbosity(opt.verbose ? dumpi::OWV_INFO : dumpi::OWV_WARN);
 
-  if (writer.open_archive(opt.output_archive, num_ranks, true) != dumpi::OTF2_WRITER_SUCCESS) {
-    printf("Error opening the archive");
-    return 1;
-  }
-
-  writer.register_comm_world(DUMPI_COMM_WORLD);
-  writer.register_comm_self(DUMPI_COMM_SELF);
-  writer.register_comm_null(DUMPI_COMM_NULL);
-  writer.register_comm_error(DUMPI_COMM_ERROR);
-  writer.register_null_request(DUMPI_REQUEST_NULL);
-  writer.set_clock_resolution(1E9);
 
   // Loop over trace files. Dumpi creates one trace file per MPI rank
   // The first pass constructs information about Communicators, Groups, and type sizes.
-  writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM);
   if (opt.print_progress) printf("Identifying Communicators, Groups, and types\n");
-  for(int rank = 0; rank < num_ranks; rank++) {
-    profile = undumpi_open(dumpi_bin_files[rank].c_str());
+  /** FIX ME
+  for(int rank = 0; rank < md.numTraces(); rank++) {
+    profile = undumpi_open(md.tracename(rank).c_str());
     writer.set_rank(rank);
     // TODO, types are rank-specific, easiest to put them into a hash_map
     register_type_sizes(profile, &writer);
     undumpi_read_stream(profile, &first_pass_cback, (void*)&writer);
     undumpi_close(profile);
 
-    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
+    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
     fflush(stdout);
   }
+  */
 
   // The second pass records MPI events and their parameters
   if (opt.print_progress) printf("\nWriting event files\n");
-  for(int rank = 0; rank < num_ranks; rank++) {
-    writer.set_comm_mode(dumpi::COMM_MODE_BUILD_COMM_COMPLETE);
-    profile = undumpi_open(dumpi_bin_files[rank].c_str());
-    writer.set_rank(rank);
-    undumpi_read_stream(profile, &second_cback, (void*)&writer);
-    undumpi_close(profile);
 
-    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/num_ranks);
+
+  std::string traceFolder = opt.output_archive.empty() ? md.filePrefix() + "-otf2" : opt.output_archive;
+  dumpi::OTF2_Writer writer0; //rank 0 is special
+  if (writer0.open_archive(traceFolder, md.numTraces(), 0) != dumpi::OTF2_WRITER_SUCCESS) {
+    fprintf(stderr, "Error opening the archive for rank 0\n");
+    return 1;
+  }
+
+  std::vector<int> eventCounts(md.numTraces());
+
+  for (int rank = 1; rank < md.numTraces(); rank++) {
+    dumpi::OTF2_Writer writer;
+    if (writer.open_archive(traceFolder, md.numTraces(), rank) != dumpi::OTF2_WRITER_SUCCESS) {
+      fprintf(stderr, "Error opening the archive for rank %d\n", rank);
+      return 1;
+    }
+    int rc = run_second_pass(writer, rank, md);
+    if (rc != 0){
+      fprintf(stderr, "Error writing DUMPI rank %d into OTF2 archive\n", rank);
+      return 1;
+    }
+    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
+    fflush(stdout);
+    eventCounts[rank] = writer.event_count();
+    writer.close_archive();
+  }
+
+  run_second_pass(writer0, 0, md);
+  eventCounts[0] = writer0.event_count();
+
+  if (opt.print_progress){
+    printf("\nWriting definition files\n");
     fflush(stdout);
   }
-  if (opt.print_progress) printf("\nWriting definition files\n");
-  fflush(stdout);
-  writer.close_archive();
+
+  writer0.write_def_files(eventCounts);
+  writer0.close_archive();
   return 0;
 }
 
@@ -148,7 +181,7 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           break;
         case 'i':
           tmp_str = strdup(optarg);
-          settings->dumpi_archive = std::string(tmp_str);
+          settings->dumpi_meta = std::string(tmp_str);
           input_set = true;
           break;
         case 'o':
@@ -172,11 +205,13 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
     return 0;
   }
 
+  /** We can sensible choose a default
   if (!output_set) {
     printf("%s", "Error: no OTF2 archive destination set. Use '-o'\n\n");
     print_usage();
     return 0;
   }
+  */
 
   return 1;
 }

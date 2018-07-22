@@ -81,31 +81,6 @@ enum OTF2_WRITER_RESULT {
 };
 
 /**
- * @brief COMM_MODE is used to distinguish between two comm/group recording
- * strategies for building the trace. Unlike Score-P, creating OTF2 archives
- * from trace sources will not have a backing runtime to collect information
- * about groups and communicators on demand. i.e. MPI_Gather needs to know
- * about the communicator to determine the root rank before calculating the
- * number of bytes received.
- *
- * For a trace-to-trace conversion, set COMM_MODE_BUILD_COMM and run MPI_Comm_*
- * and MPI_Group_* to build up comm/group metadata. Then set the mode to
- * COMM_MODE_BUILD_COMM_COMPLETE to begin recording event files.
- *
- * In situations where communicators are expected to be well defined by a
- * runtime backing (i.e. in a simulator) use COMM_MODE_NONE to bypass these behaviors.
- */
-enum COMM_MODE {
-  /// Build metadata on communicators and groups, do not record events.
-  COMM_MODE_BUILD_COMM,
-  /// Done registering communicators and groups, record events and to not build
-  /// metadata from communicator and group calls
-  COMM_MODE_BUILD_COMM_COMPLETE,
-  /// Group information is expected to be available before any
-  COMM_MODE_NONE
-};
-
-/**
  * @brief The OTF2_WRITER_VERBOSITY enum
  * Determines output verbosity. All output is written to standard out.
  */
@@ -200,12 +175,12 @@ struct RankContext {
   int event_count = 0;
   int null_request = -1;
   OTF2_EvtWriter* evt_writer = nullptr;
-  std::unordered_map<int, irecv_capture> irecv_requests;
-  std::unordered_map<int, REQUEST_TYPE> request_type;
+  std::unordered_map<request_t, irecv_capture> irecv_requests;
+  std::unordered_map<request_t, REQUEST_TYPE> request_type;
   std::unordered_map<comm_t, comm_t> comm_mapping; // Tracks arbitary local communicator IDs
   std::unordered_map<int, int> group_map; // maps arbitrary local group IDs go global ones (which an arbitrary construct created when comms are created).
 
-  void incomplete_call(int request_id, REQUEST_TYPE type);
+  void incomplete_call(request_t request_id, REQUEST_TYPE type);
   void complete_call(request_t request_id, uint64_t timestamp);
 
   // returns the number of incomplete events
@@ -343,13 +318,13 @@ private:
  * in an MPI_Comm_split
  */
 class CommSplitConstructor : public CollectiveIdRemapper<comm_t> {
-public:
+ public:
   std::tuple<MPI_Comm_Struct, std::vector<int>> get_completed(comm_t comm);
   std::vector<comm_t> get_remapping(comm_t new_comm); // For a given communicator, creates a list that maps the ranks' arbitrary local communicator IDs to the global one
   void clear(comm_t new_comm);
 
   void add_call(int global_rank, int parent_rank, int key, int color, comm_t old_comm, comm_t new_comm, int old_comm_size);
-private:
+ private:
   struct RankMetadata : public CollectiveIdRemapper<comm_t>::RankMetadata {
     int key;
   };

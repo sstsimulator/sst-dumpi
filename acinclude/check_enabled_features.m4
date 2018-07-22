@@ -38,67 +38,10 @@ AC_ARG_ENABLE(libundumpi,
   disable_libundumpi=""
 )
 
-# If we are building binary utlities, test wheter we can build the
-# dumpi-to-otf converter.
-if test "$disable_bin" != "yes"; then
-   oldlibs="$LIBS"
-   LIBS="$LIBS -lotf -lz"
-   AC_MSG_CHECKING([wheter OTF library and header file can be found])
-   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM(
-        [
-	  #include <otf.h>
-	  #include <stdlib.h>
-        ],[
-	  OTF_FileManager *mgr = NULL;
-	  mgr = OTF_FileManager_open(10);
-	  if(!mgr) {
-	    return EXIT_FAILURE;
-	  }
-	  OTF_FileManager_close(mgr);
-	  return EXIT_SUCCESS;
-        ]
-      )],
-      [
-        AC_MSG_RESULT([yes])
-	enable_otf="yes"	
-      ],[
-        AC_MSG_RESULT([no])
-	LIBS="$oldlibs"
-      ]
-    )
-fi
-
-# test for dumpi-to-otf2 converter
-if test "$disable_bin" != "yes"; then
-   oldlibs="$LIBS"
-   LIBS="$LIBS -lotf2 -lz"
-   AC_MSG_CHECKING([whether OTF2 library and header files can be found])
-   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM(
-        [
-	  #include <otf2/otf2.h>
-	  #include <stdlib.h>
-        ],[
-	  return EXIT_SUCCESS;
-        ]
-      )],
-      [
-        AC_MSG_RESULT([yes])
-	enable_otf2="yes"
-      ],[
-        AC_MSG_RESULT([no])
-	LIBS="$oldlibs"
-      ]
-    )
-fi
-
 AM_CONDITIONAL([WITH_BIN], [test "$disable_bin" != "yes"])
 AM_CONDITIONAL([WITH_TEST], [test "$enable_test" = "yes"])
 AM_CONDITIONAL([WITH_LIBDUMPI], [test "$enable_libdumpi" = "yes"])
 AM_CONDITIONAL([WITH_LIBUNDUMPI], [test "$disable_libundumpi" != "yes"])
-AM_CONDITIONAL([WITH_OTF], [test "$enable_otf" = "yes"])
-AM_CONDITIONAL([WITH_OTF2], [test "$enable_otf2" = "yes"])
 
 if test "$enable_libdumpi" = "yes"; then
   DUMPI_FUNCTIONS

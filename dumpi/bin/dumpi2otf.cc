@@ -92,11 +92,11 @@ namespace dumpi {
 
     // This becomes the shared back-end info for the traces.
     // This also constructs COMM_WORLD for us.
-    sharedstate shared(meta.traces());
+    sharedstate shared(meta.numTraces());
 
     // Open traces.
     if(opt.verbose) std::cout << "Pre-parsing traces.\n";
-    std::vector<trace> traces(meta.traces());
+    std::vector<trace> traces(meta.numTraces());
     preparse_traces(meta, &shared, traces);
     // and now we should have all the preparse state we could wish for
     // ...do whatever we want with the preparse data.

@@ -1033,7 +1033,7 @@ namespace dumpi {
   {
     trace_ = &trace;
     bin_ = &bin;
-    for(current_trace_ = 0; current_trace_ < meta.traces(); ++current_trace_) {
+    for(current_trace_ = 0; current_trace_ < meta.numTraces(); ++current_trace_) {
       std::string tname = meta.tracename(current_trace_);
       dumpi_profile *prof = undumpi_open(tname.c_str());
       // Get function addresses.

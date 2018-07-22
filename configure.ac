@@ -85,6 +85,10 @@ CHECK_CONST_QUALIFIERS()
 
 CHECK_ENABLED_FEATURES()
 
+CHECK_OTF2()
+
+CHECK_CPP11()
+
 CHECK_FORTRAN_ENABLED()
 
 if test "$enable_libdumpi" = "yes"; then
@@ -144,4 +148,18 @@ AC_CONFIG_FILES([
  docs/doxygen.cfg
 ])
 AC_OUTPUT
+
+echo
+echo "DUMPI Configuration Summary:"
+echo "---------------------------------------------------------------"
+echo "Install prefix     $prefix"
+echo "C compiler         $CC"
+echo "C++ compiler       $CXX"
+echo "CFLAGS             $CFLAGS"
+echo "CXXFLAGS           $CXXFLAGS"
+echo "CPPFLAGS           $CPPFLAGS"
+echo "LDFLAGS            $LDFLAGS"
+echo "LIBS               $LIBS"
+echo "OTF2 support       $build_otf2"
+echo "---------------------------------------------------------------"
 

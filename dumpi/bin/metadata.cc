@@ -50,20 +50,12 @@ Questions? Contact sst-macro-help@sandia.gov
 
 namespace dumpi {
 
-  //
-  // Construct a new
-  metadata::metadata(const std::string &metafile) {
+  metadata::metadata(const std::string& metafile) :
+    metafile_(metafile)
+  {
     std::ifstream in(metafile.c_str());
     if(! in) {
-      FILE *fin = fopen(metafile.c_str(), "r");
-      if(! fin) {
-	std::cerr << "\"" << metafile << "\": " << strerror(errno) << "\n";
-      }
-      else {
-	std::cerr << "Major weirdness:  failed to open ifstream for \""
-		  << metafile << "\" but succeeded using fopen.\n";
-      }
-      throw "Failed to open DUMPI metafile.";
+      throw exception("Failed to open DUMPI metafile: " + metafile);
     }
     // The file search prefix should be the same leading path as the metafile.
     std::string::size_type slash = metafile.find_last_of('/');
@@ -86,11 +78,24 @@ namespace dumpi {
 	  fileprefix_ = pathprefix + val;
       }
     }
-    //std::cerr << "numprocs: " << numprocs_ << "\n"
-    //    << "fileprefix: " << fileprefix_ << "\n";
     if(numprocs_ <= 0 || fileprefix_ == "") {
-      throw "metadata:  Invalid metafile.";
+      throw exception("Could not find numprocs and fileprefix in metafile: " + metafile);
     }
+
+    auto lastPos = metafile_.size()-1;
+    char lastChar = metafile_.at(lastPos);
+    while (lastChar == '/'){
+      lastPos--;
+      metafile_.resize(lastPos); //
+      lastChar = metafile_.at(lastPos);
+    }
+
+    auto folderSlash = metafile_.find_last_of("/");
+    if (folderSlash != std::string::npos){
+      folder_ = metafile_.substr(0, folderSlash);
+      fileprefix_ = folder_ + "/" + fileprefix_;
+    }
+
     // Now expand the fileprefix to have the "right" number of zeros.
     // Start with a %04f format, and move on from there.
     static const int maxwidth=10;
@@ -121,9 +126,6 @@ namespace dumpi {
     }
     if(files_found != numprocs_) {
       throw "metadata:  Failed to find binary trace files.";
-    }
-    else {
-      ; //std::cerr << "File prefix: " << fileprefix_ << "\n";
     }
   }
 

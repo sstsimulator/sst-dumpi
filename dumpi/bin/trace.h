@@ -396,7 +396,7 @@ namespace dumpi {
                               std::vector<trace> &traces)
   {
     traces.clear();
-    traces.resize(meta.traces());
+    traces.resize(meta.numTraces());
     for(size_t i = 0; i < traces.size(); ++i)
       traces.at(i).init(shared, meta.tracename(i), i);
     int active_traces=traces.size();

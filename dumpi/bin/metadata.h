@@ -53,6 +53,12 @@ Questions? Contact sst-macro-help@sandia.gov
 
 namespace dumpi {
 
+  struct exception : public std::runtime_error {
+    exception(const std::string& error) :
+      std::runtime_error(error)
+    {}
+  };
+
   /**
    * \ingroup dumpi_utilities
    */
@@ -64,6 +70,8 @@ namespace dumpi {
    */
   class metadata {
     int numprocs_;
+    std::string metafile_;
+    std::string folder_;
     std::string fileprefix_;
     /// This gets expanded to be the sprintf-format needed to open trace files.
     std::string tracefmt_;
@@ -71,21 +79,30 @@ namespace dumpi {
     int width_;
 
   public:
-    /// Create new metadata based on the given metafile.
-    metadata(const std::string &metafile);
+    metadata(const std::string& metafile);
 
     /// Number of traces.
-    int traces() const {
+    int numTraces() const {
       return numprocs_;
+    }
+
+    std::string folder() const {
+      return folder_;
+    }
+
+    std::string filePrefix() const {
+      return fileprefix_;
     }
 
     /// Get the full filename corresponding to the given trace index.
     std::string tracename(int index) const {
       static char buf[1024];
-      if(index >= numprocs_)
-	throw "metadata::tracename:  Invalid rank";
-      if(snprintf(buf, 1024, tracefmt_.c_str(), index) > 1023)
-	throw "metadata::tracename:  Buffer overflow.";
+      if (index >= numprocs_){
+        throw exception("Requested trace index is too large");
+      }
+      if (snprintf(buf, 1024, tracefmt_.c_str(), index) > 1023){
+        throw exception("snprintf failed to generate trace name");
+      }
       return std::string(buf);
     }
   };

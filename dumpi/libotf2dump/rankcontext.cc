@@ -1,6 +1,8 @@
 #include <dumpi/libotf2dump/otf2writer.h>
+#include <iostream>
 
 namespace dumpi {
+
   int RankContext::dispose(OTF2_Archive* archive) {
     // close existing OTF2 event file if it is open
     if (evt_writer != nullptr) {
@@ -17,9 +19,10 @@ namespace dumpi {
   }
 
   // I-event handling
-  void RankContext::incomplete_call(int request_id, REQUEST_TYPE type) {
-    if (request_id != null_request)
+  void RankContext::incomplete_call(request_t request_id, REQUEST_TYPE type) {
+    if (request_id != null_request){
       request_type[request_id] = type;
+    }
   }
 
   /*
@@ -28,27 +31,37 @@ namespace dumpi {
    * Returns the number of events generated
    */
   void RankContext::complete_call(request_t request_id, uint64_t timestamp) {
-    auto t = request_type.find(request_id);
-    if (t == request_type.end()) {
-      if (request_id != null_request)
-        printf("Error: request id (%i) not found\n", request_id);
-      return;
-    }
-    else if (t->second == REQUEST_TYPE_ISEND) {
-      OTF2_EvtWriter_MpiIsendComplete(evt_writer, nullptr, timestamp, request_id);
-      event_count++;
-    }
-    else if (t->second == REQUEST_TYPE_IRECV) {
-      auto irecv_it = irecv_requests.find(request_id);
-      irecv_capture irecv = irecv_it->second;
-      if(irecv_it == irecv_requests.end()) {
-        printf("Error: Request #(%i) not found while trying to complete MPI_IRecv\n", request_id);
+    auto iter = request_type.find(request_id);
+    if (iter == request_type.end()) {
+      if (request_id != null_request){
+        std::cerr << "Error: request (" << request_id << ") not found"
+                  << " on rank " << rank << std::endl;
+        abort();
       } else {
-        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.bytes_sent, request_id);
-        irecv_requests.erase(irecv_it);
-        event_count++;
+        return;
       }
     }
-    request_type.erase(t);
+
+    switch (iter->second){
+      case REQUEST_TYPE_ISEND:
+        OTF2_EvtWriter_MpiIsendComplete(evt_writer, nullptr, timestamp, request_id);
+        event_count++;
+        break;
+      case REQUEST_TYPE_IRECV: {
+        auto irecv_it = irecv_requests.find(request_id);
+        irecv_capture irecv = irecv_it->second;
+        if (irecv_it == irecv_requests.end()) {
+          std::cerr << "Error: request id (" << request_id << ") not found"
+                    << " while trying to complete MPI_IRecv" << std::endl;
+          abort();
+        } else {
+          OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm, irecv.tag, irecv.bytes_sent, request_id);
+          irecv_requests.erase(irecv_it);
+          event_count++;
+        }
+      }
+    }
+    request_type.erase(iter);
   }
+
 }

@@ -239,18 +239,19 @@ int main(int argc, char **argv) {
 
     // Preparse the streams to get data types etc. correct.
     if(opt.verbose) std::cerr << "Parsing metafile\n";
+
     metadata meta(opt.infile);
 
     // Open traces.
     if(opt.verbose) std::cout << "Pre-parsing traces.\n";
-    sharedstate shared(meta.traces());
+    sharedstate shared(meta.numTraces());
     std::vector<trace> traces;
     preparse_traces(meta, &shared, traces);
 
     // Tell the handlers about world size.
     if(opt.verbose) std::cerr << "Setting up handlers\n";
     for(size_t i = 0; i < opt.handlers.size(); ++i)
-      opt.handlers.at(i)->set_world_size(meta.traces());
+      opt.handlers.at(i)->set_world_size(meta.numTraces());
     // Set up.  Each bin gets a copy of all the handlers.
     for(size_t i = 0; i < opt.bin.size(); ++i) {
       std::stringstream ss;

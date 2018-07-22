@@ -23,18 +23,19 @@ AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 AM_LDFLAGS = 
 bin_PROGRAMS = dumpi2ascii dumpi2dumpi dumpistats ascii2dumpi
 
-if WITH_OTF
-  bin_PROGRAMS += dumpi2otf  
-
-  dumpi2otf_SOURCES = dumpi2otf.cc metadata.cc sharedstate.cc \
-	  sharedstate-commconstruct.cc trace.cc otfwriter.cc otfcomplete.cc
-  dumpi2otf_LDADD = ../libundumpi/libundumpi.la $(OTFDIR) -lotf
-endif
+#if WITH_OTF
+#  bin_PROGRAMS += dumpi2otf  
+#
+#  dumpi2otf_SOURCES = dumpi2otf.cc metadata.cc sharedstate.cc \
+#	  sharedstate-commconstruct.cc trace.cc otfwriter.cc otfcomplete.cc
+#  dumpi2otf_LDADD = ../libundumpi/libundumpi.la $(OTF2_LDFLAGS) $(OTF2_LIBS)
+#endif
 
 if WITH_OTF2
   bin_PROGRAMS += dumpi2otf2
-  dumpi2otf2_SOURCES = dumpi2otf2.cc dumpi2otf2-callbacks.cc
-  dumpi2otf2_LDADD = ../libundumpi/libundumpi.la ../libotf2dump/libotf2dump.la $(OTF2DIR) -lotf2
+  dumpi2otf2_SOURCES = dumpi2otf2.cc dumpi2otf2-callbacks.cc metadata.cc
+  dumpi2otf2_LDADD = ../libundumpi/libundumpi.la ../libotf2dump/libotf2dump.la $(OTF2_LDFLAGS) $(OTF2_LIBS)
+  dumpi2otf2_CPPFLAGS = $(OTF2_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
 endif
 
 dumpi2ascii_SOURCES = dumpi2ascii.c dumpi2ascii-callbacks.c
