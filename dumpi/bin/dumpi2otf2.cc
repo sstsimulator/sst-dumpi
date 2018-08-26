@@ -97,6 +97,8 @@ int main(int argc, char **argv) {
 
   dumpi::metadata md(opt.dumpi_meta);
 
+  std::vector<dumpi::OTF2_Writer> writers(md.numTraces());
+
   // Initialize the writer
   writer.set_verbosity(opt.verbose ? dumpi::OWV_INFO : dumpi::OWV_WARN);
 
@@ -104,19 +106,27 @@ int main(int argc, char **argv) {
   // Loop over trace files. Dumpi creates one trace file per MPI rank
   // The first pass constructs information about Communicators, Groups, and type sizes.
   if (opt.print_progress) printf("Identifying Communicators, Groups, and types\n");
-  /** FIX ME
+
   for(int rank = 0; rank < md.numTraces(); rank++) {
     profile = undumpi_open(md.tracename(rank).c_str());
-    writer.set_rank(rank);
     // TODO, types are rank-specific, easiest to put them into a hash_map
     register_type_sizes(profile, &writer);
-    undumpi_read_stream(profile, &first_pass_cback, (void*)&writer);
+    undumpi_read_stream(profile, &first_pass_cback, &writers[rank]);
     undumpi_close(profile);
 
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
     fflush(stdout);
   }
-  */
+
+  dumpi::global_id_assigner id_assigner;
+  for (int rank = 0; rank < md.numTraces(); rank++){
+    writers[rank].agree_global_ids(id_assigner);
+  }
+
+  for (int rank =0; rank < md.numTraces(); rank++){
+    writers[rank].assign_global_ids(id_assigner);
+  }
+
 
   // The second pass records MPI events and their parameters
   if (opt.print_progress) printf("\nWriting event files\n");

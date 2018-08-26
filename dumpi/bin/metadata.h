@@ -53,12 +53,6 @@ Questions? Contact sst-macro-help@sandia.gov
 
 namespace dumpi {
 
-  struct exception : public std::runtime_error {
-    exception(const std::string& error) :
-      std::runtime_error(error)
-    {}
-  };
-
   /**
    * \ingroup dumpi_utilities
    */
@@ -98,10 +92,10 @@ namespace dumpi {
     std::string tracename(int index) const {
       static char buf[1024];
       if (index >= numprocs_){
-        throw exception("Requested trace index is too large");
+        throw std::runtime_error("Requested trace index is too large");
       }
       if (snprintf(buf, 1024, tracefmt_.c_str(), index) > 1023){
-        throw exception("snprintf failed to generate trace name");
+        throw std::runtime_error("snprintf failed to generate trace name");
       }
       return std::string(buf);
     }

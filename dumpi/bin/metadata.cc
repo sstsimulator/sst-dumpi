@@ -55,7 +55,7 @@ namespace dumpi {
   {
     std::ifstream in(metafile.c_str());
     if(! in) {
-      throw exception("Failed to open DUMPI metafile: " + metafile);
+      throw std::runtime_error("Failed to open DUMPI metafile: " + metafile);
     }
     // The file search prefix should be the same leading path as the metafile.
     std::string::size_type slash = metafile.find_last_of('/');
@@ -79,7 +79,7 @@ namespace dumpi {
       }
     }
     if(numprocs_ <= 0 || fileprefix_ == "") {
-      throw exception("Could not find numprocs and fileprefix in metafile: " + metafile);
+      throw std::runtime_error("Could not find numprocs and fileprefix in metafile: " + metafile);
     }
 
     auto lastPos = metafile_.size()-1;

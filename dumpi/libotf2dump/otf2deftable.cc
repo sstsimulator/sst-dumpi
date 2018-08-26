@@ -50,34 +50,28 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <unordered_set>
 #include <functional>
 
-using std::string;
-using std::to_string;
-
 namespace dumpi {
 
-  OTF2DefTable::OTF2DefTable() {}
-  int OTF2DefTable::map(string string)
-  {
-    auto it = _map.find(string);
-    _added_last_lookup = false;
-    if ( it != _map.end()) return it->second;
-    _map.insert(std::make_pair(string, _counter));
-    _added_last_lookup = true;
-    return _counter++;
-  }
+OTF2DefTable::OTF2DefTable() {}
 
-  const string OTF2DefTable::map(int index) {
-    // Finds the string corresponding to the given int.
-    for (auto elem = _map.begin(); elem != _map.end(); elem++)
-      if (elem->second == index)
-        return elem->first;
-    return string();
-  }
+int
+OTF2DefTable::insert(const std::string& string)
+{
+  auto it = map_.find(string);
+  added_last_lookup_ = false;
+  if (it != map_.end()) return it->second;
+  map_.insert(std::make_pair(string, counter_));
+  added_last_lookup_ = true;
+  return counter_++;
+}
 
-  const string OTF2DefTable::operator[] (int index) { return map(index); }
-  int OTF2DefTable::operator[] (const char* index) { return map(string(index));}
-  int OTF2DefTable::operator[] (string string) { return map(string); }
-  int OTF2DefTable::size() { return _counter; }
-  bool OTF2DefTable::added_last_lookup() {return _added_last_lookup;}
+std::string
+OTF2DefTable::get(int index) {
+  // Finds the string corresponding to the given int.
+  for (auto elem = map_.begin(); elem != map_.end(); elem++)
+    if (elem->second == index)
+      return elem->first;
+  return std::string();
+}
 
 }

@@ -7,27 +7,14 @@
   cbacks->on_ ## struct_name = [](const dumpi_ ## struct_name *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg)
 
 // Boilerplate initialization
-#define MACRO_INIT() \
+#define UNPACK_ARGS() \
   dumpi::OTF2_Writer& otf2_writer = *(dumpi::OTF2_Writer*)userarg; \
   auto& p = *prm;
 
-// Boilerplate return
-#define MACRO_RET() return 1;
-
-// Macros for time manipulation
-#define START convert_time(wall->start)
-#define STOP convert_time(wall->stop)
-#define TIME START, STOP
-
-// dumpi2otf2 sets the rank at the beginning of each trace, so there is no need to track or set it here
-#define ARGS dumpi::OTF2_Writer::RANK_UNDEF, TIME
-
-#define PARAM_IGNORED false
-
 // A wrapper for calls that do not record parameters in OTF2
 #define GENERIC_CALL(name) \
-  MACRO_INIT(); \
-  otf2_writer.generic_call(ARGS, name); \
+  UNPACK_ARGS(); \
+  otf2_writer.generic_call(convert_time(wall->start), convert_time(wall->stop), name); \
   return 1;
 
 // Turns a dumpi_clock struct into an integer of total nanoseconds
@@ -39,28 +26,28 @@ static inline uint64_t convert_time(dumpi_clock c) {
 // :%s/^.*->on_\(.\{-}\)\(\s*\)= report_\(.\{-}\)\s*;$/  CBACK_INIT(\1)\2{ GENERIC_CALL("\3"); };/g
 void set_callbacks(libundumpi_callbacks *cbacks) {
   assert(cbacks != NULL);
-  CBACK_INIT(send)                      { MACRO_INIT(); otf2_writer.mpi_send(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag); MACRO_RET(); };
-  CBACK_INIT(recv)                      { MACRO_INIT(); otf2_writer.mpi_recv(ARGS, p.datatype, p.count, p.source, p.comm, p.tag); MACRO_RET(); };
+  CBACK_INIT(send)                      { UNPACK_ARGS(); otf2_writer.mpi_send(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag); return 1; };
+  CBACK_INIT(recv)                      { UNPACK_ARGS(); otf2_writer.mpi_recv(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.source, p.comm, p.tag); return 1; };
   CBACK_INIT(get_count)                 { GENERIC_CALL("MPI_Get_count"); };
-  CBACK_INIT(bsend)                     { MACRO_INIT(); otf2_writer.mpi_bsend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag); MACRO_RET(); };
-  CBACK_INIT(ssend)                     { MACRO_INIT(); otf2_writer.mpi_ssend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag); MACRO_RET(); };
-  CBACK_INIT(rsend)                     { MACRO_INIT(); otf2_writer.mpi_rsend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag); MACRO_RET(); };
+  CBACK_INIT(bsend)                     { UNPACK_ARGS(); otf2_writer.mpi_bsend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag); return 1; };
+  CBACK_INIT(ssend)                     { UNPACK_ARGS(); otf2_writer.mpi_ssend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag); return 1; };
+  CBACK_INIT(rsend)                     { UNPACK_ARGS(); otf2_writer.mpi_rsend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag); return 1; };
   CBACK_INIT(buffer_attach)             { GENERIC_CALL("MPI_Buffer_attach"); };
   CBACK_INIT(buffer_detach)             { GENERIC_CALL("MPI_Buffer_detach"); };
-  CBACK_INIT(isend)                     { MACRO_INIT(); otf2_writer.mpi_isend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag, p.request); MACRO_RET(); };
-  CBACK_INIT(ibsend)                    { MACRO_INIT(); otf2_writer.mpi_ibsend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag, p.request); MACRO_RET(); };
-  CBACK_INIT(issend)                    { MACRO_INIT(); otf2_writer.mpi_issend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag, p.request); MACRO_RET(); };
-  CBACK_INIT(irsend)                    { MACRO_INIT(); otf2_writer.mpi_irsend(ARGS, p.datatype, p.count, p.dest, p.comm, p.tag, p.request); MACRO_RET(); };
-  CBACK_INIT(irecv)                     { MACRO_INIT(); otf2_writer.mpi_irecv(ARGS, p.datatype, p.count, p.source, p.comm, p.tag, p.request); MACRO_RET(); };
-  CBACK_INIT(wait)                      { MACRO_INIT(); otf2_writer.mpi_wait(ARGS, p.request); MACRO_RET(); };
-  CBACK_INIT(test)                      { MACRO_INIT(); otf2_writer.mpi_test(ARGS, p.request, p.flag); MACRO_RET(); };
+  CBACK_INIT(isend)                     { UNPACK_ARGS(); otf2_writer.mpi_isend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag, p.request); return 1; };
+  CBACK_INIT(ibsend)                    { UNPACK_ARGS(); otf2_writer.mpi_ibsend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag, p.request); return 1; };
+  CBACK_INIT(issend)                    { UNPACK_ARGS(); otf2_writer.mpi_issend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag, p.request); return 1; };
+  CBACK_INIT(irsend)                    { UNPACK_ARGS(); otf2_writer.mpi_irsend(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.dest, p.comm, p.tag, p.request); return 1; };
+  CBACK_INIT(irecv)                     { UNPACK_ARGS(); otf2_writer.mpi_irecv(convert_time(wall->start), convert_time(wall->stop), p.datatype, p.count, p.source, p.comm, p.tag, p.request); return 1; };
+  CBACK_INIT(wait)                      { UNPACK_ARGS(); otf2_writer.mpi_wait(convert_time(wall->start), convert_time(wall->stop), p.request); return 1; };
+  CBACK_INIT(test)                      { UNPACK_ARGS(); otf2_writer.mpi_test(convert_time(wall->start), convert_time(wall->stop), p.request, p.flag); return 1; };
   CBACK_INIT(request_free)              { GENERIC_CALL("MPI_Request_free"); };
-  CBACK_INIT(waitany)                   { MACRO_INIT(); otf2_writer.mpi_waitany(ARGS, p.requests[p.index]); MACRO_RET(); };
-  CBACK_INIT(testany)                   { MACRO_INIT(); otf2_writer.mpi_testany(ARGS, p.requests, p.index, p.flag); MACRO_RET(); };
-  CBACK_INIT(waitall)                   { MACRO_INIT(); otf2_writer.mpi_waitall(ARGS, p.count, p.requests); MACRO_RET(); };
-  CBACK_INIT(testall)                   { MACRO_INIT(); otf2_writer.mpi_testall(ARGS, p.count, p.requests, p.flag); MACRO_RET(); };
-  CBACK_INIT(waitsome)                  { MACRO_INIT(); otf2_writer.mpi_waitsome(ARGS, p.requests, p.outcount, p.indices); MACRO_RET(); };
-  CBACK_INIT(testsome)                  { MACRO_INIT(); otf2_writer.mpi_testsome(ARGS, p.requests, p.outcount, p.indices); MACRO_RET(); };
+  CBACK_INIT(waitany)                   { UNPACK_ARGS(); otf2_writer.mpi_waitany(convert_time(wall->start), convert_time(wall->stop), p.requests[p.index]); return 1; };
+  CBACK_INIT(testany)                   { UNPACK_ARGS(); otf2_writer.mpi_testany(convert_time(wall->start), convert_time(wall->stop), p.requests, p.index, p.flag); return 1; };
+  CBACK_INIT(waitall)                   { UNPACK_ARGS(); otf2_writer.mpi_waitall(convert_time(wall->start), convert_time(wall->stop), p.count, p.requests); return 1; };
+  CBACK_INIT(testall)                   { UNPACK_ARGS(); otf2_writer.mpi_testall(convert_time(wall->start), convert_time(wall->stop), p.count, p.requests, p.flag); return 1; };
+  CBACK_INIT(waitsome)                  { UNPACK_ARGS(); otf2_writer.mpi_waitsome(convert_time(wall->start), convert_time(wall->stop), p.requests, p.outcount, p.indices); return 1; };
+  CBACK_INIT(testsome)                  { UNPACK_ARGS(); otf2_writer.mpi_testsome(convert_time(wall->start), convert_time(wall->stop), p.requests, p.outcount, p.indices); return 1; };
   CBACK_INIT(iprobe)                    { GENERIC_CALL("MPI_Iprobe"); };
   CBACK_INIT(probe)                     { GENERIC_CALL("MPI_Probe"); };
   CBACK_INIT(cancel)                    { GENERIC_CALL("MPI_Cancel"); };
@@ -74,12 +61,12 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(startall)                  { GENERIC_CALL("MPI_Startall"); };
   CBACK_INIT(sendrecv)                  { GENERIC_CALL("MPI_Sendrecv"); };
   CBACK_INIT(sendrecv_replace)          { GENERIC_CALL("MPI_Sendrecv_replace"); };
-  CBACK_INIT(type_contiguous)           { MACRO_INIT(); otf2_writer.mpi_type_contiguous(ARGS, p.count, p.oldtype, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_vector)               { MACRO_INIT(); otf2_writer.mpi_type_vector(ARGS, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
+  CBACK_INIT(type_contiguous)           { UNPACK_ARGS(); otf2_writer.mpi_type_contiguous(convert_time(wall->start), convert_time(wall->stop), p.count, p.oldtype, p.newtype); return 1; };
+  CBACK_INIT(type_vector)               { UNPACK_ARGS(); otf2_writer.mpi_type_vector(convert_time(wall->start), convert_time(wall->stop), p.count, p.blocklength, p.oldtype, p.newtype); return 1; };
   CBACK_INIT(type_hvector)              { GENERIC_CALL("MPI_Type_hvector"); };
-  CBACK_INIT(type_indexed)              { MACRO_INIT(); otf2_writer.mpi_type_indexed(ARGS, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_hindexed)             { MACRO_INIT(); otf2_writer.mpi_type_indexed(ARGS, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_struct)               { MACRO_INIT(); otf2_writer.mpi_type_struct(ARGS, p.count, p.lengths, p.oldtypes, p.newtype); MACRO_RET(); };
+  CBACK_INIT(type_indexed)              { UNPACK_ARGS(); otf2_writer.mpi_type_indexed(convert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
+  CBACK_INIT(type_hindexed)             { UNPACK_ARGS(); otf2_writer.mpi_type_indexed(convert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
+  CBACK_INIT(type_struct)               { UNPACK_ARGS(); otf2_writer.mpi_type_struct(convert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtypes, p.newtype); return 1; };
   CBACK_INIT(address)                   { GENERIC_CALL("MPI_Address"); };
   CBACK_INIT(type_extent)               { GENERIC_CALL("MPI_Type_extent"); };
   CBACK_INIT(type_size)                 { GENERIC_CALL("MPI_Type_size"); };
@@ -91,41 +78,41 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(pack)                      { GENERIC_CALL("MPI_Pack"); };
   CBACK_INIT(unpack)                    { GENERIC_CALL("MPI_Unpack"); };
   CBACK_INIT(pack_size)                 { GENERIC_CALL("MPI_Pack_size"); };
-  CBACK_INIT(barrier)                   { MACRO_INIT(); otf2_writer.mpi_barrier(ARGS, p.comm); MACRO_RET(); };
-  CBACK_INIT(bcast)                     { MACRO_INIT(); otf2_writer.mpi_bcast(ARGS, p.count, p.datatype, p.root, p.comm); MACRO_RET(); };
-  CBACK_INIT(gather)                    { MACRO_INIT(); otf2_writer.mpi_gather(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
-  CBACK_INIT(gatherv)                   { MACRO_INIT(); otf2_writer.mpi_gatherv(ARGS, p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.root, p.comm); MACRO_RET(); };
-  CBACK_INIT(scatter)                   { MACRO_INIT(); otf2_writer.mpi_scatter(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
-  CBACK_INIT(scatterv)                  { MACRO_INIT(); otf2_writer.mpi_scatterv(ARGS, p.commsize, p.sendcounts, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); MACRO_RET(); };
-  CBACK_INIT(allgather)                 { MACRO_INIT(); otf2_writer.mpi_allgather(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); MACRO_RET(); };
-  CBACK_INIT(allgatherv)                { MACRO_INIT(); otf2_writer.mpi_allgatherv(ARGS, p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.comm); MACRO_RET(); };
-  CBACK_INIT(alltoall)                  { MACRO_INIT(); otf2_writer.mpi_alltoall(ARGS, p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); MACRO_RET(); };
-  CBACK_INIT(alltoallv)                 { MACRO_INIT(); otf2_writer.mpi_alltoallv(ARGS, p.commsize, p.sendcounts, p.sendtype, p.recvcounts, p.recvtype, p.comm); MACRO_RET(); };
-  CBACK_INIT(reduce)                    { MACRO_INIT(); otf2_writer.mpi_reduce(ARGS, p.count, p.datatype, p.root, p.comm); MACRO_RET(); };
+  CBACK_INIT(barrier)                   { UNPACK_ARGS(); otf2_writer.mpi_barrier(convert_time(wall->start), convert_time(wall->stop), p.comm); return 1; };
+  CBACK_INIT(bcast)                     { UNPACK_ARGS(); otf2_writer.mpi_bcast(convert_time(wall->start), convert_time(wall->stop), p.count, p.datatype, p.root, p.comm); return 1; };
+  CBACK_INIT(gather)                    { UNPACK_ARGS(); otf2_writer.mpi_gather(convert_time(wall->start), convert_time(wall->stop), p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); return 1; };
+  CBACK_INIT(gatherv)                   { UNPACK_ARGS(); otf2_writer.mpi_gatherv(convert_time(wall->start), convert_time(wall->stop), p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.root, p.comm); return 1; };
+  CBACK_INIT(scatter)                   { UNPACK_ARGS(); otf2_writer.mpi_scatter(convert_time(wall->start), convert_time(wall->stop), p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); return 1; };
+  CBACK_INIT(scatterv)                  { UNPACK_ARGS(); otf2_writer.mpi_scatterv(convert_time(wall->start), convert_time(wall->stop), p.commsize, p.sendcounts, p.sendtype, p.recvcount, p.recvtype, p.root, p.comm); return 1; };
+  CBACK_INIT(allgather)                 { UNPACK_ARGS(); otf2_writer.mpi_allgather(convert_time(wall->start), convert_time(wall->stop), p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); return 1; };
+  CBACK_INIT(allgatherv)                { UNPACK_ARGS(); otf2_writer.mpi_allgatherv(convert_time(wall->start), convert_time(wall->stop), p.commsize, p.sendcount, p.sendtype, p.recvcounts, p.recvtype, p.comm); return 1; };
+  CBACK_INIT(alltoall)                  { UNPACK_ARGS(); otf2_writer.mpi_alltoall(convert_time(wall->start), convert_time(wall->stop), p.sendcount, p.sendtype, p.recvcount, p.recvtype, p.comm); return 1; };
+  CBACK_INIT(alltoallv)                 { UNPACK_ARGS(); otf2_writer.mpi_alltoallv(convert_time(wall->start), convert_time(wall->stop), p.commsize, p.sendcounts, p.sendtype, p.recvcounts, p.recvtype, p.comm); return 1; };
+  CBACK_INIT(reduce)                    { UNPACK_ARGS(); otf2_writer.mpi_reduce(convert_time(wall->start), convert_time(wall->stop), p.count, p.datatype, p.root, p.comm); return 1; };
   CBACK_INIT(op_create)                 { GENERIC_CALL("MPI_Op_create"); };
   CBACK_INIT(op_free)                   { GENERIC_CALL("MPI_Op_free"); };
-  CBACK_INIT(allreduce)                 { MACRO_INIT(); otf2_writer.mpi_allreduce(ARGS, p.count, p.datatype, p.comm); MACRO_RET(); };
-  CBACK_INIT(reduce_scatter)            { MACRO_INIT(); otf2_writer.mpi_reduce_scatter(ARGS, p.commsize, p.recvcounts, p.datatype, p.comm); MACRO_RET(); };
-  CBACK_INIT(scan)                      { MACRO_INIT(); otf2_writer.mpi_scan(ARGS, p.count, p.datatype, p.comm); MACRO_RET(); };
+  CBACK_INIT(allreduce)                 { UNPACK_ARGS(); otf2_writer.mpi_allreduce(convert_time(wall->start), convert_time(wall->stop), p.count, p.datatype, p.comm); return 1; };
+  CBACK_INIT(reduce_scatter)            { UNPACK_ARGS(); otf2_writer.mpi_reduce_scatter(convert_time(wall->start), convert_time(wall->stop), p.commsize, p.recvcounts, p.datatype, p.comm); return 1; };
+  CBACK_INIT(scan)                      { UNPACK_ARGS(); otf2_writer.mpi_scan(convert_time(wall->start), convert_time(wall->stop), p.count, p.datatype, p.comm); return 1; };
   CBACK_INIT(group_size)                { GENERIC_CALL("MPI_Group_size"); };
   CBACK_INIT(group_rank)                { GENERIC_CALL("MPI_Group_rank"); };
   CBACK_INIT(group_translate_ranks)     { GENERIC_CALL("MPI_Group_translate_ranks"); };
   CBACK_INIT(group_compare)             { GENERIC_CALL("MPI_Group_compare"); };
-  CBACK_INIT(comm_group)                { MACRO_INIT(); otf2_writer.mpi_comm_group(ARGS, p.comm, p.group); MACRO_RET(); };
-  CBACK_INIT(group_union)               { MACRO_INIT(); otf2_writer.mpi_group_union(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_intersection)        { MACRO_INIT(); otf2_writer.mpi_group_intersection(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_difference)          { MACRO_INIT(); otf2_writer.mpi_group_difference(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_incl)                { MACRO_INIT(); otf2_writer.mpi_group_incl(ARGS, p.group, p.count, p.ranks, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_excl)                { MACRO_INIT(); otf2_writer.mpi_group_excl(ARGS, p.group, p.count, p.ranks, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_range_incl)          { MACRO_INIT(); otf2_writer.mpi_group_range_incl(ARGS, p.group, p.count, p.ranges, p.newgroup); MACRO_RET(); };
+  CBACK_INIT(comm_group)                { UNPACK_ARGS(); otf2_writer.mpi_comm_group(convert_time(wall->start), convert_time(wall->stop), p.comm, p.group); return 1; };
+  CBACK_INIT(group_union)               { UNPACK_ARGS(); otf2_writer.mpi_group_union(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_intersection)        { UNPACK_ARGS(); otf2_writer.mpi_group_intersection(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_difference)          { UNPACK_ARGS(); otf2_writer.mpi_group_difference(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_incl)                { UNPACK_ARGS(); otf2_writer.mpi_group_incl(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranks, p.newgroup); return 1; };
+  CBACK_INIT(group_excl)                { UNPACK_ARGS(); otf2_writer.mpi_group_excl(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranks, p.newgroup); return 1; };
+  CBACK_INIT(group_range_incl)          { UNPACK_ARGS(); otf2_writer.mpi_group_range_incl(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranges, p.newgroup); return 1; };
   CBACK_INIT(group_range_excl)          { GENERIC_CALL("MPI_Group_range_excl"); };
   CBACK_INIT(group_free)                { GENERIC_CALL("MPI_Group_free"); };
   CBACK_INIT(comm_size)                 { GENERIC_CALL("MPI_Comm_size"); };
   CBACK_INIT(comm_rank)                 { GENERIC_CALL("MPI_Comm_rank"); };
   CBACK_INIT(comm_compare)              { GENERIC_CALL("MPI_Comm_compare"); };
-  CBACK_INIT(comm_dup)                  { MACRO_INIT(); otf2_writer.mpi_comm_dup(ARGS, p.oldcomm, p.newcomm); MACRO_RET(); };
-  CBACK_INIT(comm_create)               { MACRO_INIT(); otf2_writer.mpi_comm_create(ARGS, p.oldcomm, p.group, p.newcomm); MACRO_RET(); };
-  CBACK_INIT(comm_split)                { MACRO_INIT(); otf2_writer.mpi_comm_split(ARGS, p.oldcomm, p.key, p.color, p.newcomm); MACRO_RET(); };
+  CBACK_INIT(comm_dup)                  { UNPACK_ARGS(); otf2_writer.mpi_comm_dup(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.newcomm); return 1; };
+  CBACK_INIT(comm_create)               { UNPACK_ARGS(); otf2_writer.mpi_comm_create(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.group, p.newcomm); return 1; };
+  CBACK_INIT(comm_split)                { UNPACK_ARGS(); otf2_writer.mpi_comm_split(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.key, p.color, p.newcomm); return 1; };
   CBACK_INIT(comm_free)                 { GENERIC_CALL("MPI_Comm_free"); };
   CBACK_INIT(comm_test_inter)           { GENERIC_CALL("MPI_Comm_test_inter"); };
   CBACK_INIT(comm_remote_size)          { GENERIC_CALL("MPI_Comm_remote_size"); };
@@ -256,12 +243,12 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   CBACK_INIT(pack_external_size)        { GENERIC_CALL("MPI_Pack_external_size"); };
   CBACK_INIT(request_get_status)        { GENERIC_CALL("MPI_Request_get_status"); };
   CBACK_INIT(type_create_darray)        { GENERIC_CALL("MPI_Type_create_darray"); };
-  CBACK_INIT(type_create_hindexed)      { MACRO_INIT(); otf2_writer.mpi_type_create_hindexed(ARGS, p.count, p.blocklengths, p.oldtype, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_create_hvector)       { MACRO_INIT(); otf2_writer.mpi_type_create_hvector(ARGS, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
+  CBACK_INIT(type_create_hindexed)      { UNPACK_ARGS(); otf2_writer.mpi_type_create_hindexed(convert_time(wall->start), convert_time(wall->stop), p.count, p.blocklengths, p.oldtype, p.newtype); return 1; };
+  CBACK_INIT(type_create_hvector)       { UNPACK_ARGS(); otf2_writer.mpi_type_create_hvector(convert_time(wall->start), convert_time(wall->stop), p.count, p.blocklength, p.oldtype, p.newtype); return 1; };
   CBACK_INIT(type_create_indexed_block) { GENERIC_CALL("MPI_Type_create_indexed_block"); };
   CBACK_INIT(type_create_resized)       { GENERIC_CALL("MPI_Type_create_resized"); };
-  CBACK_INIT(type_create_struct)        { MACRO_INIT(); otf2_writer.mpi_type_create_struct(ARGS, p.count, p.blocklengths, p.oldtypes, p.newtype); MACRO_RET(); };
-  CBACK_INIT(type_create_subarray)      { MACRO_INIT(); otf2_writer.mpi_type_create_subarray(ARGS, p.ndims, p.subsizes, p.oldtype, p.newtype); MACRO_RET(); };
+  CBACK_INIT(type_create_struct)        { UNPACK_ARGS(); otf2_writer.mpi_type_create_struct(convert_time(wall->start), convert_time(wall->stop), p.count, p.blocklengths, p.oldtypes, p.newtype); return 1; };
+  CBACK_INIT(type_create_subarray)      { UNPACK_ARGS(); otf2_writer.mpi_type_create_subarray(convert_time(wall->start), convert_time(wall->stop), p.ndims, p.subsizes, p.oldtype, p.newtype); return 1; };
   CBACK_INIT(type_get_extent)           { GENERIC_CALL("MPI_Type_get_extent"); };
   CBACK_INIT(type_get_true_extent)      { GENERIC_CALL("MPI_Type_get_true_extent"); };
   CBACK_INIT(unpack_external)           { GENERIC_CALL("MPI_Unpack_external"); };
@@ -324,25 +311,25 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
 
 void set_first_pass_callbacks(libundumpi_callbacks *cbacks) {
   assert(cbacks != NULL);
-//  CBACK_INIT(type_contiguous)           { MACRO_INIT(); otf2_writer.mpi_type_contiguous(ARGS, p.count, p.oldtype, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_vector)               { MACRO_INIT(); otf2_writer.mpi_type_vector(ARGS, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
+//  CBACK_INIT(type_contiguous)           { UNPACK_ARGS(); otf2_writer.mpi_type_contiguousconvert_time(wall->start), convert_time(wall->stop), p.count, p.oldtype, p.newtype); return 1; };
+//  CBACK_INIT(type_vector)               { UNPACK_ARGS(); otf2_writer.mpi_type_vectorconvert_time(wall->start), convert_time(wall->stop), p.count, p.blocklength, p.oldtype, p.newtype); return 1; };
 //  CBACK_INIT(type_hvector)              { GENERIC_CALL("MPI_Type_hvector"); };
-//  CBACK_INIT(type_indexed)              { MACRO_INIT(); otf2_writer.mpi_type_indexed(ARGS, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_hindexed)             { MACRO_INIT(); otf2_writer.mpi_type_indexed(ARGS, p.count, p.lengths, p.oldtype, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_struct)               { MACRO_INIT(); otf2_writer.mpi_type_struct(ARGS, p.count, p.lengths, p.oldtypes, p.newtype); MACRO_RET(); };
-  CBACK_INIT(comm_group)                { MACRO_INIT(); otf2_writer.mpi_comm_group(ARGS, p.comm, p.group); MACRO_RET(); };
-  CBACK_INIT(group_union)               { MACRO_INIT(); otf2_writer.mpi_group_union(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_intersection)        { MACRO_INIT(); otf2_writer.mpi_group_intersection(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_difference)          { MACRO_INIT(); otf2_writer.mpi_group_difference(ARGS, p.group1, p.group2, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_incl)                { MACRO_INIT(); otf2_writer.mpi_group_incl(ARGS, p.group, p.count, p.ranks, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_excl)                { MACRO_INIT(); otf2_writer.mpi_group_excl(ARGS, p.group, p.count, p.ranks, p.newgroup); MACRO_RET(); };
-  CBACK_INIT(group_range_incl)          { MACRO_INIT(); otf2_writer.mpi_group_range_incl(ARGS, p.group, p.count, p.ranges, p.newgroup); MACRO_RET(); };
+//  CBACK_INIT(type_indexed)              { UNPACK_ARGS(); otf2_writer.mpi_type_indexedconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
+//  CBACK_INIT(type_hindexed)             { UNPACK_ARGS(); otf2_writer.mpi_type_indexedconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
+//  CBACK_INIT(type_struct)               { UNPACK_ARGS(); otf2_writer.mpi_type_structconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtypes, p.newtype); return 1; };
+  CBACK_INIT(comm_group)                { UNPACK_ARGS(); otf2_writer.mpi_comm_group(convert_time(wall->start), convert_time(wall->stop), p.comm, p.group); return 1; };
+  CBACK_INIT(group_union)               { UNPACK_ARGS(); otf2_writer.mpi_group_union_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_intersection)        { UNPACK_ARGS(); otf2_writer.mpi_group_intersection_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_difference)          { UNPACK_ARGS(); otf2_writer.mpi_group_difference_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
+  CBACK_INIT(group_incl)                { UNPACK_ARGS(); otf2_writer.mpi_group_incl_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranks, p.newgroup); return 1; };
+  CBACK_INIT(group_excl)                { UNPACK_ARGS(); otf2_writer.mpi_group_excl_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranks, p.newgroup); return 1; };
+  CBACK_INIT(group_range_incl)          { UNPACK_ARGS(); otf2_writer.mpi_group_range_incl_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group, p.count, p.ranges, p.newgroup); return 1; };
   CBACK_INIT(group_range_excl)          { GENERIC_CALL("MPI_Group_range_excl"); };
-  CBACK_INIT(comm_dup)                  { MACRO_INIT(); otf2_writer.mpi_comm_dup(ARGS, p.oldcomm, p.newcomm); MACRO_RET(); };
-  CBACK_INIT(comm_create)               { MACRO_INIT(); otf2_writer.mpi_comm_create(ARGS, p.oldcomm, p.group, p.newcomm); MACRO_RET(); };
-  CBACK_INIT(comm_split)                { MACRO_INIT(); otf2_writer.mpi_comm_split(ARGS, p.oldcomm, p.key, p.color, p.newcomm); MACRO_RET(); };
-//  CBACK_INIT(type_create_hindexed)      { MACRO_INIT(); otf2_writer.mpi_type_create_hindexed(ARGS, p.count, p.blocklengths, p.oldtype, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_create_hvector)       { MACRO_INIT(); otf2_writer.mpi_type_create_hvector(ARGS, p.count, p.blocklength, p.oldtype, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_create_struct)        { MACRO_INIT(); otf2_writer.mpi_type_create_struct(ARGS, p.count, p.blocklengths, p.oldtypes, p.newtype); MACRO_RET(); };
-//  CBACK_INIT(type_create_subarray)      { MACRO_INIT(); otf2_writer.mpi_type_create_subarray(ARGS, p.ndims, p.subsizes, p.oldtype, p.newtype); MACRO_RET(); };
+  CBACK_INIT(comm_dup)                  { UNPACK_ARGS(); otf2_writer.mpi_comm_dup_first_pass(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.newcomm); return 1; };
+  CBACK_INIT(comm_create)               { UNPACK_ARGS(); otf2_writer.mpi_comm_create_first_pass(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.group, p.newcomm); return 1; };
+  CBACK_INIT(comm_split)                { UNPACK_ARGS(); otf2_writer.mpi_comm_split_first_pass(convert_time(wall->start), convert_time(wall->stop), p.oldcomm, p.key, p.color, p.newcomm); return 1; };
+//  CBACK_INIT(type_create_hindexed)      { UNPACK_ARGS(); otf2_writer.mpi_type_create_hindexedconvert_time(wall->start), convert_time(wall->stop), p.count, p.blocklengths, p.oldtype, p.newtype); return 1; };
+//  CBACK_INIT(type_create_hvector)       { UNPACK_ARGS(); otf2_writer.mpi_type_create_hvectorconvert_time(wall->start), convert_time(wall->stop), p.count, p.blocklength, p.oldtype, p.newtype); return 1; };
+//  CBACK_INIT(type_create_struct)        { UNPACK_ARGS(); otf2_writer.mpi_type_create_structconvert_time(wall->start), convert_time(wall->stop), p.count, p.blocklengths, p.oldtypes, p.newtype); return 1; };
+//  CBACK_INIT(type_create_subarray)      { UNPACK_ARGS(); otf2_writer.mpi_type_create_subarrayconvert_time(wall->start), convert_time(wall->stop), p.ndims, p.subsizes, p.oldtype, p.newtype); return 1; };
 }
