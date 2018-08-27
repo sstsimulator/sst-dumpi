@@ -118,9 +118,10 @@ int main(int argc, char **argv) {
     fflush(stdout);
   }
 
-  dumpi::global_id_assigner id_assigner;
+  std::vector<dumpi::OTF2_MPI_Comm*> unique_comms;
+  dumpi::global_id_assigner id_assigner(dumpi::OTF2_Writer::MPI_COMM_USER_ID_OFFSET);
   for (int rank = 0; rank < md.numTraces(); rank++){
-    writers[rank].agree_global_ids(id_assigner);
+    writers[rank].agree_global_ids(id_assigner, unique_comms);
   }
 
   for (int rank =0; rank < md.numTraces(); rank++){
@@ -155,6 +156,7 @@ int main(int argc, char **argv) {
     if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
     fflush(stdout);
     eventCounts[rank] = writer.event_count();
+    writer.write_local_def_file();
     writer.close_archive();
   }
 
@@ -166,7 +168,8 @@ int main(int argc, char **argv) {
     fflush(stdout);
   }
 
-  writer0.write_def_files(eventCounts);
+  writer0.write_local_def_file();
+  writer0.write_global_def_file(eventCounts, unique_comms);
   writer0.close_archive();
   return 0;
 }

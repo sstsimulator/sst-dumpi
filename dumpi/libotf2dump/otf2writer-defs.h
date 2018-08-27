@@ -56,13 +56,13 @@ Questions? Contact sst-macro-help@sandia.gov
 
 
 namespace dumpi {
-typedef int32_t comm_t;
-typedef int32_t group_t;
-typedef int32_t request_t;
+
+typedef int32_t mpi_request_t;
+typedef int32_t mpi_group_t;
+typedef int32_t mpi_comm_t;
 typedef int16_t mpi_type_t;
 typedef uint64_t otf2_time_t;
 
-// TODO replace with C++ exceptions?
 /**
  * @brief The OTF2_WRITER_RESULT enum
  * Used to classify errors
@@ -120,7 +120,7 @@ struct irecv_capture {
   uint32_t source;
   uint32_t tag;
   int comm;
-  request_t request;
+  mpi_request_t request;
 };
 
 /**
