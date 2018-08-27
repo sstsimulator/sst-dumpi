@@ -161,6 +161,12 @@ struct OTF2_MPI_Group {
   bool written;
   std::vector<int> global_ranks;
 
+  int get_world_rank(int local_rank){
+    if (is_comm_world) return local_rank;
+    else if (is_comm_self) return 0;
+    else return global_ranks[local_rank];
+  }
+
   OTF2_MPI_Group() :
     is_comm_self(false), is_comm_world(false),
     written(false),
@@ -318,7 +324,7 @@ class OTF2_Writer {
 
   OTF2_WRITER_RESULT mpi_group_range_incl(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
                                           int count, int**ranges, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_range_incl_first_pass(otf2_time_t start, otf2_time_t stop, int group,
+  OTF2_WRITER_RESULT mpi_group_range_incl_first_pass(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
                                           int count, int**ranges, mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_union(otf2_time_t start, otf2_time_t stop,
@@ -331,7 +337,9 @@ class OTF2_Writer {
   OTF2_WRITER_RESULT mpi_comm_dup_first_pass(otf2_time_t start, otf2_time_t stop,
                                              mpi_comm_t oldcomm, mpi_comm_t newcomm);
 
-  OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, int group);
+  OTF2_WRITER_RESULT mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, 
+                                               mpi_comm_t comm, mpi_group_t group);
+  OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, mpi_group_t group);
 
   OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, mpi_comm_t oldcomm,
                                      mpi_group_t group, mpi_comm_t newcomm);
@@ -373,12 +381,12 @@ class OTF2_Writer {
   void assign_global_ids(const global_id_assigner& global_ids);
 
 
-  static constexpr mpi_group_t COMM_LOCATIONS_GROUP_ID = 0;
-  static constexpr mpi_group_t MPI_GROUP_WORLD_ID = 1;
-  static constexpr mpi_group_t MPI_GROUP_SELF_ID = 2;
-  static constexpr mpi_comm_t MPI_COMM_WORLD_ID = 0;
-  static constexpr mpi_comm_t MPI_COMM_SELF_ID = 1;
-  static constexpr mpi_comm_t MPI_COMM_USER_ID_OFFSET = 2;
+  static constexpr mpi_group_t COMM_LOCATIONS_GROUP_ID{0};
+  static constexpr mpi_group_t MPI_GROUP_WORLD_ID{1};
+  static constexpr mpi_group_t MPI_GROUP_SELF_ID{2};
+  static constexpr mpi_comm_t MPI_COMM_WORLD_ID{0};
+  static constexpr mpi_comm_t MPI_COMM_SELF_ID{1};
+  static constexpr mpi_comm_t MPI_COMM_USER_ID_OFFSET{2};
 
   static const mpi_group_t global_group_id_from_comm_id(mpi_comm_t id){
     return id + 1;

@@ -134,11 +134,11 @@ class OTF2DefTable {
 
   int insert(const std::string& str);
 
-  std::string get(int index);
+  std::string get(int index) const;
 
-  int get(const std::string& str);
+  int get(const std::string& str) const;
 
-  int size(){
+  int size() const {
     return counter_;
   }
 
@@ -152,15 +152,10 @@ class OTF2DefTable {
     return map_.end();
   }
 
-  bool added_last_lookup(){
-    return added_last_lookup_;
-  }
-
  private:
   std::unordered_map<std::string, int> map_;
 
   int counter_ = 0;
-  bool added_last_lookup_;
 };
 
 }

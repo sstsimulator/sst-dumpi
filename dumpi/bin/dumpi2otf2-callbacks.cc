@@ -317,7 +317,7 @@ void set_first_pass_callbacks(libundumpi_callbacks *cbacks) {
 //  CBACK_INIT(type_indexed)              { UNPACK_ARGS(); otf2_writer.mpi_type_indexedconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
 //  CBACK_INIT(type_hindexed)             { UNPACK_ARGS(); otf2_writer.mpi_type_indexedconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtype, p.newtype); return 1; };
 //  CBACK_INIT(type_struct)               { UNPACK_ARGS(); otf2_writer.mpi_type_structconvert_time(wall->start), convert_time(wall->stop), p.count, p.lengths, p.oldtypes, p.newtype); return 1; };
-  CBACK_INIT(comm_group)                { UNPACK_ARGS(); otf2_writer.mpi_comm_group(convert_time(wall->start), convert_time(wall->stop), p.comm, p.group); return 1; };
+  CBACK_INIT(comm_group)                { UNPACK_ARGS(); otf2_writer.mpi_comm_group_first_pass(convert_time(wall->start), convert_time(wall->stop), p.comm, p.group); return 1; };
   CBACK_INIT(group_union)               { UNPACK_ARGS(); otf2_writer.mpi_group_union_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
   CBACK_INIT(group_intersection)        { UNPACK_ARGS(); otf2_writer.mpi_group_intersection_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };
   CBACK_INIT(group_difference)          { UNPACK_ARGS(); otf2_writer.mpi_group_difference_first_pass(convert_time(wall->start), convert_time(wall->stop), p.group1, p.group2, p.newgroup); return 1; };

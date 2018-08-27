@@ -50,6 +50,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdexcept>
 
 namespace dumpi {
 

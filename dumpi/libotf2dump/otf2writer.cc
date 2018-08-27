@@ -199,6 +199,13 @@ static const OTF2_CollectiveCallbacks dumpi_otf2writer_collectives =
 
 namespace dumpi {
 
+constexpr mpi_group_t OTF2_Writer::COMM_LOCATIONS_GROUP_ID;
+constexpr mpi_group_t OTF2_Writer::MPI_GROUP_WORLD_ID;
+constexpr mpi_group_t OTF2_Writer::MPI_GROUP_SELF_ID;
+constexpr mpi_comm_t  OTF2_Writer::MPI_COMM_WORLD_ID;
+constexpr mpi_comm_t  OTF2_Writer::MPI_COMM_SELF_ID;
+constexpr mpi_comm_t  OTF2_Writer::MPI_COMM_USER_ID_OFFSET;
+
 OTF2_Writer::OTF2_Writer() :
   archive_(nullptr),
   start_time_(~0),
@@ -586,6 +593,9 @@ OTF2_Writer::close_archive()
 void
 OTF2_Writer::register_comm_world(mpi_comm_t id)
 {
+  if (comms_.find(0) != comms_.end()) abort();
+  comm_world_id_ = id;
+
   OTF2_MPI_Group& grp = groups_[MPI_GROUP_WORLD_ID];
   grp.is_comm_world = true;
   grp.local_id = MPI_GROUP_WORLD_ID;
@@ -599,6 +609,7 @@ OTF2_Writer::register_comm_world(mpi_comm_t id)
 }
 
 void OTF2_Writer::register_comm_self(mpi_comm_t id) {
+  if (comms_.find(0) != comms_.end()) abort();
   comm_self_id_ = id;
 
   OTF2_MPI_Group& grp = groups_[MPI_GROUP_SELF_ID];
@@ -606,8 +617,8 @@ void OTF2_Writer::register_comm_self(mpi_comm_t id) {
   grp.local_id = MPI_GROUP_SELF_ID;
   grp.global_id = MPI_GROUP_SELF_ID;
 
-  auto& comm = comms_[MPI_COMM_SELF_ID];
-  comm.local_id=MPI_COMM_SELF_ID;
+  auto& comm = comms_[id];
+  comm.local_id=id;
   comm.global_id=MPI_COMM_SELF_ID;
   comm.group = &grp;
   comm.name="MPI_COMM_SELF";
@@ -1149,9 +1160,10 @@ OTF2_Writer::mpi_group_incl_first_pass(otf2_time_t start, otf2_time_t stop,
   OTF2_MPI_Group& parent = groups_[group];
   OTF2_MPI_Group& subGrp = groups_[newgroup];
 
+  subGrp.local_id = newgroup;
   subGrp.global_ranks.resize(count);
   for (int i=0; i < count; ++i){
-    subGrp.global_ranks[i] = parent.global_ranks[ranks[i]];
+    subGrp.global_ranks[i] = parent.get_world_rank(ranks[i]);
   }
   return OTF2_WRITER_SUCCESS;
 }
@@ -1170,6 +1182,7 @@ OTF2_Writer::mpi_group_excl_first_pass(otf2_time_t start, otf2_time_t stop,
 {
   OTF2_MPI_Group& parent = groups_[group];
   OTF2_MPI_Group& subGrp = groups_[newgroup];
+  subGrp.local_id = newgroup;
 
   std::set<int> sortedRanks;
   for (int i=0; i < count; ++i) sortedRanks.insert(ranks[i]);
@@ -1248,7 +1261,7 @@ void
 OTF2_Writer::agree_global_ids(global_id_assigner& assigner,
                               std::vector<OTF2_MPI_Comm*>& unique_comms)
 {
-  OTF2_MPI_Comm& world = comms_[MPI_COMM_WORLD_ID];
+  OTF2_MPI_Comm& world = comms_[comm_world_id_];
   agree_global_ids(world.sub_comms, assigner, unique_comms);
 }
 
@@ -1283,7 +1296,7 @@ void
 OTF2_Writer::assign_global_ids(const global_id_assigner& global_ids)
 {
   tree_id local_ids;
-  OTF2_MPI_Comm& world = comms_[MPI_COMM_WORLD_ID];
+  OTF2_MPI_Comm& world = comms_[comm_world_id_];
   assign_global_ids(world.sub_comms, global_ids, local_ids);
 }
 
@@ -1321,15 +1334,24 @@ OTF2_Writer::mpi_comm_dup(otf2_time_t start, otf2_time_t stop,
 }
 
 OTF2_WRITER_RESULT
+OTF2_Writer::mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, mpi_group_t group)
+{
+  OTF2_MPI_Comm& comm_st = comms_[comm];
+
+  if (comm == comm_world_id_){
+    OTF2_MPI_Group& grp = groups_[group];
+    grp.is_comm_world = true;
+    grp.local_id = group;
+  } else if (comm_st.group->local_id != group){
+    throw exception("mismatched commmunicator group in call to MPI_Comm_group");
+  }
+}
+
+OTF2_WRITER_RESULT
 OTF2_Writer::mpi_comm_group(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, mpi_group_t group)
 {
   _ENTER("MPI_Comm_group");
   _LEAVE();
-
-  OTF2_MPI_Comm& comm_st = comms_[comm];
-  if (comm_st.group->local_id != group){
-    throw exception("mismatched commmunicator group in call to MPI_Comm_group");
-  }
 }
 
 
@@ -1341,6 +1363,7 @@ OTF2_Writer::mpi_comm_create_first_pass(otf2_time_t start, otf2_time_t stop, mpi
   OTF2_MPI_Comm& parent_comm = comms_[comm];
   OTF2_MPI_Comm& sub_comm = comms_[newcomm];
   OTF2_MPI_Group& subgrp = groups_[group];
+  sub_comm.local_id = newcomm;
   sub_comm.parent = &parent_comm;
   sub_comm.group = &subgrp;
   sub_comm.is_root = world_.rank == subgrp.global_ranks[0];

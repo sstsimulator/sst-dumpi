@@ -58,15 +58,24 @@ int
 OTF2DefTable::insert(const std::string& string)
 {
   auto it = map_.find(string);
-  added_last_lookup_ = false;
   if (it != map_.end()) return it->second;
   map_.insert(std::make_pair(string, counter_));
-  added_last_lookup_ = true;
   return counter_++;
 }
 
+
+int
+OTF2DefTable::get(const std::string& string) const
+{
+  auto it = map_.find(string);
+  if (it == map_.end()){
+    throw std::runtime_error("string " + string + " not inserted into def table");
+  }
+  return it->second;
+}
+
 std::string
-OTF2DefTable::get(int index) {
+OTF2DefTable::get(int index) const {
   // Finds the string corresponding to the given int.
   for (auto elem = map_.begin(); elem != map_.end(); elem++)
     if (elem->second == index)
