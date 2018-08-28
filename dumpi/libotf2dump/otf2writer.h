@@ -129,7 +129,7 @@ struct global_id_assigner {
     unique_id.add_level();
   }
 
-  void advance_sub_comm(){
+  void advance(){
     unique_id.advance();
   }
 
@@ -205,17 +205,26 @@ class OTF2_Writer {
     return directory_;
   }
 
-  OTF2_WRITER_RESULT open_archive(const std::string& path, int size, int rank);
+  OTF2_WRITER_RESULT open_archive(const std::string& path);
   OTF2_WRITER_RESULT close_archive();
   void write_global_def_file(const std::vector<int>& event_counts,
-                              const std::vector<OTF2_MPI_Comm*>& unique_comms);
+                             const std::vector<OTF2_MPI_Comm*>& unique_comms,
+                             uint64_t min_start_time, uint64_t max_start_time);
   void write_local_def_file();
 
   int event_count() const {
     return event_count_;
   }
 
-  void register_comm_world(mpi_comm_t id);
+  uint64_t start_time() const {
+    return start_time_;
+  }
+
+  uint64_t stop_time() const {
+    return stop_time_;
+  }
+
+  void register_comm_world(mpi_comm_t id, int size, int rank);
   void register_comm_self(mpi_comm_t id);
   void register_comm_error(mpi_comm_t id);
   void register_comm_null(mpi_comm_t id);
@@ -436,6 +445,8 @@ class OTF2_Writer {
   void assign_global_ids(OTF2_MPI_Comm* comm,
                          const global_id_assigner& global_ids,
                          tree_id& local_ids);
+
+  mpi_comm_t get_global_comm(mpi_comm_t local_id) const;
 
   struct exception : public std::runtime_error {
     exception(const std::string& error) :

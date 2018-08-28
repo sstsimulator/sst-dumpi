@@ -85,7 +85,8 @@ static T array_sum(T* t, int n){
 
 #define COLLECTIVE_WRAPPER(collective, sent, received)                                                    \
   OTF2_EvtWriter_MpiCollectiveBegin(evt_writer, nullptr, start);                                      \
-  OTF2_EvtWriter_MpiCollectiveEnd(evt_writer, nullptr, stop, collective, comm, root, sent, received); \
+  OTF2_EvtWriter_MpiCollectiveEnd(evt_writer, nullptr, stop, collective, \
+          get_global_comm(comm), root, sent, received); \
   event_count_ += 2;
 
 static OTF2_CallbackCode
@@ -237,7 +238,7 @@ OTF2_FlushCallbacks flush_callbacks =
 };
 
 OTF2_WRITER_RESULT
-OTF2_Writer::open_archive(const std::string& path, int size, int rank)
+OTF2_Writer::open_archive(const std::string& path)
 {
   if (archive_ != nullptr)
     return OTF2_WRITER_ERROR_ARCHIVE_ALREADY_OPEN;
@@ -254,8 +255,6 @@ OTF2_Writer::open_archive(const std::string& path, int size, int rank)
   //if (stat((path + "/..").c_str(), &sb) && !force)
   //  return OTF2_WRITER_ERROR_DIRECTORY_ALREADY_EXISTS;
 
-  world_.size = size;
-  world_.rank = rank;
   directory_ = path;
   archive_ = OTF2_Archive_Open(  directory_.c_str(),
                                  "traces",
@@ -270,7 +269,7 @@ OTF2_Writer::open_archive(const std::string& path, int size, int rank)
   OTF2_Archive_SetFlushCallbacks( archive_, &flush_callbacks, NULL );
   OTF2_Archive_OpenEvtFiles(archive_);
 
-  evt_writer = OTF2_Archive_GetEvtWriter(archive_, rank);
+  evt_writer = OTF2_Archive_GetEvtWriter(archive_, world_.rank);
 
   return OTF2_WRITER_SUCCESS;
 }
@@ -351,12 +350,20 @@ OTF2_Writer::check_otf2(OTF2_ErrorCode status, const char* description)
   }
 }
 
+mpi_comm_t
+OTF2_Writer::get_global_comm(mpi_comm_t local_id) const
+{
+  auto iter = comms_.find(local_id);
+  const OTF2_MPI_Comm& comm = iter->second;
+  return comm.global_id;
+}
 
 void
 OTF2_Writer::write_local_def_file()
 {
   OTF2_DefWriter* local_def_writer = OTF2_Archive_GetDefWriter(archive_, world_.rank);
 
+  /**
   OTF2_IdMap* mpi_comm_map = OTF2_IdMap_Create(OTF2_ID_MAP_SPARSE, comms_.size());
   for (auto& pair : comms_){
     OTF2_MPI_Comm& comm = pair.second;
@@ -371,15 +378,18 @@ OTF2_Writer::write_local_def_file()
   check_otf2(OTF2_DefWriter_WriteMappingTable(local_def_writer, OTF2_MAPPING_COMM, mpi_comm_map),
              "Writing a communicator mapping table to the OTF2 archive");
 
+  OTF2_IdMap_Free(mpi_comm_map);
+  */
+
   check_otf2(OTF2_Archive_CloseDefWriter(archive_, local_def_writer),
              "Closing a local def writer");
 
-  OTF2_IdMap_Free(mpi_comm_map);
 }
 
 void
 OTF2_Writer::write_global_def_file(const std::vector<int>& event_counts,
-                             const std::vector<OTF2_MPI_Comm*>& unique_comms)
+                             const std::vector<OTF2_MPI_Comm*>& unique_comms,
+                             uint64_t min_start_time, uint64_t max_start_time)
 {
   // OTF2 Reference Example
   // https://silc.zih.tu-dresden.de/otf2-current/group__usage__writing__mpi.htm
@@ -391,12 +401,15 @@ OTF2_Writer::write_global_def_file(const std::vector<int>& event_counts,
   OTF2_GlobalDefWriter* defwriter = OTF2_Archive_GetGlobalDefWriter(archive_);
 
 
-  if (clock_resolution_ == 0) logger(OWV_ERROR, "Clock Resolution not set, use 'set_clock_resolution() to set ticks per second'");
+  if (clock_resolution_ == 0){
+    logger(OWV_ERROR, "Clock Resolution not set, use 'set_clock_resolution() to set ticks per second'");
+  }
 
   check_otf2(OTF2_GlobalDefWriter_WriteClockProperties( defwriter,
                                                         clock_resolution_,
-                                                        start_time_,
-                                                        stop_time_ - start_time_), "Writing clock properties to global def file");
+                                                        min_start_time,
+                                                        max_start_time - min_start_time),
+             "Writing clock properties to global def file");
 
   // Strings must come first in the def file
   // Otherwise tools like otf2_print will report errors, even though all of the information is available
@@ -520,6 +533,7 @@ OTF2_Writer::write_global_def_file(const std::vector<int>& event_counts,
 
   for (OTF2_MPI_Comm* comm : unique_comms){
     OTF2_MPI_Group* grp = comm->group;
+
     if (!grp->written){ //the same group might be used in multiple communicators
       /** To save storage, we use regular integers. 64-bit is more
        * than we need, but is required by OTF2 - convert here */
@@ -591,8 +605,11 @@ OTF2_Writer::close_archive()
 }
 
 void
-OTF2_Writer::register_comm_world(mpi_comm_t id)
+OTF2_Writer::register_comm_world(mpi_comm_t id, int size, int rank)
 {
+  world_.size = size;
+  world_.rank = rank;
+
   if (comms_.find(0) != comms_.end()) abort();
   comm_world_id_ = id;
 
@@ -606,6 +623,7 @@ OTF2_Writer::register_comm_world(mpi_comm_t id)
   comm.global_id=MPI_COMM_WORLD_ID;
   comm.name="MPI_COMM_WORLD";
   comm.group = &grp;
+  comm.is_root = world_.rank == 0;
 }
 
 void OTF2_Writer::register_comm_self(mpi_comm_t id) {
@@ -734,7 +752,8 @@ OTF2_Writer::complete_call(mpi_request_t request_id, uint64_t timestamp) {
                   << " while trying to complete MPI_IRecv" << std::endl;
         abort();
       } else {
-        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source, irecv.comm,
+        OTF2_EvtWriter_MpiIrecv(evt_writer, nullptr, timestamp, irecv.source,
+                                get_global_comm(irecv.comm),
                                 irecv.tag, irecv.bytes_sent, request_id);
         irecv_requests.erase(irecv_it);
         event_count_++;
@@ -749,7 +768,8 @@ OTF2_Writer::mpi_isend_inner(otf2_time_t start, mpi_type_t type, uint64_t count,
                              uint32_t dest, mpi_comm_t comm, uint32_t tag, mpi_request_t request)
 {
   incomplete_call(request, REQUEST_TYPE_ISEND);
-  OTF2_EvtWriter_MpiIsend(evt_writer, nullptr, start, dest, comm, tag, count_bytes(type, count), request);
+  OTF2_EvtWriter_MpiIsend(evt_writer, nullptr, start, dest, get_global_comm(comm),
+                          tag, count_bytes(type, count), request);
   event_count_++;
   return OTF2_WRITER_SUCCESS;
 }
@@ -1237,8 +1257,8 @@ OTF2_Writer::agree_global_ids(const std::list<OTF2_MPI_Comm*>& subs,
 {
   assigner.add_level();
   for (OTF2_MPI_Comm* sub : subs){
-    assigner.advance_sub_comm();
     agree_global_ids(sub, assigner, unique_comms);
+    assigner.advance();
   }
   assigner.remove_level();
 }
@@ -1262,6 +1282,12 @@ OTF2_Writer::agree_global_ids(global_id_assigner& assigner,
                               std::vector<OTF2_MPI_Comm*>& unique_comms)
 {
   OTF2_MPI_Comm& world = comms_[comm_world_id_];
+  OTF2_MPI_Comm& self = comms_[comm_self_id_];
+  if (world_.rank == 0){
+    unique_comms.push_back(&world);
+    unique_comms.push_back(&self);
+  }
+
   agree_global_ids(world.sub_comms, assigner, unique_comms);
 }
 
@@ -1272,8 +1298,8 @@ OTF2_Writer::assign_global_ids(const std::list<OTF2_MPI_Comm*>& subs,
 {
   local_ids.add_level();
   for (OTF2_MPI_Comm* sub : subs){
-    local_ids.advance();
     assign_global_ids(sub, global_ids, local_ids);
+    local_ids.advance();
   }
   local_ids.remove_level();
 }
@@ -1334,7 +1360,8 @@ OTF2_Writer::mpi_comm_dup(otf2_time_t start, otf2_time_t stop,
 }
 
 OTF2_WRITER_RESULT
-OTF2_Writer::mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, mpi_group_t group)
+OTF2_Writer::mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm,
+                                       mpi_group_t group)
 {
   OTF2_MPI_Comm& comm_st = comms_[comm];
 
@@ -1345,6 +1372,8 @@ OTF2_Writer::mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, mpi_
   } else if (comm_st.group->local_id != group){
     throw exception("mismatched commmunicator group in call to MPI_Comm_group");
   }
+
+  return OTF2_WRITER_SUCCESS;
 }
 
 OTF2_WRITER_RESULT

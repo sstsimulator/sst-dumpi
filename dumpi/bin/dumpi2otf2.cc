@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 
   for(int rank = 0; rank < md.numTraces(); rank++) {
     dumpi::OTF2_Writer& writer = writers[rank];
-    writer.register_comm_world(DUMPI_COMM_WORLD);
+    writer.register_comm_world(DUMPI_COMM_WORLD, md.numTraces(), rank);
     writer.register_comm_self(DUMPI_COMM_SELF);
     writer.register_comm_null(DUMPI_COMM_NULL);
     writer.register_comm_error(DUMPI_COMM_ERROR);
@@ -135,16 +135,13 @@ int main(int argc, char **argv) {
 
 
   std::string traceFolder = opt.output_archive.empty() ? md.filePrefix() + "-otf2" : opt.output_archive;
-  if (writers[0].open_archive(traceFolder, md.numTraces(), 0) != dumpi::OTF2_WRITER_SUCCESS) {
-    fprintf(stderr, "Error opening the archive for rank 0\n");
-    return 1;
-  }
-
   std::vector<int> eventCounts(md.numTraces());
 
-  for (int rank = 1; rank < md.numTraces(); rank++) {
+  uint64_t min_start_time = std::numeric_limits<uint64_t>::max();
+  uint64_t max_stop_time = std::numeric_limits<uint64_t>::min();
+  for (int rank = 0; rank < md.numTraces(); rank++) {
     dumpi::OTF2_Writer& writer = writers[rank];
-    if (writer.open_archive(traceFolder, md.numTraces(), rank) != dumpi::OTF2_WRITER_SUCCESS) {
+    if (writer.open_archive(traceFolder) != dumpi::OTF2_WRITER_SUCCESS) {
       fprintf(stderr, "Error opening the archive for rank %d\n", rank);
       return 1;
     }
@@ -157,19 +154,19 @@ int main(int argc, char **argv) {
     fflush(stdout);
     eventCounts[rank] = writer.event_count();
     writer.write_local_def_file();
-    writer.close_archive();
-  }
+    if (rank > 0) writer.close_archive(); //rank 0 is special
 
-  run_second_pass(writers[0], 0, md);
-  eventCounts[0] = writers[0].event_count();
+    min_start_time = std::min(min_start_time, writer.start_time());
+    max_stop_time = std::max(max_stop_time, writer.stop_time());
+  }
 
   if (opt.print_progress){
     printf("\nWriting definition files\n");
     fflush(stdout);
   }
 
-  writers[0].write_local_def_file();
-  writers[0].write_global_def_file(eventCounts, unique_comms);
+  writers[0].write_global_def_file(eventCounts, unique_comms,
+                                   min_start_time, max_stop_time);
   writers[0].close_archive();
   return 0;
 }

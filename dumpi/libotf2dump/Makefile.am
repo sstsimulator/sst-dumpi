@@ -24,5 +24,5 @@ libotf2dump_la_SOURCES = \
 
 libotf2dump_la_LDFLAGS = -version-info @DUMPI_LIBVERSION@ $(OTF2_LDFLAGS)
 libotf2dump_la_LIBADD = ../common/libdumpi_common.la \
-  $(OTF2_LIBS)
+  $(OTF2_LDFLAGS) $(OTF2_LIBS)
 
