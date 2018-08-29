@@ -17,10 +17,7 @@ lib_LTLIBRARIES = libotf2dump.la
 
 libotf2dump_la_SOURCES = \
                       otf2writer.cc \
-                      otf2deftable.cc \
-                      rankcontext.cc \
-                      commsplitconstructor.cc \
-                      commcreateconstructor.cc
+                      otf2deftable.cc 
 
 libotf2dump_la_LDFLAGS = -version-info @DUMPI_LIBVERSION@ $(OTF2_LDFLAGS)
 libotf2dump_la_LIBADD = ../common/libdumpi_common.la \
