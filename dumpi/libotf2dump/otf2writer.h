@@ -46,112 +46,10 @@ Questions? Contact sst-macro-help@sandia.gov
 #define OTF2WRITER_H
 
 #include "otf2writer-defs.h"
+#include <memory>
+#include <dumpi/common/constants.h>
 
 namespace dumpi {
-
-struct tree_id {
-
-  tree_id() : tree_index_(0) {}
-
-  void add_level(){
-    tree_.emplace_back(0);
-    tree_index_ = 0;
-  }
-
-  void advance(){
-    ++tree_index_;
-    tree_.back() = tree_index_;
-  }
-
-  void remove_level(){
-    tree_.pop_back();
-  }
-
-  bool equals(const tree_id& id) const {
-    if (id.tree_.size() != tree_.size()) return false;
-
-    int len = tree_.size();
-    for (int i=0; i < len; ++i){
-      if (tree_[i] != id.tree_[i]) return false;
-    }
-
-    return true;
-  }
-
-  uint32_t hash() const {
-    int len = tree_.size();
-    uint32_t hash = 0;
-    for(int i = 0; i < len; ++i)
-    {
-      hash += tree_[i];
-      hash += (hash << 10);
-      hash ^= (hash >> 6);
-    }
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
-    return hash;
-  }
-
- private:
-  std::vector<uint32_t> tree_;
-  uint32_t tree_index_;
-
-};
-
-static bool operator==(const tree_id& l, const tree_id& r){
-  return l.equals(r);
-}
-
-} //end namespaced dumpi
-
-namespace std {
-
-template <> struct hash<dumpi::tree_id> {
-  size_t operator()(const dumpi::tree_id& tree) const {
-    return tree.hash();
-  }
-};
-
-}
-
-namespace dumpi {
-
-struct global_id_assigner {
-  global_id_assigner(int start_id) :
-    id_counter(start_id) {}
-
-  void assign_current(){
-    ids[unique_id] = id_counter++;
-  }
-
-  void add_level(){
-    unique_id.add_level();
-  }
-
-  void advance(){
-    unique_id.advance();
-  }
-
-  void remove_level(){
-    unique_id.remove_level();
-  }
-
-  int get_id(const tree_id& tid) const {
-    auto iter = ids.find(tid);
-    if (iter == ids.end()){
-      return -1;
-    } else {
-      return iter->second;
-    }
-  }
-
- private:
-  std::unordered_map<tree_id,int> ids;
-  int id_counter;
-  tree_id unique_id;
-};
-
 
 struct OTF2_MPI_Group {
   mpi_group_t local_id;
@@ -159,7 +57,16 @@ struct OTF2_MPI_Group {
   bool is_comm_world;
   bool is_comm_self;
   bool written;
+  int world_size;
   std::vector<int> global_ranks;
+
+  using shared_ptr = std::shared_ptr<OTF2_MPI_Group>;
+
+  int size() const {
+    if (is_comm_world) return world_size;
+    else if (is_comm_self) return 1;
+    else return global_ranks.size();
+  }
 
   int get_world_rank(int local_rank){
     if (is_comm_world) return local_rank;
@@ -170,30 +77,91 @@ struct OTF2_MPI_Group {
   OTF2_MPI_Group() :
     is_comm_self(false), is_comm_world(false),
     written(false),
-    local_id(-1), global_id(-1)
+    local_id(-1), global_id(-1), world_size(-1)
   {}
 };
 
 struct OTF2_MPI_Comm {
+  using shared_ptr = std::shared_ptr<OTF2_MPI_Comm>;
+
   mpi_comm_t local_id;
   mpi_comm_t global_id;
   bool is_root;
-  OTF2_MPI_Group* group;
-  OTF2_MPI_Comm* parent;
+  bool is_split;
+  int color;
+  int key;
+  int local_rank;
+  int world_rank;
+  OTF2_MPI_Group::shared_ptr group;
+  OTF2_MPI_Comm::shared_ptr parent;
   const char* name;
-  std::list<OTF2_MPI_Comm*> sub_comms;
+
   OTF2_MPI_Comm() :
     local_id(-1), global_id(-1),
-    is_root(false), group(nullptr),
+    is_root(false), is_split(false),
+    group(nullptr),
+    color(-1), key(-1),
+    local_rank(-1), world_rank(-1),
     name(nullptr), parent(nullptr)
   {}
+
+  void set_split(int c, int k){
+    is_split = true;
+    color = c;
+    key = k;
+  }
+
 };
+
 
 /**
  * @brief The OTF2_Writer class makes emitting OTF2 traces a bit easier
  */
 class OTF2_Writer {
  public:
+  template <class Key, class T>
+  struct versioned_shared_ptr_map {
+    std::map<Key, std::list<std::shared_ptr<T>>> the_map;
+
+    std::shared_ptr<T>& operator[](const Key& k){
+      auto& entry = the_map[k];
+      return entry.front();
+    }
+
+    std::shared_ptr<T>& make_new(const Key& k){
+      auto& entry = the_map[k];
+      entry.push_front(std::shared_ptr<T>(new T));
+      return entry.front();
+    }
+
+    void make_new(const Key& k, const std::shared_ptr<T>& t){
+      auto& entry = the_map[k];
+      entry.push_front(t);
+    }
+
+    void erase(const Key& k){
+      auto& entry = the_map[k];
+      entry.pop_front();
+      if (entry.empty()) the_map.erase(k);
+    }
+
+    void reverse(){
+      for (auto& pair : the_map){
+        pair.second.reverse();
+      }
+    }
+
+    const std::shared_ptr<T>& operator[](const Key& k) const {
+      auto iter = the_map.find(k);
+      if (iter == the_map.end()){
+        throw std::runtime_error("Bad key for shared_ptr map");
+      }
+      return iter->second.front();
+    }
+
+  };
+
+
   OTF2_Writer();
 
   struct worldConfig {
@@ -208,7 +176,7 @@ class OTF2_Writer {
   OTF2_WRITER_RESULT open_archive(const std::string& path);
   OTF2_WRITER_RESULT close_archive();
   void write_global_def_file(const std::vector<int>& event_counts,
-                             const std::vector<OTF2_MPI_Comm*>& unique_comms,
+                             const std::vector<OTF2_MPI_Comm::shared_ptr>& unique_comms,
                              uint64_t min_start_time, uint64_t max_start_time);
   void write_local_def_file();
 
@@ -223,6 +191,12 @@ class OTF2_Writer {
   uint64_t stop_time() const {
     return stop_time_;
   }
+
+  /**
+   * When doing another pass, all the versions of a comm/group
+   * with the same local ID need to be "reset" or reversed
+   */
+  void reverse_versions();
 
   void register_comm_world(mpi_comm_t id, int size, int rank);
   void register_comm_self(mpi_comm_t id);
@@ -313,52 +287,50 @@ class OTF2_Writer {
 
   OTF2_WRITER_RESULT mpi_group_difference(otf2_time_t start, otf2_time_t stop,
                                           mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_difference_first_pass(otf2_time_t start, otf2_time_t stop,
-                                          mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_difference_first_pass(mpi_group_t group1,
+                                                     mpi_group_t group2, mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_excl(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
                                     int count, const int*ranks, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_excl_first_pass(otf2_time_t start, otf2_time_t stop, int group,
-                                    int count, const int*ranks, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_excl_first_pass(mpi_group_t group, int count,
+                                               const int* ranks, mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_incl(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
                                     int count, const int*ranks, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_incl_first_pass(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
-                                    int count, const int*ranks, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_incl_first_pass(mpi_group_t group, int count,
+                                               const int* ranks, mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_intersection(otf2_time_t start, otf2_time_t stop,
                                             mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_intersection_first_pass(otf2_time_t start, otf2_time_t stop,
-                                            mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_intersection_first_pass(mpi_group_t group1, mpi_group_t group2,
+                                                       mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_range_incl(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
                                           int count, int**ranges, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_range_incl_first_pass(otf2_time_t start, otf2_time_t stop, mpi_group_t group,
-                                          int count, int**ranges, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_range_incl_first_pass(mpi_group_t group, int count,
+                                                     int** ranges, mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_group_union(otf2_time_t start, otf2_time_t stop,
                                      mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
-  OTF2_WRITER_RESULT mpi_group_union_first_pass(otf2_time_t start, otf2_time_t stop,
-                                                mpi_group_t group1, mpi_group_t group2, mpi_group_t newgroup);
+  OTF2_WRITER_RESULT mpi_group_union_first_pass(mpi_group_t group1, mpi_group_t group2,
+                                                mpi_group_t newgroup);
 
   OTF2_WRITER_RESULT mpi_comm_dup(otf2_time_t start, otf2_time_t stop,
                                   mpi_comm_t oldcomm, mpi_comm_t newcomm);
-  OTF2_WRITER_RESULT mpi_comm_dup_first_pass(otf2_time_t start, otf2_time_t stop,
-                                             mpi_comm_t oldcomm, mpi_comm_t newcomm);
+  OTF2_WRITER_RESULT mpi_comm_dup_first_pass(mpi_comm_t oldcomm, mpi_comm_t newcomm);
 
-  OTF2_WRITER_RESULT mpi_comm_group_first_pass(otf2_time_t start, otf2_time_t stop, 
-                                               mpi_comm_t comm, mpi_group_t group);
+  OTF2_WRITER_RESULT mpi_comm_group_first_pass(mpi_comm_t comm, mpi_group_t group);
   OTF2_WRITER_RESULT mpi_comm_group(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm, mpi_group_t group);
 
   OTF2_WRITER_RESULT mpi_comm_create(otf2_time_t start, otf2_time_t stop, mpi_comm_t oldcomm,
                                      mpi_group_t group, mpi_comm_t newcomm);
-  OTF2_WRITER_RESULT mpi_comm_create_first_pass(otf2_time_t start, otf2_time_t stop, mpi_comm_t oldcomm,
-                                                mpi_group_t group, mpi_comm_t newcomm);
+  OTF2_WRITER_RESULT mpi_comm_create_first_pass(mpi_comm_t oldcomm, mpi_group_t group, mpi_comm_t newcomm);
 
   OTF2_WRITER_RESULT mpi_comm_split(otf2_time_t start, otf2_time_t stop, mpi_comm_t oldcomm,
-                                    int key, int color, mpi_comm_t newcomm);
-  OTF2_WRITER_RESULT mpi_comm_split_first_pass(otf2_time_t start, otf2_time_t stop, mpi_comm_t oldcomm,
-                                    int key, int color, mpi_comm_t newcomm);
+                                    int color, int key, mpi_comm_t newcomm);
+  OTF2_WRITER_RESULT mpi_comm_split_first_pass(mpi_comm_t oldcomm, int color, int key, mpi_comm_t newcomm);
+
+  OTF2_WRITER_RESULT mpi_comm_free(otf2_time_t start, otf2_time_t stop, mpi_comm_t comm);
 
   // Depricated in MPI v2.0
   OTF2_WRITER_RESULT mpi_type_contiguous(otf2_time_t start, otf2_time_t stop, int count,
@@ -384,11 +356,28 @@ class OTF2_Writer {
   OTF2_WRITER_RESULT mpi_type_create_hindexed(otf2_time_t start, otf2_time_t stop, int count,
                                               const int* lengths, mpi_type_t oldtype, mpi_type_t newtype);
 
-  void agree_global_ids(global_id_assigner& assigner,
-                        std::vector<OTF2_MPI_Comm*>& unique_comms);
 
-  void assign_global_ids(const global_id_assigner& global_ids);
+  OTF2_MPI_Comm::shared_ptr pending_comm() const {
+    return pending_comm_;
+  }
 
+  void clear_pending_comm() {
+    pending_comm_ = nullptr;
+  }
+
+  int world_rank() const {
+    return world_.rank;
+  }
+
+  int world_size() const {
+    return world_.size;
+  }
+
+  const std::vector<OTF2_MPI_Comm::shared_ptr>& unique_comms() const {
+    return unique_comms_;
+  }
+
+  OTF2_MPI_Group::shared_ptr make_comm_split(OTF2_MPI_Comm::shared_ptr comm, const std::vector<int>& world_ranks);
 
   static constexpr mpi_group_t COMM_LOCATIONS_GROUP_ID{0};
   static constexpr mpi_group_t MPI_GROUP_WORLD_ID{1};
@@ -403,7 +392,7 @@ class OTF2_Writer {
 
  private:
   int get_world_rank(int comm_rank, mpi_comm_t comm);
-  int get_comm_rank(int world_rank, mpi_comm_t comm);
+  int get_group_rank(int world_rank, OTF2_MPI_Group::shared_ptr group);
   int get_comm_size(mpi_comm_t comm);
   int mk_archive_dir(const char *path);
   void logger(OTF2_WRITER_VERBOSITY level, const std::string& msg);
@@ -431,21 +420,6 @@ class OTF2_Writer {
 
   void complete_call(mpi_request_t request_id, uint64_t timestamp);
 
-  void agree_global_ids(const std::list<OTF2_MPI_Comm*>& subs,
-                        global_id_assigner& assigner,
-                        std::vector<OTF2_MPI_Comm*>& unique_comms);
-
-  void agree_global_ids(OTF2_MPI_Comm* comm, global_id_assigner& assigner,
-                        std::vector<OTF2_MPI_Comm*>& unique_comms);
-
-  void assign_global_ids(const std::list<OTF2_MPI_Comm*>& subs,
-                         const global_id_assigner& global_ids,
-                         tree_id& local_ids);
-
-  void assign_global_ids(OTF2_MPI_Comm* comm,
-                         const global_id_assigner& global_ids,
-                         tree_id& local_ids);
-
   mpi_comm_t get_global_comm(mpi_comm_t local_id) const;
 
   struct exception : public std::runtime_error {
@@ -458,8 +432,8 @@ class OTF2_Writer {
 
   std::unordered_map<mpi_type_t, int> type_sizes_;
 
-  std::unordered_map<int, OTF2_MPI_Comm> comms_;
-  std::unordered_map<int, OTF2_MPI_Group> groups_;
+  versioned_shared_ptr_map<int, OTF2_MPI_Comm> comms_;
+  versioned_shared_ptr_map<int, OTF2_MPI_Group> groups_;
 
   OTF2DefTable otf2_strings_table_;
   OTF2DefTable otf2_regions_table_;
@@ -467,6 +441,8 @@ class OTF2_Writer {
   OTF2_Archive* archive_ = nullptr;
   OTF2_TimeStamp start_time_ = ~0;
   OTF2_TimeStamp stop_time_ = 0;
+
+  std::vector<OTF2_MPI_Comm::shared_ptr> unique_comms_;
 
 
   static constexpr int undefined_root = -1;
@@ -482,7 +458,11 @@ class OTF2_Writer {
   mpi_comm_t comm_error_id_ = -1;
   mpi_comm_t comm_null_id_ = -1;
 
+  OTF2_MPI_Comm::shared_ptr pending_comm_;
+
   int event_count_;
+
+  int next_group_id_;
 
   OTF2_WRITER_VERBOSITY verbosity_ = OWV_NONE;
   uint64_t clock_resolution_ = 0;

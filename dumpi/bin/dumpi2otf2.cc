@@ -46,6 +46,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <dumpi/libundumpi/libundumpi.h>
 #include <dumpi/libotf2dump/otf2writer.h>
 #include <dumpi/bin/metadata.h>
+#include <dumpi/libundumpi/bindings.h>
 
 #include <glob.h>
 #include <string.h>
@@ -72,8 +73,75 @@ int run_second_pass(dumpi::OTF2_Writer& writer, int rank, dumpi::metadata& md)
   return 0;
 }
 
-int main(int argc, char **argv) {
-  dumpi_profile *profile;
+struct active_profile {
+  dumpi_profile* profile;
+  dumpi::OTF2_Writer* writer;
+};
+
+static int add_new_comm(int global_id_offset, std::vector<active_profile>& creators)
+{
+  if (creators.empty()){
+    return 0;
+  }
+  dumpi::OTF2_MPI_Comm::shared_ptr first = creators[0].writer->pending_comm();
+  if (first->parent->group->size() > creators.size()){
+    return 0; //this is not ready yet
+  }
+
+  int next_id = global_id_offset;
+  if (first->is_split){
+    std::map<int, std::vector<dumpi::OTF2_Writer*>> color_map;
+    for (active_profile& prof : creators){
+      dumpi::OTF2_MPI_Comm::shared_ptr comm = prof.writer->pending_comm();
+      if (comm->color != DUMPI_UNDEFINED)
+        color_map[comm->color].emplace_back(prof.writer);
+    }
+
+    auto sorter = [](const dumpi::OTF2_Writer* lw, const dumpi::OTF2_Writer* rw){
+      dumpi::OTF2_MPI_Comm* l = lw->pending_comm().get();
+      dumpi::OTF2_MPI_Comm* r = rw->pending_comm().get();
+      if (l->key != r->key) return l->key < r->key;
+      else return l->parent->local_rank < r->parent->local_rank;
+    };
+
+    for (auto& pair : color_map){
+      int color = pair.first;
+      auto& vec = pair.second;
+      std::sort(vec.begin(), vec.end(), sorter);
+      int new_rank = 0;
+      std::vector<int> global_ranks(vec.size());
+      for (dumpi::OTF2_Writer* writer : vec){
+        dumpi::OTF2_MPI_Comm::shared_ptr comm = writer->pending_comm();
+        global_ranks[new_rank] = comm->world_rank;
+        comm->local_rank = new_rank++;
+        comm->global_id = next_id;
+      }
+
+      for (dumpi::OTF2_Writer* writer : vec){
+        dumpi::OTF2_MPI_Comm::shared_ptr comm = writer->pending_comm();
+        dumpi::OTF2_MPI_Group::shared_ptr group = writer->make_comm_split(comm, global_ranks);
+        comm->group = group;
+        group->global_id = writer->global_group_id_from_comm_id(comm->global_id);
+        writer->clear_pending_comm();
+      }
+      ++next_id;
+    }
+    return next_id - global_id_offset;
+  } else {
+    //okay - groups already created and everything is good
+    //just need to assign the global id
+    for (active_profile& prof : creators){
+      prof.writer->pending_comm()->global_id = next_id;
+      prof.writer->pending_comm()->group->global_id =
+            prof.writer->global_group_id_from_comm_id(next_id);
+      prof.writer->clear_pending_comm();
+    }
+    return 1;
+  }
+}
+
+int main(int argc, char **argv)
+{
   d2o2opt opt;
   dumpi::OTF2_Writer writer;
 
@@ -101,7 +169,8 @@ int main(int argc, char **argv) {
   // The first pass constructs information about Communicators, Groups, and type sizes.
   if (opt.print_progress) printf("Identifying Communicators, Groups, and types\n");
 
-  for(int rank = 0; rank < md.numTraces(); rank++) {
+  std::vector<active_profile> active_profiles(md.numTraces());
+  for (int rank=0; rank < md.numTraces(); ++rank){
     dumpi::OTF2_Writer& writer = writers[rank];
     writer.register_comm_world(DUMPI_COMM_WORLD, md.numTraces(), rank);
     writer.register_comm_self(DUMPI_COMM_SELF);
@@ -109,38 +178,83 @@ int main(int argc, char **argv) {
     writer.register_comm_error(DUMPI_COMM_ERROR);
     writer.register_null_request(DUMPI_REQUEST_NULL);
     writer.set_clock_resolution(1E9);
-    profile = undumpi_open(md.tracename(rank).c_str());
-    // TODO, types are rank-specific, easiest to put them into a hash_map
-    register_type_sizes(profile, &writer);
-    undumpi_read_stream(profile, &first_pass_cback, &writer);
-    undumpi_close(profile);
 
-    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
-    fflush(stdout);
+    active_profile& active = active_profiles[rank];
+    active.profile = undumpi_open(md.tracename(rank).c_str());
+    active.writer = &writer;
+
+    // this has to come here after undumpi_open
+    register_type_sizes(active.profile, &writer);
+
+    dumpi_start_stream_read(active.profile);
   }
 
-  std::vector<dumpi::OTF2_MPI_Comm*> unique_comms;
-  dumpi::global_id_assigner id_assigner(dumpi::OTF2_Writer::MPI_COMM_USER_ID_OFFSET);
-  for (int rank = 0; rank < md.numTraces(); rank++){
-    writers[rank].agree_global_ids(id_assigner, unique_comms);
-  }
+  std::map<int, std::vector<active_profile>> pending_comm_creates;
 
-  for (int rank =0; rank < md.numTraces(); rank++){
-    writers[rank].assign_global_ids(id_assigner);
-  }
+  int num_finished = 0;
+  int finalized;
+  int comm_id_counter = dumpi::OTF2_Writer::MPI_COMM_USER_ID_OFFSET;
+  libundumpi_cbpair first_pass_callarr[DUMPI_END_OF_STREAM] = {{NULL, NULL}};
+  libundumpi_populate_callbacks(&first_pass_cback, first_pass_callarr);
 
+  while(num_finished < md.numTraces()){
+    if (active_profiles.empty()){
+      for (auto iter = pending_comm_creates.begin(); iter != pending_comm_creates.end(); ++iter){
+        int num_created = add_new_comm(comm_id_counter, iter->second);
+        if (num_created > 0){
+          auto& collective_profiles = iter->second;
+          active_profiles.insert(active_profiles.end(),
+                                 collective_profiles.begin(), collective_profiles.end());
+          pending_comm_creates.erase(iter);
+          comm_id_counter += num_created;
+          break;
+        }
+      }
+    } else {
+      active_profile active = active_profiles.back();
+      active_profiles.pop_back();
+
+      if (active.writer->pending_comm()){
+        std::cerr << "Rank " << active.writer->world_rank()
+              << " has pending comm but is still in active list " << std::endl;
+        abort();
+      }
+
+      int stream_active = 1;
+      while (!active.writer->pending_comm() && stream_active){
+        stream_active = undumpi_read_single_call(active.profile, first_pass_callarr, active.writer,
+                                            &finalized);
+      }
+
+      if (stream_active){
+        //we have more calls, but progress has stalled on a collective
+        int global_id = active.writer->pending_comm()->parent->global_id;
+        pending_comm_creates[global_id].push_back(active);
+      } else {
+        //nope, stream is over
+        undumpi_close(active.profile);
+        ++num_finished;
+      }
+    }
+  }
 
   // The second pass records MPI events and their parameters
   if (opt.print_progress) printf("\nWriting event files\n");
-
 
   std::string traceFolder = opt.output_archive.empty() ? md.filePrefix() + "-otf2" : opt.output_archive;
   std::vector<int> eventCounts(md.numTraces());
 
   uint64_t min_start_time = std::numeric_limits<uint64_t>::max();
   uint64_t max_stop_time = std::numeric_limits<uint64_t>::min();
+
+  std::vector<dumpi::OTF2_MPI_Comm::shared_ptr> unique_comms;
   for (int rank = 0; rank < md.numTraces(); rank++) {
     dumpi::OTF2_Writer& writer = writers[rank];
+
+    auto& writer_unique_comms = writer.unique_comms();
+    unique_comms.insert(unique_comms.end(), writer_unique_comms.begin(), writer_unique_comms.end());
+    writer.reverse_versions();
+
     if (writer.open_archive(traceFolder) != dumpi::OTF2_WRITER_SUCCESS) {
       fprintf(stderr, "Error opening the archive for rank %d\n", rank);
       return 1;
