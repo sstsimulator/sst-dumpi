@@ -49,6 +49,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <cstring>
 #include <unordered_set>
 #include <functional>
+#include <iostream>
 
 namespace dumpi {
 
@@ -58,7 +59,7 @@ int
 OTF2DefTable::insert(const std::string& string)
 {
   auto it = map_.find(string);
-  if (it != map_.end()) return it->second;
+  if (it != map_.end())return it->second;
   map_.insert(std::make_pair(string, counter_));
   return counter_++;
 }

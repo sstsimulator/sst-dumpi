@@ -172,6 +172,7 @@ int main(int argc, char **argv)
   std::vector<active_profile> active_profiles(md.numTraces());
   for (int rank=0; rank < md.numTraces(); ++rank){
     dumpi::OTF2_Writer& writer = writers[rank];
+    writer.set_write_global_comms(true); //remapping will not work - ids get reused
     writer.register_comm_world(DUMPI_COMM_WORLD, md.numTraces(), rank);
     writer.register_comm_self(DUMPI_COMM_SELF);
     writer.register_comm_null(DUMPI_COMM_NULL);
@@ -180,7 +181,11 @@ int main(int argc, char **argv)
     writer.set_clock_resolution(1E9);
 
     active_profile& active = active_profiles[rank];
-    active.profile = undumpi_open(md.tracename(rank).c_str());
+    std::string trace_file = md.tracename(rank);
+    active.profile = undumpi_open(trace_file.c_str());
+    if (!active.profile){
+      throw std::runtime_error("failed opening trace " + trace_file);
+    }
     active.writer = &writer;
 
     // this has to come here after undumpi_open
@@ -197,6 +202,8 @@ int main(int argc, char **argv)
   libundumpi_cbpair first_pass_callarr[DUMPI_END_OF_STREAM] = {{NULL, NULL}};
   libundumpi_populate_callbacks(&first_pass_cback, first_pass_callarr);
 
+  std::cout << "Executing first pass to construct communicators" << std::endl;
+
   while(num_finished < md.numTraces()){
     if (active_profiles.empty()){
       for (auto iter = pending_comm_creates.begin(); iter != pending_comm_creates.end(); ++iter){
@@ -207,6 +214,7 @@ int main(int argc, char **argv)
                                  collective_profiles.begin(), collective_profiles.end());
           pending_comm_creates.erase(iter);
           comm_id_counter += num_created;
+          std::cout << comm_id_counter << " communicators constructed " << std::endl;
           break;
         }
       }
@@ -238,16 +246,17 @@ int main(int argc, char **argv)
     }
   }
 
-  // The second pass records MPI events and their parameters
-  if (opt.print_progress) printf("\nWriting event files\n");
+
+  std::cout << "Executing second pass to build traces" << std::endl;
 
   std::string traceFolder = opt.output_archive.empty() ? md.filePrefix() + "-otf2" : opt.output_archive;
-  std::vector<int> eventCounts(md.numTraces());
+  std::vector<int> event_counts(md.numTraces());
 
   uint64_t min_start_time = std::numeric_limits<uint64_t>::max();
   uint64_t max_stop_time = std::numeric_limits<uint64_t>::min();
 
   std::vector<dumpi::OTF2_MPI_Comm::shared_ptr> unique_comms;
+  int old_percent = 0;
   for (int rank = 0; rank < md.numTraces(); rank++) {
     dumpi::OTF2_Writer& writer = writers[rank];
 
@@ -264,9 +273,14 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error writing DUMPI rank %d into OTF2 archive\n", rank);
       return 1;
     }
-    if (opt.print_progress) printf("%.2f%% complete\n", ((1 + rank)*100.0)/md.numTraces());
-    fflush(stdout);
-    eventCounts[rank] = writer.event_count();
+
+    int new_percent = ((1 + rank)*100)/md.numTraces();
+    if (new_percent != old_percent){
+      std::cout << "Pass " << new_percent << "% complete" << std::endl;
+      old_percent = new_percent;
+    }
+
+    event_counts[rank] = writer.event_count();
     writer.write_local_def_file();
     if (rank > 0) writer.close_archive(); //rank 0 is special
 
@@ -274,12 +288,9 @@ int main(int argc, char **argv)
     max_stop_time = std::max(max_stop_time, writer.stop_time());
   }
 
-  if (opt.print_progress){
-    printf("\nWriting definition files\n");
-    fflush(stdout);
-  }
+  std::cout << "Writing definition files" << std::endl;
 
-  writers[0].write_global_def_file(eventCounts, unique_comms,
+  writers[0].write_global_def_file(event_counts, unique_comms,
                                    min_start_time, max_stop_time);
   writers[0].close_archive();
   return 0;
@@ -345,11 +356,13 @@ void print_usage() {
         "        -o  archive      Output OTF2 archive name\n");
 }
 
-static void register_type_sizes(dumpi_profile *profile, dumpi::OTF2_Writer* writer) {
+static void
+register_type_sizes(dumpi_profile *profile, dumpi::OTF2_Writer* writer)
+{
   dumpi_sizeof sizes = undumpi_read_datatype_sizes(profile);
-  for(int i = 0; i < sizes.count; i++)
+  for(int i = 0; i < sizes.count; i++){
     writer->register_type(i, sizes.size[i]);
-
+  }
   free(sizes.size);
 }
 

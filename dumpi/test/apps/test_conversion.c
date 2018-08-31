@@ -63,6 +63,9 @@ MPI_Comm run_split_test(MPI_Comm comm, int* colors, int* keys)
   return newComm;
 }
 
+
+#define sstmac_app_name convertotf2
+
 int main(int argc, char** argv)
 {
   MPI_Init(&argc, &argv);
