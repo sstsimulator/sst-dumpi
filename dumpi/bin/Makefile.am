@@ -38,6 +38,12 @@ if WITH_OTF2
   dumpi2otf2_CPPFLAGS = $(OTF2_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
 endif
 
+if WITH_OTF2
+  bin_PROGRAMS += dumpi2otf2
+  dumpi2otf2_SOURCES = dumpi2otf2.cc dumpi2otf2-callbacks.cc
+  dumpi2otf2_LDADD = ../libundumpi/libundumpi.la ../libotf2dump/libotf2dump.la $(OTF2DIR) -lotf2
+endif
+
 dumpi2ascii_SOURCES = dumpi2ascii.c dumpi2ascii-callbacks.c
 dumpi2ascii_LDADD = ../libundumpi/libundumpi.la 
 
