@@ -53,6 +53,7 @@ Questions? Contact sst-macro-help@sandia.gov
 #include <getopt.h>
 #include <assert.h>
 #include <cstdlib>
+#include <algorithm>
 
 static int parse_cli_options(int argc, char **argv, d2o2opt *opt);
 static std::vector<std::string> glob_files(const char* path);
