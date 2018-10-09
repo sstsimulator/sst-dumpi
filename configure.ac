@@ -12,7 +12,7 @@ dnl
 
 dnl Version info, used both in library versioning and inside dumpi.
 m4_define([DUMPI_VERSION_TAG], 8)
-m4_define([DUMPI_SUBVERSION_TAG], 0)
+m4_define([DUMPI_SUBVERSION_TAG], 1)
 m4_define([DUMPI_SUBSUBVERSION_TAG], 0)
 # Enable this for releases
 dnl m4_define([DUMPI_SNAPSHOT_TAG])
@@ -38,7 +38,7 @@ dnl dumpi_profile as the first argument for IO calls).
 dnl Dumpi version 1.0.0 given libversion 3.0.0 because of several new 
 dnl API calls, bug fixes, and renamings.
 m4_define([DUMPI_MAJOR_LIBVERS], 8)
-m4_define([DUMPI_MINOR_LIBVERS], 0)
+m4_define([DUMPI_MINOR_LIBVERS], 1)
 m4_define([DUMPI_BACKW_LIBVERS], 0)
 m4_define([DUMPI_LIBVERSION_TAG],
           [DUMPI_MAJOR_LIBVERS:DUMPI_MINOR_LIBVERS:DUMPI_BACKW_LIBVERS])
