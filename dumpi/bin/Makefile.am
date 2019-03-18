@@ -21,7 +21,7 @@ TESTS = test_dumpi2ascii.sh test_dumpi2dumpi.sh
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 AM_LDFLAGS = 
-bin_PROGRAMS = dumpi2ascii dumpi2dumpi dumpistats ascii2dumpi
+bin_PROGRAMS = dumpi2ascii dumpi2dumpi dumpistats ascii2dumpi dumpi2sst
 
 #if WITH_OTF
 #  bin_PROGRAMS += dumpi2otf  
@@ -40,6 +40,9 @@ endif
 
 dumpi2ascii_SOURCES = dumpi2ascii.c dumpi2ascii-callbacks.c
 dumpi2ascii_LDADD = ../libundumpi/libundumpi.la 
+
+dumpi2sst_SOURCES = dumpi2sst.cc dumpi2sst-callbacks.cc metadata.cc
+dumpi2sst_LDADD = ../libundumpi/libundumpi.la
 
 ascii2dumpi_SOURCES = ascii2dumpi.c
 ascii2dumpi_LDADD = ../libundumpi/libundumpi.la
