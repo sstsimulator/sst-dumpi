@@ -21,6 +21,7 @@ extern "C" {
     std::vector<std::string> dumpi_bin;
     std::string output_archive;
     bool print_progress = false;
+    int percent;
   } d2o2opt;
 }
 #endif // DUMPI2OTF2_H

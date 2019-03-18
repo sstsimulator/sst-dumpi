@@ -126,7 +126,7 @@ namespace dumpi {
       }
       define_local_functions(current_rank_+1, profile);
       define_perfctr_labels(current_rank_+1, profile);
-      undumpi_read_stream(profile, &callbacks_, this);
+      undumpi_read_stream(profile, &callbacks_, this, false);
       undumpi_close(profile);
     }
   }

@@ -119,7 +119,8 @@ int undumpi_read_single_call(dumpi_profile *profile,
 	   (int)currfunc, dumpi_function_label(currfunc),
 	   ftello(profile->file), end_stream);
     */
-    if(ftello(profile->file) >= end_stream) {
+    profile->pos = ftello(profile->file);
+    if(profile->pos >= end_stream) {
       retval = 0;
     }
   }
@@ -128,10 +129,10 @@ int undumpi_read_single_call(dumpi_profile *profile,
 
 int undumpi_read_stream(dumpi_profile* profile,
       const libundumpi_callbacks *callback,
-      void *uarg)
+      void *uarg, bool print_progress)
 {
   //by default, don't print progress or terminate early
-  return undumpi_read_stream_full("", profile,callback,uarg,false);
+  return undumpi_read_stream_full("", profile,callback,uarg,print_progress);
 }
 
 static double get_time()
@@ -156,19 +157,10 @@ int undumpi_read_stream_full(
   assert(profile != NULL && profile->file != NULL && callback != NULL);
 
   libundumpi_populate_handlers(callback, callarr);
+  libundumpi_populate_callouts(callback, callarr);
 
-  /** First loop through and figure out number of fxns, if necessary */
-  long num_dumpi_fxns = 0;
-  if (print_progress){
-    assert(dumpi_start_stream_read(profile) != 0);
-    while (undumpi_read_single_call(profile, callarr, uarg, &mpi_finalized)){
-      ++num_dumpi_fxns;
-    }
-  }
-
-  libundumpi_populate_callouts(callback,callarr);
-
-  double t_start = get_time();
+  printf("Read profile until %lu out of %lu\n",
+         profile->terminate_pos, profile->total_file_size);
 
   /* Go */
   mpi_finalized = 0;
@@ -176,9 +168,9 @@ int undumpi_read_stream_full(
   long num_fxns_called = 0;
    //print every percent progress
   int last_percent_done = 0;
-  while(undumpi_read_single_call(profile, callarr, uarg, &mpi_finalized)) {
-    ++num_fxns_called;
-    double percent_done = 100. * ((double)num_fxns_called) / ((double)num_dumpi_fxns);
+  while(undumpi_read_single_call(profile, callarr, uarg, &mpi_finalized) &&
+        profile->pos < profile->terminate_pos) {
+    double percent_done = 100. * ((double)profile->pos) / ((double)profile->total_file_size);
 
     /** Check if we should print anything */
     int int_percent_done = (int) percent_done;

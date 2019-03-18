@@ -66,10 +66,16 @@ static std::vector<int> get_type_sizes(dumpi_profile*);
 /** These are stateless lambdas and can be global variables */
 static libundumpi_callbacks first_pass_cback, second_cback;
 
-int run_second_pass(dumpi::OTF2_Writer& writer, int rank, dumpi::metadata& md)
+int run_second_pass(dumpi::OTF2_Writer& writer, int rank, dumpi::metadata& md,
+                    int terminate_percent)
 {
   auto profile = undumpi_open(md.tracename(rank).c_str());
-  undumpi_read_stream(profile, &second_cback, (void*)&writer);
+
+  std::cout << "Terminate at " << terminate_percent << std::endl;
+  if (terminate_percent < 100){
+    profile->terminate_pos = (profile->total_file_size * terminate_percent) / 100;
+  }
+  undumpi_read_stream(profile, &second_cback, (void*)&writer, true);
   undumpi_close(profile);
   return 0;
 }
@@ -230,12 +236,17 @@ int main(int argc, char **argv)
       }
 
       int stream_active = 1;
-      while (!active.writer->pending_comm() && stream_active){
+      if (opt.percent < 100){
+        active.profile->terminate_pos = (active.profile->terminate_pos * opt.percent) / 100;
+      }
+      while (!active.writer->pending_comm()
+             && stream_active
+             && active.profile->pos < active.profile->terminate_pos){
         stream_active = undumpi_read_single_call(active.profile, first_pass_callarr, active.writer,
                                             &finalized);
       }
 
-      if (stream_active){
+      if (stream_active && active.profile->pos < active.profile->terminate_pos){
         //we have more calls, but progress has stalled on a collective
         int global_id = active.writer->pending_comm()->parent->global_id;
         pending_comm_creates[global_id].push_back(active);
@@ -269,7 +280,8 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error opening the archive for rank %d\n", rank);
       return 1;
     }
-    int rc = run_second_pass(writer, rank, md);
+
+    int rc = run_second_pass(writer, rank, md, opt.percent);
     if (rc != 0){
       fprintf(stderr, "Error writing DUMPI rank %d into OTF2 archive\n", rank);
       return 1;
@@ -302,8 +314,15 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
   bool output_set = false;
   bool input_set = false;
 
+  //set defaults
+  settings->percent = 100;
+  settings->help = 0;
+  settings->verbose = 0;
+  settings->print_progress = false;
+
+
   assert(settings != NULL);
-  while((opt = getopt(argc, argv, "vhpi:o:")) != -1) {
+  while((opt = getopt(argc, argv, "vhpi:o:t:")) != -1) {
       switch(opt) {
         case 'v':
           fprintf(stdout, "Setting output to verbose.\n");
@@ -323,6 +342,9 @@ int parse_cli_options(int argc, char **argv, d2o2opt* settings) {
           break;
         case 'p':
           settings->print_progress = true;
+          break;
+        case 't':
+          settings->percent = atoi(optarg);
           break;
         default:
           fprintf(stderr, "Invalid argument %c.\n", opt);
