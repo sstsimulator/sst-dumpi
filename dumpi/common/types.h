@@ -288,6 +288,9 @@ extern "C" {
      * it will be set to DUMPI_MEMBUF_SIZE (by default 128 MB).
      */
     size_t target_membuf_size;
+    uint64_t total_file_size;
+    uint64_t pos;
+    uint64_t terminate_pos;
   } dumpi_profile;
 
   /**

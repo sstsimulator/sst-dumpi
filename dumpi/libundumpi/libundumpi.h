@@ -125,7 +125,7 @@ extern "C" {
    */
   int undumpi_read_stream(dumpi_profile* profile,
                           const libundumpi_callbacks *callback,
-                          void *userarg);
+                          void *userarg, bool print_progress);
 
   /**
    * Parse the keyval (user-populated) record from this file.

@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     assert(d2a_addr != NULL);
     dumpi_read_function_addresses(profile, &(d2a_addr->count),
 				  &(d2a_addr->address), &(d2a_addr->name));
-    undumpi_read_stream(profile, &cback, DUMPI_UARG);
+    undumpi_read_stream(profile, &cback, DUMPI_UARG, false);
     for(i = 0; i < d2a_addr->count; ++i)
       free(d2a_addr->name[i]);
     free(d2a_addr->address);

@@ -762,7 +762,7 @@ int d2d_parse_stream(const char *in, const char *out, d2dopts *opt) {
     goto pieces;
   }
   /* For an unclear reason, I chose to use '1' as a good return for undumpi */
-  error = (undumpi_read_stream(profile, &opt->cback, opt) == 0);
+  error = (undumpi_read_stream(profile, &opt->cback, opt, false) == 0);
   if(error)
     fprintf(stderr, "Error:  Failed running undumpi.\n");
   /* Now we just need to handle the rest of the dumpi records */

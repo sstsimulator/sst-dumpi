@@ -432,6 +432,7 @@ dumpi_profile *dumpi_open_input_file(const char *fname) {
   assert(retval != NULL);
   retval->addrlbl = retval->perflbl = 0;
   retval->file = fp;
+  retval->pos = 0;
   if(dumpi_debug & DUMPI_DEBUG_TRACEIO)
     fprintf(stderr, "[DUMPI-IO] dumpi_open_input_file\n");
   if(fp == NULL) {
@@ -439,6 +440,10 @@ dumpi_profile *dumpi_open_input_file(const char *fname) {
 	    "  errno=%d (%s)\n", fname, errno, strerror(errno));
     return NULL;
   }
+  fseek(fp, 0L, SEEK_END);
+  retval->total_file_size = ftell(fp);
+  retval->terminate_pos = retval->total_file_size;
+  rewind(fp);
   magic = get64(retval);
   if(magic != DUMPI_HEAD_MAGIC) {
     fprintf(stderr, "dumpi_open_input_file:  File \"%s\" does not start with "

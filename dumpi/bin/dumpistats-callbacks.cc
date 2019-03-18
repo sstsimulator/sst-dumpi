@@ -1051,7 +1051,7 @@ namespace dumpi {
       // Rest of the stuff.
       for(size_t hand = 0; hand < bin.size(); ++hand)
         bin[hand]->start_trace(current_trace_);
-      undumpi_read_stream(prof, &cb, this);
+      undumpi_read_stream(prof, &cb, this, false);
       undumpi_close(prof);
     }
     for(size_t hand = 0; hand < bin.size(); ++hand)
