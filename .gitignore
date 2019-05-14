@@ -33,6 +33,7 @@ bin/missing
 bin/py-compile
 bin/ar-lib
 bin/compile
+bin/test-driver
 
 tests/reference/upd
 dumpi/dumpiconfig-generated.h.in
