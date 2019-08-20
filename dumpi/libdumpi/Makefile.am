@@ -9,7 +9,7 @@
 #   SST/macroscale directory.
 #
 
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
+include $(top_srcdir)/Makefile.common
 #AM_LDFLAGS = -lrt
 library_includedir=$(includedir)/dumpi/libdumpi
 library_include_HEADERS = \

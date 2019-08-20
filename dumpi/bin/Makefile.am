@@ -8,6 +8,7 @@
 #   For more information, see the LICENSE file in the top 
 #   SST/macroscale directory.
 #
+include $(top_srcdir)/Makefile.common
 
 EXTRA_DIST = comm.h dumpi2ascii-callbacks.h dumpi2ascii-defs.h dumpi2dumpi.h \
              group.h metadata.h otfcomplete.h otfwriter.h \
@@ -19,7 +20,6 @@ EXTRA_DIST = comm.h dumpi2ascii-callbacks.h dumpi2ascii-defs.h dumpi2dumpi.h \
 
 TESTS = test_dumpi2ascii.sh test_dumpi2dumpi.sh
 
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 AM_LDFLAGS = 
 bin_PROGRAMS = dumpi2ascii dumpi2dumpi dumpistats ascii2dumpi
 

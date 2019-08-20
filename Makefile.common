@@ -1,0 +1,8 @@
+AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir) 
+
+if HAVE_MACSDK
+AM_CFLAGS = $(MACSDK_CFLAGS)
+AM_CXXFLAGS = $(MACSDK_CXXFLAGS)
+endif
+
+

@@ -8,8 +8,10 @@
 #   For more information, see the LICENSE file in the top 
 #   SST/macroscale directory.
 #
+include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir) $(OTF2_CPPFLAGS)
+AM_CPPFLAGS += $(OTF2_CPPFLAGS)
+
 library_includedir=$(includedir)/dumpi/libotf2dump
 library_include_HEADERS = \
                       otf2writer.h otf2writer-defs.h
