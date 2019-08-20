@@ -8,6 +8,7 @@
 #   For more information, see the LICENSE file in the top 
 #   SST/macroscale directory.
 #
+include $(top_srcdir)/Makefile.common
 
 SUBDIRS = common
 
@@ -31,7 +32,7 @@ if WITH_TEST
   SUBDIRS +=  test
 endif
 
-AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)
+
 library_includedir=$(includedir)/dumpi
 library_include_HEADERS = dumpiconfig.h 
 nodist_library_include_HEADERS = dumpiconfig-generated.h

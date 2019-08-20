@@ -8,8 +8,8 @@
 #   For more information, see the LICENSE file in the top 
 #   SST/macroscale directory.
 #
+include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 AM_LDFLAGS =
 library_includedir=$(includedir)/dumpi/common
 library_include_HEADERS = \
