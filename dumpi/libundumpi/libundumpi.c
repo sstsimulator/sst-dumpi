@@ -159,9 +159,6 @@ int undumpi_read_stream_full(
   libundumpi_populate_handlers(callback, callarr);
   libundumpi_populate_callouts(callback, callarr);
 
-  printf("Read profile until %lu out of %lu\n",
-         profile->terminate_pos, profile->total_file_size);
-
   /* Go */
   mpi_finalized = 0;
   assert(dumpi_start_stream_read(profile) != 0);
