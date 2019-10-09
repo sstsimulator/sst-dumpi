@@ -8,11 +8,11 @@
 #   For more information, see the LICENSE file in the top 
 #   SST/macroscale directory.
 #
+include $(top_srcdir)/Makefile.common
 
 EXTRA_DIST = coll.h manip.h p2p.h probe.h \
 	run_testmpi.sh run_testf77.sh run_testf90.sh \
   apps
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 
 noinst_PROGRAMS = testmpi testthreads
 TESTS = run_testmpi.sh
