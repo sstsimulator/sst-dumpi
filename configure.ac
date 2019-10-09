@@ -38,11 +38,7 @@ dnl dumpi_profile as the first argument for IO calls).
 dnl Dumpi version 1.0.0 given libversion 3.0.0 because of several new 
 dnl API calls, bug fixes, and renamings.
 m4_define([DUMPI_MAJOR_LIBVERS], 9)
-<<<<<<< HEAD
-m4_define([DUMPI_MINOR_LIBVERS], 0)
-=======
 m4_define([DUMPI_MINOR_LIBVERS], 1)
->>>>>>> 9d2ce9c6fcb6643a0a3979fbbc29159e9fdb7d6d
 m4_define([DUMPI_BACKW_LIBVERS], 0)
 m4_define([DUMPI_LIBVERSION_TAG],
           [DUMPI_MAJOR_LIBVERS:DUMPI_MINOR_LIBVERS:DUMPI_BACKW_LIBVERS])
