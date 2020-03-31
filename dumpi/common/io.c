@@ -372,7 +372,7 @@ int dumpi_write_datatype_sizes(dumpi_profile *profile,
 
 int dumpi_read_datatype_sizes(dumpi_profile *profile, dumpi_sizeof *sizes) {
   int i;
-  long callpos;
+  long callpos = 0;
   assert(sizes != NULL);
   if(profile->sizelbl > 0) {
     assert(profile && profile->file);
