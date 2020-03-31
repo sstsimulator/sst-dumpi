@@ -41,7 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Questions? Contact sst-macro-help@sandia.gov
 */
-
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <dumpi/bin/dumpi2ascii-callbacks.h>
 #include <dumpi/bin/dumpi2ascii-defs.h>
 #include <dumpi/common/funcs.h>
@@ -286,7 +287,7 @@ void print_addresses(int count, const uint64_t *addresses, char **names)
 {
   int i;
   for(i = 0; i < count; ++i) {
-    fprintf(dumpfh, "Function address %llu has label %s\n", addresses[i], names[i]);
+    fprintf(dumpfh, "Function address %" PRIu64 " has label %s\n", addresses[i], names[i]);
   }
 }
 

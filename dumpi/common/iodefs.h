@@ -833,7 +833,7 @@ void do_get_char_array_2(dumpi_profile *profile, int *len0, int *len1,
   /** Utility definition for handling character arrays */
 #define PUT_CHAR_ARRAY_3(PROFILE, TERM0, TERM1, TERM2, VALUE) do {	\
     int i0, i1, i2, len0=0, len1=0, len2=0;                             \
-    char **v0, *v1, v2;                                                 \
+    char **v0 = NULL, *v1 = NULL, v2 = '\0';                            \
     if((VALUE) == NULL) {                                               \
       put32(PROFILE, 0);						\
     }                                                                   \
