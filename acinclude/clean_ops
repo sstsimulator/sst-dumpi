@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python2
 
 import re
 text = open("oldmpiops.m4").read()
@@ -19,5 +19,3 @@ for m in matches:
 str_arr.append("])")
 
 open("mpiops.m4","w").write("\n".join(str_arr))
-
-

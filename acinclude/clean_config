@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python2
 
 import re
 text = open("oldmpiconfigs.m4").read()
@@ -41,5 +41,3 @@ for m in matches:
 str_arr.append("])")
 
 open("mpiconfigs.m4","w").write("\n".join(str_arr))
-
-
