@@ -1,5 +1,5 @@
 /**
-Copyright 2009-2018 National Technology and Engineering Solutions of Sandia, 
+Copyright 2009-2020 National Technology and Engineering Solutions of Sandia, 
 LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
 retains certain rights in this software.
 
@@ -8,7 +8,7 @@ by National Technology and Engineering Solutions of Sandia, LLC., a wholly
 owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
-Copyright (c) 2009-2018, NTESS
+Copyright (c) 2009-2020, NTESS
 
 All rights reserved.
 
@@ -41,7 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Questions? Contact sst-macro-help@sandia.gov
 */
-
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <dumpi/bin/dumpi2ascii-callbacks.h>
 #include <dumpi/bin/dumpi2ascii-defs.h>
 #include <dumpi/common/funcs.h>
@@ -286,7 +287,7 @@ void print_addresses(int count, const uint64_t *addresses, char **names)
 {
   int i;
   for(i = 0; i < count; ++i) {
-    fprintf(dumpfh, "Function address %llu has label %s\n", addresses[i], names[i]);
+    fprintf(dumpfh, "Function address %" PRIu64 " has label %s\n", addresses[i], names[i]);
   }
 }
 

@@ -1,5 +1,5 @@
 /**
-Copyright 2009-2018 National Technology and Engineering Solutions of Sandia, 
+Copyright 2009-2020 National Technology and Engineering Solutions of Sandia, 
 LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
 retains certain rights in this software.
 
@@ -8,7 +8,7 @@ by National Technology and Engineering Solutions of Sandia, LLC., a wholly
 owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
-Copyright (c) 2009-2018, NTESS
+Copyright (c) 2009-2020, NTESS
 
 All rights reserved.
 
@@ -345,26 +345,17 @@ extern "C" {
 #if DUMPI_HAVE_MPI_COMBINER_VECTOR
     case MPI_COMBINER_VECTOR: return DUMPI_COMBINER_VECTOR;
 #endif
-#if DUMPI_HAVE_MPI_COMBINER_HVECTOR_INTEGER
-    case MPI_COMBINER_HVECTOR_INTEGER: return DUMPI_COMBINER_HVECTOR_INTEGER;
-#endif
 #if DUMPI_HAVE_MPI_COMBINER_HVECTOR
     case MPI_COMBINER_HVECTOR: return DUMPI_COMBINER_HVECTOR;
 #endif
 #if DUMPI_HAVE_MPI_COMBINER_INDEXED
     case MPI_COMBINER_INDEXED: return DUMPI_COMBINER_INDEXED;
 #endif
-#if DUMPI_HAVE_MPI_COMBINER_HINDEXED_INTEGER
-    case MPI_COMBINER_HINDEXED_INTEGER: return DUMPI_COMBINER_HINDEXED_INTEGER;
-#endif
 #if DUMPI_HAVE_MPI_COMBINER_HINDEXED
     case MPI_COMBINER_HINDEXED: return DUMPI_COMBINER_HINDEXED;
 #endif
 #if DUMPI_HAVE_MPI_COMBINER_INDEXED_BLOCK
     case MPI_COMBINER_INDEXED_BLOCK: return DUMPI_COMBINER_INDEXED_BLOCK;
-#endif
-#if DUMPI_HAVE_MPI_COMBINER_STRUCT_INTEGER
-    case MPI_COMBINER_STRUCT_INTEGER: return DUMPI_COMBINER_STRUCT_INTEGER;
 #endif
 #if DUMPI_HAVE_MPI_COMBINER_STRUCT
     case MPI_COMBINER_STRUCT: return DUMPI_COMBINER_STRUCT;
