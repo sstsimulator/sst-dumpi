@@ -1218,37 +1218,6 @@ AC_DEFUN([DUMPI_TEST_MPI_OLD],
       AC_DEFINE(DUMPI_SKIP_MPI_TYPE_VECTOR, [1])
     fi
 
-    AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_HVECTOR], [if MPI_Type_hvector is missing])
-    AC_CACHE_CHECK([whether MPI_Type_hvector is present], [dumpi_cv_have_mpi_type_hvector],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            int count;
-            int blocklength;
-            MPI_Aint stride;
-            MPI_Datatype oldtype;
-            MPI_Datatype *newtype;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Type_hvector(count, blocklength, stride, oldtype, newtype);
-            PMPI_Type_hvector(count, blocklength, stride, oldtype, newtype);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_type_hvector="yes"
-        ], [
-          dumpi_cv_have_mpi_type_hvector="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_type_hvector" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_TYPE_HVECTOR, [1])
-    fi
-
     AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_INDEXED], [if MPI_Type_indexed is missing])
     AC_CACHE_CHECK([whether MPI_Type_indexed is present], [dumpi_cv_have_mpi_type_indexed],
       [AC_LINK_IFELSE(
@@ -1278,96 +1247,6 @@ AC_DEFUN([DUMPI_TEST_MPI_OLD],
     )
     if test "$dumpi_cv_have_mpi_type_indexed" = "no"; then
       AC_DEFINE(DUMPI_SKIP_MPI_TYPE_INDEXED, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_HINDEXED], [if MPI_Type_hindexed is missing])
-    AC_CACHE_CHECK([whether MPI_Type_hindexed is present], [dumpi_cv_have_mpi_type_hindexed],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            int count;
-            int *lengths;
-            MPI_Aint *indices;
-            MPI_Datatype oldtype;
-            MPI_Datatype *newtype;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Type_hindexed(count, lengths, indices, oldtype, newtype);
-            PMPI_Type_hindexed(count, lengths, indices, oldtype, newtype);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_type_hindexed="yes"
-        ], [
-          dumpi_cv_have_mpi_type_hindexed="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_type_hindexed" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_TYPE_HINDEXED, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_STRUCT], [if MPI_Type_struct is missing])
-    AC_CACHE_CHECK([whether MPI_Type_struct is present], [dumpi_cv_have_mpi_type_struct],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            int count;
-            int *lengths;
-            MPI_Aint *indices;
-            MPI_Datatype *oldtypes;
-            MPI_Datatype *newtype;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Type_struct(count, lengths, indices, oldtypes, newtype);
-            PMPI_Type_struct(count, lengths, indices, oldtypes, newtype);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_type_struct="yes"
-        ], [
-          dumpi_cv_have_mpi_type_struct="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_type_struct" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_TYPE_STRUCT, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_ADDRESS], [if MPI_Address is missing])
-    AC_CACHE_CHECK([whether MPI_Address is present], [dumpi_cv_have_mpi_address],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            void *buf;
-            MPI_Aint *address;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Address(buf, address);
-            PMPI_Address(buf, address);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_address="yes"
-        ], [
-          dumpi_cv_have_mpi_address="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_address" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_ADDRESS, [1])
     fi
 
     AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_EXTENT], [if MPI_Type_extent is missing])
@@ -1424,62 +1303,6 @@ AC_DEFUN([DUMPI_TEST_MPI_OLD],
     )
     if test "$dumpi_cv_have_mpi_type_size" = "no"; then
       AC_DEFINE(DUMPI_SKIP_MPI_TYPE_SIZE, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_LB], [if MPI_Type_lb is missing])
-    AC_CACHE_CHECK([whether MPI_Type_lb is present], [dumpi_cv_have_mpi_type_lb],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_Datatype datatype;
-            MPI_Aint *lb;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Type_lb(datatype, lb);
-            PMPI_Type_lb(datatype, lb);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_type_lb="yes"
-        ], [
-          dumpi_cv_have_mpi_type_lb="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_type_lb" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_TYPE_LB, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_UB], [if MPI_Type_ub is missing])
-    AC_CACHE_CHECK([whether MPI_Type_ub is present], [dumpi_cv_have_mpi_type_ub],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_Datatype datatype;
-            MPI_Aint *ub;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Type_ub(datatype, ub);
-            PMPI_Type_ub(datatype, ub);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_type_ub="yes"
-        ], [
-          dumpi_cv_have_mpi_type_ub="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_type_ub" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_TYPE_UB, [1])
     fi
 
     AH_TEMPLATE([DUMPI_SKIP_MPI_TYPE_COMMIT], [if MPI_Type_commit is missing])
@@ -3577,90 +3400,6 @@ AC_DEFUN([DUMPI_TEST_MPI_OLD],
     )
     if test "$dumpi_cv_have_mpi_get_version" = "no"; then
       AC_DEFINE(DUMPI_SKIP_MPI_GET_VERSION, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_ERRHANDLER_CREATE], [if MPI_Errhandler_create is missing])
-    AC_CACHE_CHECK([whether MPI_Errhandler_create is present], [dumpi_cv_have_mpi_errhandler_create],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_Handler_function *function;
-            MPI_Errhandler *errhandler;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Errhandler_create(function, errhandler);
-            PMPI_Errhandler_create(function, errhandler);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_errhandler_create="yes"
-        ], [
-          dumpi_cv_have_mpi_errhandler_create="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_errhandler_create" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_ERRHANDLER_CREATE, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_ERRHANDLER_SET], [if MPI_Errhandler_set is missing])
-    AC_CACHE_CHECK([whether MPI_Errhandler_set is present], [dumpi_cv_have_mpi_errhandler_set],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_Comm comm;
-            MPI_Errhandler errhandler;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Errhandler_set(comm, errhandler);
-            PMPI_Errhandler_set(comm, errhandler);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_errhandler_set="yes"
-        ], [
-          dumpi_cv_have_mpi_errhandler_set="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_errhandler_set" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_ERRHANDLER_SET, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_ERRHANDLER_GET], [if MPI_Errhandler_get is missing])
-    AC_CACHE_CHECK([whether MPI_Errhandler_get is present], [dumpi_cv_have_mpi_errhandler_get],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_Comm comm;
-            MPI_Errhandler *errhandler;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_Errhandler_get(comm, errhandler);
-            PMPI_Errhandler_get(comm, errhandler);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_errhandler_get="yes"
-        ], [
-          dumpi_cv_have_mpi_errhandler_get="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_errhandler_get" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_ERRHANDLER_GET, [1])
     fi
 
     AH_TEMPLATE([DUMPI_SKIP_MPI_ERRHANDLER_FREE], [if MPI_Errhandler_free is missing])
@@ -8261,35 +8000,6 @@ AC_DEFUN([DUMPI_TEST_MPI_OLD],
     )
     if test "$dumpi_cv_have_mpi_file_write_ordered_end" = "no"; then
       AC_DEFINE(DUMPI_SKIP_MPI_FILE_WRITE_ORDERED_END, [1])
-    fi
-
-    AH_TEMPLATE([DUMPI_SKIP_MPI_FILE_GET_TYPE_EXTENT], [if MPI_File_get_type_extent is missing])
-    AC_CACHE_CHECK([whether MPI_File_get_type_extent is present], [dumpi_cv_have_mpi_file_get_type_extent],
-      [AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM(
-          [
-            #include <mpi.h>
-          ], [
-            int *aargc;
-            char ***aargv;
-            MPI_File file;
-            MPI_Datatype datatype;
-            MPI_Aint *extent;
-            //
-            MPI_Init(aargc, aargv);
-            MPI_File_get_type_extent(file, datatype, extent);
-            PMPI_File_get_type_extent(file, datatype, extent);
-            MPI_Finalize();
-          ])],
-        [ 
-          dumpi_cv_have_mpi_file_get_type_extent="yes"
-        ], [
-          dumpi_cv_have_mpi_file_get_type_extent="no"
-        ]
-      )]
-    )
-    if test "$dumpi_cv_have_mpi_file_get_type_extent" = "no"; then
-      AC_DEFINE(DUMPI_SKIP_MPI_FILE_GET_TYPE_EXTENT, [1])
     fi
 
     AH_TEMPLATE([DUMPI_SKIP_MPI_REGISTER_DATAREP], [if MPI_Register_datarep is missing])
