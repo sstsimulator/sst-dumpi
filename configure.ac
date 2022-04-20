@@ -11,8 +11,8 @@ dnl   SST/macroscale directory.
 dnl
 
 dnl Version info, used both in library versioning and inside dumpi.
-m4_define([DUMPI_VERSION_TAG], 11)
-m4_define([DUMPI_SUBVERSION_TAG], 1)
+m4_define([DUMPI_VERSION_TAG], 12)
+m4_define([DUMPI_SUBVERSION_TAG], 0)
 m4_define([DUMPI_SUBSUBVERSION_TAG], 0)
 # Enable this for releases
 dnl m4_define([DUMPI_SNAPSHOT_TAG])
@@ -37,18 +37,18 @@ dnl been changed for many common IO routines (now consistently passing
 dnl dumpi_profile as the first argument for IO calls).
 dnl Dumpi version 1.0.0 given libversion 3.0.0 because of several new 
 dnl API calls, bug fixes, and renamings.
-m4_define([DUMPI_MAJOR_LIBVERS], 11)
-m4_define([DUMPI_MINOR_LIBVERS], 1)
+m4_define([DUMPI_MAJOR_LIBVERS], 12)
+m4_define([DUMPI_MINOR_LIBVERS], 0)
 m4_define([DUMPI_BACKW_LIBVERS], 0)
 m4_define([DUMPI_LIBVERSION_TAG],
           [DUMPI_MAJOR_LIBVERS:DUMPI_MINOR_LIBVERS:DUMPI_BACKW_LIBVERS])
 
-AC_INIT([dumpi], [DUMPI_ACVERSION_TAG], [wg-sst@sandia.gov])
+AC_INIT([dumpi],[DUMPI_ACVERSION_TAG],[wg-sst@sandia.gov])
 AC_CONFIG_MACRO_DIR([acinclude])
 AC_CONFIG_AUX_DIR(bin)
-AC_CONFIG_HEADER(dumpi/dumpiconfig-generated.h)
+AC_CONFIG_HEADERS([dumpi/dumpiconfig-generated.h])
 
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -57,7 +57,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
-AC_LANG_C
+AC_LANG([C])
 AC_PROG_LIBTOOL
 
 # Disable shared libraries by default.
