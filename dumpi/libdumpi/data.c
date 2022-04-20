@@ -1,14 +1,14 @@
 /**
-Copyright 2009-2021 National Technology and Engineering Solutions of Sandia, 
-LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
+Copyright 2009-2022 National Technology and Engineering Solutions of Sandia,
+LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S. Government
 retains certain rights in this software.
 
 Sandia National Laboratories is a multimission laboratory managed and operated
-by National Technology and Engineering Solutions of Sandia, LLC., a wholly 
-owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
+by National Technology and Engineering Solutions of Sandia, LLC., a wholly
+owned subsidiary of Honeywell International, Inc., for the U.S. Department of
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
-Copyright (c) 2009-2021, NTESS
+Copyright (c) 2009-2022, NTESS
 
 All rights reserved.
 
@@ -70,6 +70,8 @@ const MPI_Datatype dumpi_mpi_datatype_match[DUMPI_FIRST_USER_DATATYPE] = {
   DUMPI_DATATYPE_MPI_UNSIGNED_LONG_LONG,
   DUMPI_DATATYPE_MPI_LONG_LONG,
   DUMPI_DATATYPE_MPI_PACKED,
+  DUMPI_DATATYPE_MPI_LB,
+  DUMPI_DATATYPE_MPI_UB,
   DUMPI_DATATYPE_MPI_FLOAT_INT,
   DUMPI_DATATYPE_MPI_DOUBLE_INT,
   DUMPI_DATATYPE_MPI_LONG_INT,

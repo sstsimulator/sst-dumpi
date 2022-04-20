@@ -3,7 +3,7 @@
 #
 #   This file is part of DUMPI: 
 #                The MPI profiling library from the SST suite.
-#   Copyright (c) 2009-2021 NTESS.
+#   Copyright (c) 2009-2020 NTESS.
 #   This software is distributed under the BSD License.
 #   Under the terms of Contract DE-NA0003525 with NTESS,
 #   the U.S. Government retains certain rights in this software.

@@ -1,7 +1,7 @@
 C
 C  This file is part of DUMPI: 
 C               The MPI profiling library from the SST suite.
-C  Copyright (c) 2009-2021 NTESS.
+C  Copyright (c) 2009-2020 NTESS.
 C  This software is distributed under the BSD License.
 C  Under the terms of Contract DE-NA0003525 with NTESS,
 C  the U.S. Government retains certain rights in this software.
