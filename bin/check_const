@@ -6,7 +6,6 @@ def getReText(regexp,text):
   import re
   match = re.compile(regexp, re.DOTALL).search(text)
   if not match:
-    sys.stderr.write(text); sys.stderr.write("\n")
     sys.exit("No match for %s in text" % regexp)
   return match.groups()[0]
 
