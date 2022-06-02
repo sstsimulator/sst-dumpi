@@ -128,7 +128,7 @@ int dumpi_init_perfctrs(dumpi_perfinfo *ctrs) {
   /* Initialize PAPI.  Return 0 if PAPI fails. */
   ret = PAPI_library_init(PAPI_VER_CURRENT);
   if(ret != PAPI_VER_CURRENT) {
-    PAPI_perror(ret, errstr, PAPI_MAX_STR_LEN);
+    PAPI_perror(errstr);
     fprintf(stderr, "dumpi_init_perfctrs:  Error initializing PAPI:  %s\n",
 	    errstr);
     assert(ret == PAPI_VER_CURRENT);
