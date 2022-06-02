@@ -1,14 +1,14 @@
 /**
-Copyright 2009-2022 National Technology and Engineering Solutions of Sandia,
-LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S. Government
+Copyright 2009-2021 National Technology and Engineering Solutions of Sandia, 
+LLC (NTESS).  Under the terms of Contract DE-NA-0003525, the U.S.  Government 
 retains certain rights in this software.
 
 Sandia National Laboratories is a multimission laboratory managed and operated
-by National Technology and Engineering Solutions of Sandia, LLC., a wholly
-owned subsidiary of Honeywell International, Inc., for the U.S. Department of
+by National Technology and Engineering Solutions of Sandia, LLC., a wholly 
+owned subsidiary of Honeywell International, Inc., for the U.S. Department of 
 Energy's National Nuclear Security Administration under contract DE-NA0003525.
 
-Copyright (c) 2009-2022, NTESS
+Copyright (c) 2009-2021, NTESS
 
 All rights reserved.
 
@@ -1407,39 +1407,6 @@ int MPI_Type_vector(int count, int blocklength, int stride, MPI_Datatype oldtype
 }
 #endif /* DUMPI_SKIP_MPI_TYPE_VECTOR */
 
-#ifndef DUMPI_SKIP_MPI_TYPE_HVECTOR
-int MPI_Type_hvector(int count, int blocklength, MPI_Aint stride, MPI_Datatype oldtype, MPI_Datatype *newtype) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_hvector stat;
-  memset(&stat, 0, sizeof(dumpi_type_hvector));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_hvector);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_hvector);
-    DUMPI_INT_FROM_INT(stat.count, count);
-    DUMPI_INT_FROM_INT(stat.blocklength, blocklength);
-    DUMPI_INT_FROM_MPI_AINT(stat.stride, stride);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.oldtype, oldtype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_hvector);
-  }
-  retval = PMPI_Type_hvector(count, blocklength, stride, oldtype, newtype);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_hvector);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE_NOREG(stat.newtype, *newtype);
-    libdumpi_lock_io();
-    dumpi_write_type_hvector(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_hvector);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_HVECTOR */
-
 #ifndef DUMPI_SKIP_MPI_TYPE_INDEXED
 int MPI_Type_indexed(int count, DUMPI_CONST int *lengths, DUMPI_CONST int *indices, MPI_Datatype oldtype, MPI_Datatype *newtype) {
   int16_t thread;
@@ -1475,139 +1442,6 @@ int MPI_Type_indexed(int count, DUMPI_CONST int *lengths, DUMPI_CONST int *indic
 }
 #endif /* DUMPI_SKIP_MPI_TYPE_INDEXED */
 
-#ifndef DUMPI_SKIP_MPI_TYPE_HINDEXED
-int MPI_Type_hindexed(int count, DUMPI_DEPRECATED_CONST int *lengths, 
-  DUMPI_DEPRECATED_CONST MPI_Aint *indices, 
-  MPI_Datatype oldtype, MPI_Datatype *newtype) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_hindexed stat;
-  memset(&stat, 0, sizeof(dumpi_type_hindexed));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_hindexed);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_hindexed);
-    DUMPI_INT_FROM_INT(stat.count, count);
-    DUMPI_INT_FROM_INT_ARRAY_1(count, stat.lengths, lengths);
-    DUMPI_INT_FROM_MPI_AINT_ARRAY_1(count, stat.indices, indices);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.oldtype, oldtype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_hindexed);
-  }
-  retval = PMPI_Type_hindexed(count, lengths, indices, oldtype, newtype);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_hindexed);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE_NOREG(stat.newtype, *newtype);
-    libdumpi_lock_io();
-    dumpi_write_type_hindexed(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    if(lengths != NULL) DUMPI_FREE_INT_FROM_INT(stat.lengths);
-    if(indices != NULL) DUMPI_FREE_INT_FROM_MPI_AINT(stat.indices);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_hindexed);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_HINDEXED */
-
-#ifndef DUMPI_SKIP_MPI_TYPE_STRUCT
-int MPI_Type_struct(int count, DUMPI_DEPRECATED_CONST int *lengths, 
-  DUMPI_DEPRECATED_CONST MPI_Aint *indices, 
-  DUMPI_DEPRECATED_CONST MPI_Datatype *oldtypes, MPI_Datatype *newtype) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_struct stat;
-  memset(&stat, 0, sizeof(dumpi_type_struct));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_struct);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_struct);
-    DUMPI_INT_FROM_INT(stat.count, count);
-    DUMPI_INT_FROM_INT_ARRAY_1(count, stat.lengths, lengths);
-    DUMPI_INT_FROM_MPI_AINT_ARRAY_1(count, stat.indices, indices);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE_ARRAY_1(count, stat.oldtypes, oldtypes);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_struct);
-  }
-  retval = PMPI_Type_struct(count, lengths, indices, oldtypes, newtype);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_struct);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE_NOREG(stat.newtype, *newtype);
-    libdumpi_lock_io();
-    dumpi_write_type_struct(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    if(lengths != NULL) DUMPI_FREE_INT_FROM_INT(stat.lengths);
-    if(oldtypes != NULL) DUMPI_FREE_DATATYPE_FROM_MPI_DATATYPE(stat.oldtypes);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_struct);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_STRUCT */
-
-#ifndef DUMPI_SKIP_MPI_ADDRESS
-int MPI_Address(DUMPI_DEPRECATED_CONST void *buf, MPI_Aint *address) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_address stat;
-  memset(&stat, 0, sizeof(dumpi_address));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Address);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Address);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Address);
-  }
-  retval = PMPI_Address(buf, address);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Address);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_INT_FROM_MPI_AINT(stat.address, *address);
-    libdumpi_lock_io();
-    dumpi_write_address(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Address);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_ADDRESS */
-
-#ifndef DUMPI_SKIP_MPI_TYPE_EXTENT
-int MPI_Type_extent(MPI_Datatype datatype, MPI_Aint *extent) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_extent stat;
-  memset(&stat, 0, sizeof(dumpi_type_extent));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_extent);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_extent);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_extent);
-  }
-  retval = PMPI_Type_extent(datatype, extent);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_extent);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_INT_FROM_MPI_AINT(stat.extent, *extent);
-    libdumpi_lock_io();
-    dumpi_write_type_extent(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_extent);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_EXTENT */
-
 #ifndef DUMPI_SKIP_MPI_TYPE_SIZE
 int MPI_Type_size(MPI_Datatype datatype, int *size) {
   int16_t thread;
@@ -1637,66 +1471,6 @@ int MPI_Type_size(MPI_Datatype datatype, int *size) {
   return retval;
 }
 #endif /* DUMPI_SKIP_MPI_TYPE_SIZE */
-
-#ifndef DUMPI_SKIP_MPI_TYPE_LB
-int MPI_Type_lb(MPI_Datatype datatype, MPI_Aint *lb) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_lb stat;
-  memset(&stat, 0, sizeof(dumpi_type_lb));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_lb);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_lb);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_lb);
-  }
-  retval = PMPI_Type_lb(datatype, lb);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_lb);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_INT_FROM_MPI_AINT(stat.lb, *lb);
-    libdumpi_lock_io();
-    dumpi_write_type_lb(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_lb);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_LB */
-
-#ifndef DUMPI_SKIP_MPI_TYPE_UB
-int MPI_Type_ub(MPI_Datatype datatype, MPI_Aint *ub) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_type_ub stat;
-  memset(&stat, 0, sizeof(dumpi_type_ub));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Type_ub);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_ub);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_ub);
-  }
-  retval = PMPI_Type_ub(datatype, ub);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Type_ub);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_INT_FROM_MPI_AINT(stat.ub, *ub);
-    libdumpi_lock_io();
-    dumpi_write_type_ub(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Type_ub);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_TYPE_UB */
 
 #ifndef DUMPI_SKIP_MPI_TYPE_COMMIT
 int MPI_Type_commit(MPI_Datatype *datatype) {
@@ -4007,95 +3781,6 @@ int MPI_Get_version(int *version, int *subversion) {
   return retval;
 }
 #endif /* DUMPI_SKIP_MPI_GET_VERSION */
-
-#ifndef DUMPI_SKIP_MPI_ERRHANDLER_CREATE
-int MPI_Errhandler_create(MPI_Handler_function *function, MPI_Errhandler *errhandler) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_errhandler_create stat;
-  memset(&stat, 0, sizeof(dumpi_errhandler_create));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Errhandler_create);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_create);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_create);
-  }
-  retval = PMPI_Errhandler_create(function, errhandler);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_create);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_ERRHANDLER_FROM_MPI_ERRHANDLER(stat.errhandler, *errhandler);
-    libdumpi_lock_io();
-    dumpi_write_errhandler_create(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_create);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_ERRHANDLER_CREATE */
-
-#ifndef DUMPI_SKIP_MPI_ERRHANDLER_SET
-int MPI_Errhandler_set(MPI_Comm comm, MPI_Errhandler errhandler) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_errhandler_set stat;
-  memset(&stat, 0, sizeof(dumpi_errhandler_set));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Errhandler_set);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_set);
-    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
-    DUMPI_ERRHANDLER_FROM_MPI_ERRHANDLER(stat.errhandler, errhandler);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_set);
-  }
-  retval = PMPI_Errhandler_set(comm, errhandler);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_set);
-    DUMPI_STOP_TIME(cpu, wall);
-    libdumpi_lock_io();
-    dumpi_write_errhandler_set(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_set);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_ERRHANDLER_SET */
-
-#ifndef DUMPI_SKIP_MPI_ERRHANDLER_GET
-int MPI_Errhandler_get(MPI_Comm comm, MPI_Errhandler *errhandler) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_errhandler_get stat;
-  memset(&stat, 0, sizeof(dumpi_errhandler_get));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_Errhandler_get);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_get);
-    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_get);
-  }
-  retval = PMPI_Errhandler_get(comm, errhandler);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_Errhandler_get);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_ERRHANDLER_FROM_MPI_ERRHANDLER(stat.errhandler, *errhandler);
-    libdumpi_lock_io();
-    dumpi_write_errhandler_get(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_Errhandler_get);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_ERRHANDLER_GET */
 
 #ifndef DUMPI_SKIP_MPI_ERRHANDLER_FREE
 int MPI_Errhandler_free(MPI_Errhandler *errhandler) {
@@ -9120,37 +8805,6 @@ int MPI_File_write_ordered_end(MPI_File file, DUMPI_CONST void *buf, MPI_Status 
   return retval;
 }
 #endif /* DUMPI_SKIP_MPI_FILE_WRITE_ORDERED_END */
-
-#ifndef DUMPI_SKIP_MPI_FILE_GET_TYPE_EXTENT
-int MPI_File_get_type_extent(MPI_File file, MPI_Datatype datatype, MPI_Aint *extent) {
-  int16_t thread;
-  dumpi_time cpu, wall;
-  int retval;
-  dumpi_file_get_type_extent stat;
-  memset(&stat, 0, sizeof(dumpi_file_get_type_extent));
-  thread = libdumpi_get_thread_id();
-  DUMPI_INSERT_PREAMBLE(DUMPI_File_get_type_extent);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_File_get_type_extent);
-    DUMPI_FILE_FROM_MPI_FILE(stat.file, file);
-    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
-    DUMPI_START_TIME(cpu, wall);
-    DUMPI_STOP_OVERHEAD(DUMPI_File_get_type_extent);
-  }
-  retval = PMPI_File_get_type_extent(file, datatype, extent);
-  if(profiling) {
-    DUMPI_START_OVERHEAD(DUMPI_File_get_type_extent);
-    DUMPI_STOP_TIME(cpu, wall);
-    DUMPI_INT_FROM_MPI_AINT(stat.extent, *extent);
-    libdumpi_lock_io();
-    dumpi_write_file_get_type_extent(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
-    libdumpi_unlock_io();
-    DUMPI_STOP_OVERHEAD(DUMPI_File_get_type_extent);
-  }
-  DUMPI_INSERT_POSTAMBLE;
-  return retval;
-}
-#endif /* DUMPI_SKIP_MPI_FILE_GET_TYPE_EXTENT */
 
 #ifndef DUMPI_SKIP_MPI_REGISTER_DATAREP
 int MPI_Register_datarep(DUMPI_CONST char *name, MPI_Datarep_conversion_function *readfun, MPI_Datarep_conversion_function *writefun, MPI_Datarep_extent_function *extentfun, void *state) {
