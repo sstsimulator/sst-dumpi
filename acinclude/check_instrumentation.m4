@@ -121,9 +121,10 @@ AC_ARG_ENABLE(instrumenting,
   [ 
     if test "$enableval" = "yes"; then
       AC_MSG_RESULT([instrumentation enabled])
+      AC_MSG_CHECKING([instrumentation works])
       AC_TEST_INSTRUMENTATION 
       if test "$instrumentation_works" = "yes"; then
-        AC_MSG_RESULT([enabled]) 
+        AC_MSG_RESULT([instrumentation works]) 
       else 
         AC_MSG_ERROR([instrumentation requested but not working.])  
       fi 
