@@ -32,8 +32,23 @@ AC_ARG_ENABLE(f90,
   enable_f90="no"
 )
 
-AM_CONDITIONAL([WITH_MPIF77], [test "$MPIF77" != ""])
-AM_CONDITIONAL([WITH_MPIF90], [test "$MPIF90" != ""])
+# print messages
+AC_MSG_CHECKING([Fortran 77 bindings])
+if test "$enable_f77" != "yes"; then
+   AC_MSG_RESULT([not enabled])
+else
+   AC_MSG_RESULT([enabled])
+fi
+
+AC_MSG_CHECKING([Fortran 90 bindings])
+if test "$enable_f90" != "yes"; then
+   AC_MSG_RESULT([not enabled])
+else
+   AC_MSG_RESULT([enabled])
+fi
+
+AM_CONDITIONAL([WITH_MPIF77], [test "$MPIF77" != "" -a "$enable_f77" == "yes"])
+AM_CONDITIONAL([WITH_MPIF90], [test "$MPIF90" != "" -a "$enable_f90" == "yes"])
 
 ])
 
