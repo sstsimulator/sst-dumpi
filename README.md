@@ -2,7 +2,7 @@
 
 # Structural Simulation Toolkit (SST) DUMPI Trace Library
 
-#### Copyright (c) 2009-2022, National Technology and Engineering Solutions of Sandia, LLC (NTESS)
+#### Copyright (c) 2009-2023, National Technology and Engineering Solutions of Sandia, LLC (NTESS)
 
 ---
 The DUMPI library provides trace collection and trace replay tools for MPI applications.
