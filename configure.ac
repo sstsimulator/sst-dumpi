@@ -45,7 +45,7 @@ dnl (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 dnl OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 dnl Version info, used both in library versioning and inside dumpi.
-m4_define([DUMPI_VERSION_TAG], 13)
+m4_define([DUMPI_VERSION_TAG], 16)
 m4_define([DUMPI_SUBVERSION_TAG], 0)
 m4_define([DUMPI_SUBSUBVERSION_TAG], 0)
 # Enable this for releases
@@ -71,7 +71,7 @@ dnl been changed for many common IO routines (now consistently passing
 dnl dumpi_profile as the first argument for IO calls).
 dnl Dumpi version 1.0.0 given libversion 3.0.0 because of several new 
 dnl API calls, bug fixes, and renamings.
-m4_define([DUMPI_MAJOR_LIBVERS], 13)
+m4_define([DUMPI_MAJOR_LIBVERS], 16)
 m4_define([DUMPI_MINOR_LIBVERS], 0)
 m4_define([DUMPI_BACKW_LIBVERS], 0)
 m4_define([DUMPI_LIBVERSION_TAG],
