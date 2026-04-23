@@ -204,7 +204,7 @@ static inline void wrap_ungetline(fwrapper *wrap) {
 typedef void (*mpihandler)(fwrapper *wrapper, settings *opts);
 mpihandler get_handler(const char *func, const fwrapper *wrap);
 
-static void print_help();
+void print_help(const char *name);
 static void parse_opts(int argc, char **argv, settings *opts);
 static void parse_infile(const char *fname, FILE *fp, settings *opts);
 
