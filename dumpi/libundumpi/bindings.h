@@ -669,6 +669,16 @@ extern "C" {
    */
   int libundumpi_grab_reduce(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
 
+  int libundumpi_grab_ireduce(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_iallreduce(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_ibcast(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_igather(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_igatherv(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_iscatter(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_iscatterv(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_ialltoall(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+  int libundumpi_grab_ialltoallv(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg);
+
   /**
    * Parse MPI op_create.
    * \param profile   An profile positioned at the start of the MPI call.

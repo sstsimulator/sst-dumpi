@@ -1162,6 +1162,50 @@ int libundumpi_grab_reduce(dumpi_profile *profile, libundumpi_unsafe_fun callout
   return 1;
 }
 
+int libundumpi_grab_ireduce(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg) {
+  dumpi_ireduce val;
+  uint16_t thread;
+  dumpi_time cpu, wall;
+  dumpi_perfinfo perf;
+  memset(&val, 0, sizeof(dumpi_ireduce));
+  thread = 0;
+  memset(&cpu, 0, sizeof(dumpi_time));
+  memset(&wall, 0, sizeof(dumpi_time));
+  memset(&perf, 0, sizeof(dumpi_perfinfo));
+  dumpi_read_ireduce(&val, &thread, &cpu, &wall, &perf, profile);
+  if(callout != NULL)
+    ((dumpi_ireduce_call)callout)(&val, thread, &cpu, &wall, &perf, uarg);
+  DUMPI_RELEASE_PERFTAGS(perf);
+  return 1;
+}
+
+#define DUMPI_GRAB_NBC(NAME, TYPE, CALLTYPE)                            \
+int libundumpi_grab_##NAME(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg) { \
+  TYPE val;                                                             \
+  uint16_t thread;                                                      \
+  dumpi_time cpu, wall;                                                 \
+  dumpi_perfinfo perf;                                                  \
+  memset(&val, 0, sizeof(TYPE));                                        \
+  thread = 0;                                                           \
+  memset(&cpu, 0, sizeof(dumpi_time));                                  \
+  memset(&wall, 0, sizeof(dumpi_time));                                 \
+  memset(&perf, 0, sizeof(dumpi_perfinfo));                             \
+  dumpi_read_##NAME(&val, &thread, &cpu, &wall, &perf, profile);        \
+  if(callout != NULL)                                                   \
+    ((CALLTYPE)callout)(&val, thread, &cpu, &wall, &perf, uarg);        \
+  DUMPI_RELEASE_PERFTAGS(perf);                                         \
+  return 1;                                                             \
+}
+DUMPI_GRAB_NBC(iallreduce, dumpi_iallreduce, dumpi_iallreduce_call)
+DUMPI_GRAB_NBC(ibcast,     dumpi_ibcast,     dumpi_ibcast_call)
+DUMPI_GRAB_NBC(igather,    dumpi_igather,    dumpi_igather_call)
+DUMPI_GRAB_NBC(igatherv,   dumpi_igatherv,   dumpi_igatherv_call)
+DUMPI_GRAB_NBC(iscatter,   dumpi_iscatter,   dumpi_iscatter_call)
+DUMPI_GRAB_NBC(iscatterv,  dumpi_iscatterv,  dumpi_iscatterv_call)
+DUMPI_GRAB_NBC(ialltoall,  dumpi_ialltoall,  dumpi_ialltoall_call)
+DUMPI_GRAB_NBC(ialltoallv, dumpi_ialltoallv, dumpi_ialltoallv_call)
+#undef DUMPI_GRAB_NBC
+
 int libundumpi_grab_op_create(dumpi_profile *profile, libundumpi_unsafe_fun callout, void *uarg) {
   dumpi_op_create val;
   uint16_t thread;
@@ -5254,6 +5298,15 @@ void libundumpi_populate_callouts(const libundumpi_callbacks *callback,
   callarr[DUMPI_Alltoall].callout = (libundumpi_unsafe_fun)callback->on_alltoall;
   callarr[DUMPI_Alltoallv].callout = (libundumpi_unsafe_fun)callback->on_alltoallv;
   callarr[DUMPI_Reduce].callout = (libundumpi_unsafe_fun)callback->on_reduce;
+  callarr[DUMPI_Ireduce].callout = (libundumpi_unsafe_fun)callback->on_ireduce;
+  callarr[DUMPI_Iallreduce].callout = (libundumpi_unsafe_fun)callback->on_iallreduce;
+  callarr[DUMPI_Ibcast].callout = (libundumpi_unsafe_fun)callback->on_ibcast;
+  callarr[DUMPI_Igather].callout = (libundumpi_unsafe_fun)callback->on_igather;
+  callarr[DUMPI_Igatherv].callout = (libundumpi_unsafe_fun)callback->on_igatherv;
+  callarr[DUMPI_Iscatter].callout = (libundumpi_unsafe_fun)callback->on_iscatter;
+  callarr[DUMPI_Iscatterv].callout = (libundumpi_unsafe_fun)callback->on_iscatterv;
+  callarr[DUMPI_Ialltoall].callout = (libundumpi_unsafe_fun)callback->on_ialltoall;
+  callarr[DUMPI_Ialltoallv].callout = (libundumpi_unsafe_fun)callback->on_ialltoallv;
   callarr[DUMPI_Op_create].callout = (libundumpi_unsafe_fun)callback->on_op_create;
   callarr[DUMPI_Op_free].callout = (libundumpi_unsafe_fun)callback->on_op_free;
   callarr[DUMPI_Allreduce].callout = (libundumpi_unsafe_fun)callback->on_allreduce;
@@ -5552,6 +5605,15 @@ void libundumpi_populate_handlers(const libundumpi_callbacks *callback,
   callarr[DUMPI_Alltoall].handler = libundumpi_grab_alltoall;
   callarr[DUMPI_Alltoallv].handler = libundumpi_grab_alltoallv;
   callarr[DUMPI_Reduce].handler = libundumpi_grab_reduce;
+  callarr[DUMPI_Ireduce].handler = libundumpi_grab_ireduce;
+  callarr[DUMPI_Iallreduce].handler = libundumpi_grab_iallreduce;
+  callarr[DUMPI_Ibcast].handler = libundumpi_grab_ibcast;
+  callarr[DUMPI_Igather].handler = libundumpi_grab_igather;
+  callarr[DUMPI_Igatherv].handler = libundumpi_grab_igatherv;
+  callarr[DUMPI_Iscatter].handler = libundumpi_grab_iscatter;
+  callarr[DUMPI_Iscatterv].handler = libundumpi_grab_iscatterv;
+  callarr[DUMPI_Ialltoall].handler = libundumpi_grab_ialltoall;
+  callarr[DUMPI_Ialltoallv].handler = libundumpi_grab_ialltoallv;
   callarr[DUMPI_Op_create].handler = libundumpi_grab_op_create;
   callarr[DUMPI_Op_free].handler = libundumpi_grab_op_free;
   callarr[DUMPI_Allreduce].handler = libundumpi_grab_allreduce;

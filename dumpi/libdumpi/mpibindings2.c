@@ -2293,6 +2293,345 @@ int MPI_Reduce(DUMPI_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype
 }
 #endif /* DUMPI_SKIP_MPI_REDUCE */
 
+#ifndef DUMPI_SKIP_MPI_IREDUCE
+int MPI_Ireduce(DUMPI_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_ireduce stat;
+  memset(&stat, 0, sizeof(dumpi_ireduce));
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Ireduce);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ireduce);
+    DUMPI_INT_FROM_INT(stat.count, count);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
+    DUMPI_OP_FROM_MPI_OP(stat.op, op);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Ireduce);
+  }
+  retval = PMPI_Ireduce(sendbuf, recvbuf, count, datatype, op, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ireduce);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_ireduce(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Ireduce);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IREDUCE */
+
+#ifndef DUMPI_SKIP_MPI_IALLREDUCE
+int MPI_Iallreduce(DUMPI_CONST void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_iallreduce stat;
+  memset(&stat, 0, sizeof(dumpi_iallreduce));
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Iallreduce);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iallreduce);
+    DUMPI_INT_FROM_INT(stat.count, count);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
+    DUMPI_OP_FROM_MPI_OP(stat.op, op);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Iallreduce);
+  }
+  retval = PMPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iallreduce);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_iallreduce(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Iallreduce);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IALLREDUCE */
+
+#ifndef DUMPI_SKIP_MPI_IBCAST
+int MPI_Ibcast(void *sendbuf, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_ibcast stat;
+  memset(&stat, 0, sizeof(dumpi_ibcast));
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Ibcast);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ibcast);
+    DUMPI_INT_FROM_INT(stat.count, count);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.datatype, datatype);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Ibcast);
+  }
+  retval = PMPI_Ibcast(sendbuf, count, datatype, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ibcast);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_ibcast(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Ibcast);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IBCAST */
+
+#ifndef DUMPI_SKIP_MPI_IGATHER
+int MPI_Igather(DUMPI_CONST void *inbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_igather stat;
+  memset(&stat, 0, sizeof(dumpi_igather));
+  int commrank;
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Igather);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Igather);
+    PMPI_Comm_rank(comm, &commrank);
+    DUMPI_INT_FROM_INT(stat.commrank, commrank);
+    DUMPI_INT_FROM_INT(stat.sendcount, sendcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    if(commrank==root)    DUMPI_INT_FROM_INT(stat.recvcount, recvcount);
+    if(commrank==root)    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Igather);
+  }
+  retval = PMPI_Igather(inbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Igather);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_igather(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Igather);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IGATHER */
+
+#ifndef DUMPI_SKIP_MPI_IGATHERV
+int MPI_Igatherv(DUMPI_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, DUMPI_CONST int *recvcounts, DUMPI_CONST int *displs, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_igatherv stat;
+  memset(&stat, 0, sizeof(dumpi_igatherv));
+  int commsize;
+  int commrank;
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Igatherv);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Igatherv);
+    PMPI_Comm_size(comm, &commsize); PMPI_Comm_rank(comm, &commrank);
+    DUMPI_INT_FROM_INT(stat.commrank, commrank);
+    DUMPI_INT_FROM_INT(stat.commsize, commsize);
+    DUMPI_INT_FROM_INT(stat.sendcount, sendcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    if(commrank==root)    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.recvcounts, recvcounts);
+    if(commrank==root)    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.displs, displs);
+    if(commrank==root)    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Igatherv);
+  }
+  retval = PMPI_Igatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Igatherv);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_igatherv(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    if(recvcounts != NULL) DUMPI_FREE_INT_FROM_INT(stat.recvcounts);
+    if(displs != NULL) DUMPI_FREE_INT_FROM_INT(stat.displs);
+    DUMPI_STOP_OVERHEAD(DUMPI_Igatherv);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IGATHERV */
+
+#ifndef DUMPI_SKIP_MPI_ISCATTER
+int MPI_Iscatter(DUMPI_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_iscatter stat;
+  memset(&stat, 0, sizeof(dumpi_iscatter));
+  int commrank;
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Iscatter);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iscatter);
+    PMPI_Comm_rank(comm, &commrank);
+    DUMPI_INT_FROM_INT(stat.commrank, commrank);
+    if(commrank==root)    DUMPI_INT_FROM_INT(stat.sendcount, sendcount);
+    if(commrank==root)    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    DUMPI_INT_FROM_INT(stat.recvcount, recvcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Iscatter);
+  }
+  retval = PMPI_Iscatter(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iscatter);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_iscatter(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Iscatter);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_ISCATTER */
+
+#ifndef DUMPI_SKIP_MPI_ISCATTERV
+int MPI_Iscatterv(DUMPI_CONST void *sendbuf, DUMPI_CONST int *sendcounts, DUMPI_CONST int *displs, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_iscatterv stat;
+  memset(&stat, 0, sizeof(dumpi_iscatterv));
+  int commsize;
+  int commrank;
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Iscatterv);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iscatterv);
+    PMPI_Comm_size(comm, &commsize); PMPI_Comm_rank(comm, &commrank);
+    DUMPI_INT_FROM_INT(stat.commrank, commrank);
+    DUMPI_INT_FROM_INT(stat.commsize, commsize);
+    if(commrank==root)    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.sendcounts, sendcounts);
+    if(commrank==root)    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.displs, displs);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    DUMPI_INT_FROM_INT(stat.recvcount, recvcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_INT_FROM_INT(stat.root, root);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Iscatterv);
+  }
+  retval = PMPI_Iscatterv(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Iscatterv);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_iscatterv(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    if(sendcounts != NULL) DUMPI_FREE_INT_FROM_INT(stat.sendcounts);
+    if(displs != NULL) DUMPI_FREE_INT_FROM_INT(stat.displs);
+    DUMPI_STOP_OVERHEAD(DUMPI_Iscatterv);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_ISCATTERV */
+
+#ifndef DUMPI_SKIP_MPI_IALLTOALL
+int MPI_Ialltoall(DUMPI_CONST void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_ialltoall stat;
+  memset(&stat, 0, sizeof(dumpi_ialltoall));
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Ialltoall);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ialltoall);
+    DUMPI_INT_FROM_INT(stat.sendcount, sendcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    DUMPI_INT_FROM_INT(stat.recvcount, recvcount);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Ialltoall);
+  }
+  retval = PMPI_Ialltoall(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ialltoall);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_ialltoall(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    DUMPI_STOP_OVERHEAD(DUMPI_Ialltoall);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IALLTOALL */
+
+#ifndef DUMPI_SKIP_MPI_IALLTOALLV
+int MPI_Ialltoallv(DUMPI_CONST void *sendbuf, DUMPI_CONST int *sendcounts, DUMPI_CONST int *senddispls, MPI_Datatype sendtype, void *recvbuf, DUMPI_CONST int *recvcounts, DUMPI_CONST int *recvdispls, MPI_Datatype recvtype, MPI_Comm comm, MPI_Request *request) {
+  int16_t thread;
+  dumpi_time cpu, wall;
+  int retval;
+  dumpi_ialltoallv stat;
+  memset(&stat, 0, sizeof(dumpi_ialltoallv));
+  int commsize;
+  thread = libdumpi_get_thread_id();
+  DUMPI_INSERT_PREAMBLE(DUMPI_Ialltoallv);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ialltoallv);
+    PMPI_Comm_size(comm, &commsize);
+    DUMPI_INT_FROM_INT(stat.commsize, commsize);
+    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.sendcounts, sendcounts);
+    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.senddispls, senddispls);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.sendtype, sendtype);
+    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.recvcounts, recvcounts);
+    DUMPI_INT_FROM_INT_ARRAY_1(commsize, stat.recvdispls, recvdispls);
+    DUMPI_DATATYPE_FROM_MPI_DATATYPE(stat.recvtype, recvtype);
+    DUMPI_COMM_FROM_MPI_COMM(stat.comm, comm);
+    DUMPI_START_TIME(cpu, wall);
+    DUMPI_STOP_OVERHEAD(DUMPI_Ialltoallv);
+  }
+  retval = PMPI_Ialltoallv(sendbuf, sendcounts, senddispls, sendtype, recvbuf, recvcounts, recvdispls, recvtype, comm, request);
+  if(profiling) {
+    DUMPI_START_OVERHEAD(DUMPI_Ialltoallv);
+    DUMPI_STOP_TIME(cpu, wall);
+    DUMPI_REQUEST_FROM_MPI_REQUEST(stat.request, *request);
+    libdumpi_lock_io();
+    dumpi_write_ialltoallv(&stat, thread, &cpu, &wall, dumpi_global->perf, dumpi_global->output, dumpi_global->profile);
+    libdumpi_unlock_io();
+    if(sendcounts != NULL) DUMPI_FREE_INT_FROM_INT(stat.sendcounts);
+    if(senddispls != NULL) DUMPI_FREE_INT_FROM_INT(stat.senddispls);
+    if(recvcounts != NULL) DUMPI_FREE_INT_FROM_INT(stat.recvcounts);
+    if(recvdispls != NULL) DUMPI_FREE_INT_FROM_INT(stat.recvdispls);
+    DUMPI_STOP_OVERHEAD(DUMPI_Ialltoallv);
+  }
+  DUMPI_INSERT_POSTAMBLE;
+  return retval;
+}
+#endif /* DUMPI_SKIP_MPI_IALLTOALLV */
+
 #ifndef DUMPI_SKIP_MPI_OP_CREATE
 int MPI_Op_create(MPI_User_function *fptr, int commute, MPI_Op *op) {
   int16_t thread;

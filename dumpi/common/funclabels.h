@@ -207,6 +207,12 @@ extern "C" {
     DUMPIO_Testall,                  DUMPIO_Waitall,                  
     DUMPIO_Testany,                  DUMPIO_Waitany,                  
     DUMPIO_Waitsome,                 DUMPIO_Testsome,                 
+    /* Nonblocking collectives (MPI-3), appended to keep existing ordinals stable */
+    DUMPI_Ireduce,
+    DUMPI_Iallreduce,                DUMPI_Ibcast,
+    DUMPI_Igather,                   DUMPI_Igatherv,
+    DUMPI_Iscatter,                  DUMPI_Iscatterv,
+    DUMPI_Ialltoall,                 DUMPI_Ialltoallv,
     DUMPI_ALL_FUNCTIONS,  /* Sentinel to mark last MPI function */
     /* Special lables to indicate profiled functions. */
     DUMPI_Function_enter,            DUMPI_Function_exit,

@@ -193,6 +193,16 @@ extern "C" {
   typedef int (*dumpi_alltoallv_call)(const dumpi_alltoallv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
   /** Signature for user-defined callback to handle MPI reduce calls. */
   typedef int (*dumpi_reduce_call)(const dumpi_reduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  /** Signature for user-defined callback to handle MPI ireduce calls. */
+  typedef int (*dumpi_ireduce_call)(const dumpi_ireduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_iallreduce_call)(const dumpi_iallreduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_ibcast_call)(const dumpi_ibcast *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_igather_call)(const dumpi_igather *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_igatherv_call)(const dumpi_igatherv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_iscatter_call)(const dumpi_iscatter *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_iscatterv_call)(const dumpi_iscatterv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_ialltoall_call)(const dumpi_ialltoall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
+  typedef int (*dumpi_ialltoallv_call)(const dumpi_ialltoallv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
   /** Signature for user-defined callback to handle MPI op_create calls. */
   typedef int (*dumpi_op_create_call)(const dumpi_op_create *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *userarg);
   /** Signature for user-defined callback to handle MPI op_free calls. */
@@ -722,6 +732,15 @@ extern "C" {
     dumpi_alltoall_call on_alltoall;
     dumpi_alltoallv_call on_alltoallv;
     dumpi_reduce_call on_reduce;
+    dumpi_ireduce_call on_ireduce;
+    dumpi_iallreduce_call on_iallreduce;
+    dumpi_ibcast_call on_ibcast;
+    dumpi_igather_call on_igather;
+    dumpi_igatherv_call on_igatherv;
+    dumpi_iscatter_call on_iscatter;
+    dumpi_iscatterv_call on_iscatterv;
+    dumpi_ialltoall_call on_ialltoall;
+    dumpi_ialltoallv_call on_ialltoallv;
     dumpi_op_create_call on_op_create;
     dumpi_op_free_call on_op_free;
     dumpi_allreduce_call on_allreduce;

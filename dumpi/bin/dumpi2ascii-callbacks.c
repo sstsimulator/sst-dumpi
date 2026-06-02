@@ -647,6 +647,118 @@ int report_MPI_Reduce(const dumpi_reduce *prm, uint16_t thread, const dumpi_time
   DUMPI_RETURNING(MPI_Reduce, prm, thread, cpu, wall, perf);
 }
 
+int report_MPI_Ireduce(const dumpi_ireduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Ireduce, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(count);
+  DUMPI_REPORT_DATATYPE(datatype);
+  DUMPI_REPORT_OP(op);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Ireduce, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Iallreduce(const dumpi_iallreduce *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Iallreduce, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(count);
+  DUMPI_REPORT_DATATYPE(datatype);
+  DUMPI_REPORT_OP(op);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Iallreduce, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Ibcast(const dumpi_ibcast *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Ibcast, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(count);
+  DUMPI_REPORT_DATATYPE(datatype);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Ibcast, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Igather(const dumpi_igather *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Igather, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(commrank);
+  DUMPI_REPORT_INT(sendcount);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT(recvcount);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Igather, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Igatherv(const dumpi_igatherv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Igatherv, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(commrank);
+  DUMPI_REPORT_INT(commsize);
+  DUMPI_REPORT_INT(sendcount);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, recvcounts);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, displs);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Igatherv, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Iscatter(const dumpi_iscatter *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Iscatter, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(commrank);
+  DUMPI_REPORT_INT(sendcount);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT(recvcount);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Iscatter, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Iscatterv(const dumpi_iscatterv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Iscatterv, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(commrank);
+  DUMPI_REPORT_INT(commsize);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, sendcounts);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, displs);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT(recvcount);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_INT(root);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Iscatterv, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Ialltoall(const dumpi_ialltoall *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Ialltoall, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(sendcount);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT(recvcount);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Ialltoall, prm, thread, cpu, wall, perf);
+}
+
+int report_MPI_Ialltoallv(const dumpi_ialltoallv *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
+  DUMPI_ENTERING(MPI_Ialltoallv, prm, thread, cpu, wall, perf);
+  DUMPI_REPORT_INT(commsize);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, sendcounts);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, senddispls);
+  DUMPI_REPORT_DATATYPE(sendtype);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, recvcounts);
+  DUMPI_REPORT_INT_ARRAY_1(prm->commsize, recvdispls);
+  DUMPI_REPORT_DATATYPE(recvtype);
+  DUMPI_REPORT_COMM(comm);
+  DUMPI_REPORT_REQUEST(request);
+  DUMPI_RETURNING(MPI_Ialltoallv, prm, thread, cpu, wall, perf);
+}
+
 int report_MPI_Op_create(const dumpi_op_create *prm, uint16_t thread, const dumpi_time *cpu, const dumpi_time *wall, const dumpi_perfinfo *perf, void *uarg) {
   DUMPI_ENTERING(MPI_Op_create, prm, thread, cpu, wall, perf);
   DUMPI_REPORT_INT(commute);
@@ -2545,6 +2657,15 @@ void set_callbacks(libundumpi_callbacks *cbacks) {
   cbacks->on_alltoall                  = report_MPI_Alltoall                 ;
   cbacks->on_alltoallv                 = report_MPI_Alltoallv                ;
   cbacks->on_reduce                    = report_MPI_Reduce                   ;
+  cbacks->on_ireduce                   = report_MPI_Ireduce                  ;
+  cbacks->on_iallreduce                = report_MPI_Iallreduce               ;
+  cbacks->on_ibcast                    = report_MPI_Ibcast                   ;
+  cbacks->on_igather                   = report_MPI_Igather                  ;
+  cbacks->on_igatherv                  = report_MPI_Igatherv                 ;
+  cbacks->on_iscatter                  = report_MPI_Iscatter                 ;
+  cbacks->on_iscatterv                 = report_MPI_Iscatterv                ;
+  cbacks->on_ialltoall                 = report_MPI_Ialltoall                ;
+  cbacks->on_ialltoallv                = report_MPI_Ialltoallv               ;
   cbacks->on_op_create                 = report_MPI_Op_create                ;
   cbacks->on_op_free                   = report_MPI_Op_free                  ;
   cbacks->on_allreduce                 = report_MPI_Allreduce                ;

@@ -1407,6 +1407,240 @@ int dumpi_read_reduce(dumpi_reduce *val, DUMPI_READARGS) {
   return 1;
 }
 
+int dumpi_write_ireduce(const dumpi_ireduce *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Ireduce);
+  PUT_INT(profile, val->count);
+  PUT_DUMPI_DATATYPE(profile, val->datatype);
+  PUT_DUMPI_OP(profile, val->op);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+
+int dumpi_read_ireduce(dumpi_ireduce *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Ireduce);
+  val->count = GET_INT(profile);
+  val->datatype = GET_DUMPI_DATATYPE(profile);
+  val->op = GET_DUMPI_OP(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_iallreduce(const dumpi_iallreduce *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Iallreduce);
+  PUT_INT(profile, val->count);
+  PUT_DUMPI_DATATYPE(profile, val->datatype);
+  PUT_DUMPI_OP(profile, val->op);
+  PUT_DUMPI_COMM(profile, val->comm);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_iallreduce(dumpi_iallreduce *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Iallreduce);
+  val->count = GET_INT(profile);
+  val->datatype = GET_DUMPI_DATATYPE(profile);
+  val->op = GET_DUMPI_OP(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_ibcast(const dumpi_ibcast *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Ibcast);
+  PUT_INT(profile, val->count);
+  PUT_DUMPI_DATATYPE(profile, val->datatype);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_ibcast(dumpi_ibcast *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Ibcast);
+  val->count = GET_INT(profile);
+  val->datatype = GET_DUMPI_DATATYPE(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_igather(const dumpi_igather *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Igather);
+  PUT_INT(profile, val->commrank);
+  PUT_INT(profile, val->sendcount);
+  PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  if(val->commrank == val->root)   PUT_INT(profile, val->recvcount);
+  if(val->commrank == val->root)   PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_igather(dumpi_igather *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Igather);
+  val->commrank = GET_INT(profile);
+  val->sendcount = GET_INT(profile);
+  val->sendtype = GET_DUMPI_DATATYPE(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  if(val->commrank == val->root)   val->recvcount = GET_INT(profile);
+  if(val->commrank == val->root)   val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_igatherv(const dumpi_igatherv *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Igatherv);
+  PUT_INT(profile, val->commrank);
+  PUT_INT(profile, val->commsize);
+  PUT_INT(profile, val->sendcount);
+  PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  if(val->commrank == val->root)   PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->recvcounts);
+  if(val->commrank == val->root)   PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->displs);
+  PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_igatherv(dumpi_igatherv *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Igatherv);
+  val->commrank = GET_INT(profile);
+  val->commsize = GET_INT(profile);
+  val->sendcount = GET_INT(profile);
+  val->sendtype = GET_DUMPI_DATATYPE(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  if(val->commrank == val->root)   GET_INT_ARRAY_1(profile, val->commsize, val->recvcounts);
+  if(val->commrank == val->root)   GET_INT_ARRAY_1(profile, val->commsize, val->displs);
+  val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_iscatter(const dumpi_iscatter *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Iscatter);
+  PUT_INT(profile, val->commrank);
+  PUT_INT(profile, val->recvcount);
+  PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  if(val->commrank == val->root)   PUT_INT(profile, val->sendcount);
+  if(val->commrank == val->root)   PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_iscatter(dumpi_iscatter *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Iscatter);
+  val->commrank = GET_INT(profile);
+  val->recvcount = GET_INT(profile);
+  val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  if(val->commrank == val->root)   val->sendcount = GET_INT(profile);
+  if(val->commrank == val->root)   val->sendtype = GET_DUMPI_DATATYPE(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_iscatterv(const dumpi_iscatterv *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Iscatterv);
+  PUT_INT(profile, val->commrank);
+  PUT_INT(profile, val->commsize);
+  PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_INT(profile, val->recvcount);
+  PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_INT(profile, val->root);
+  PUT_DUMPI_COMM(profile, val->comm);
+  if(val->commrank == val->root)   PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->sendcounts);
+  if(val->commrank == val->root)   PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->displs);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_iscatterv(dumpi_iscatterv *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Iscatterv);
+  val->commrank = GET_INT(profile);
+  val->commsize = GET_INT(profile);
+  val->sendtype = GET_DUMPI_DATATYPE(profile);
+  val->recvcount = GET_INT(profile);
+  val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->root = GET_INT(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  if(val->commrank == val->root)   GET_INT_ARRAY_1(profile, val->commsize, val->sendcounts);
+  if(val->commrank == val->root)   GET_INT_ARRAY_1(profile, val->commsize, val->displs);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_ialltoall(const dumpi_ialltoall *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Ialltoall);
+  PUT_INT(profile, val->sendcount);
+  PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_INT(profile, val->recvcount);
+  PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_DUMPI_COMM(profile, val->comm);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_ialltoall(dumpi_ialltoall *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Ialltoall);
+  val->sendcount = GET_INT(profile);
+  val->sendtype = GET_DUMPI_DATATYPE(profile);
+  val->recvcount = GET_INT(profile);
+  val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
+int dumpi_write_ialltoallv(const dumpi_ialltoallv *val, DUMPI_WRITEARGS) {
+  STARTWRITE(profile, DUMPI_Ialltoallv);
+  PUT_INT(profile, val->commsize);
+  PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->sendcounts);
+  PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->senddispls);
+  PUT_DUMPI_DATATYPE(profile, val->sendtype);
+  PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->recvcounts);
+  PUT_INT_ARRAY_1(profile, (i0 < val->commsize), val->recvdispls);
+  PUT_DUMPI_DATATYPE(profile, val->recvtype);
+  PUT_DUMPI_COMM(profile, val->comm);
+  PUT_DUMPI_REQUEST(profile, val->request);
+  ENDWRITE(profile);
+  return 1;
+}
+int dumpi_read_ialltoallv(dumpi_ialltoallv *val, DUMPI_READARGS) {
+  STARTREAD(profile, DUMPI_Ialltoallv);
+  val->commsize = GET_INT(profile);
+  GET_INT_ARRAY_1(profile, val->commsize, val->sendcounts);
+  GET_INT_ARRAY_1(profile, val->commsize, val->senddispls);
+  val->sendtype = GET_DUMPI_DATATYPE(profile);
+  GET_INT_ARRAY_1(profile, val->commsize, val->recvcounts);
+  GET_INT_ARRAY_1(profile, val->commsize, val->recvdispls);
+  val->recvtype = GET_DUMPI_DATATYPE(profile);
+  val->comm = GET_DUMPI_COMM(profile);
+  val->request = GET_DUMPI_REQUEST(profile);
+  ENDREAD(profile);
+  return 1;
+}
+
 int dumpi_write_op_create(const dumpi_op_create *val, DUMPI_WRITEARGS) {
   STARTWRITE(profile, DUMPI_Op_create);
   PUT_INT(profile, val->commute);

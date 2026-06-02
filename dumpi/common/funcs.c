@@ -195,7 +195,12 @@ const char *dumpi_function_names[DUMPI_END_OF_STREAM+1] = {
   "MPIO_Testall"                 , "MPIO_Waitall"                 , 
   "MPIO_Testany"                 , "MPIO_Waitany"                 , 
   "MPIO_Waitsome"                , "MPIO_Testsome"                , 
-  "MPI_ALL_FUNCTIONS"            , 
+  "MPI_Ireduce"                  ,
+  "MPI_Iallreduce"               , "MPI_Ibcast"                   ,
+  "MPI_Igather"                  , "MPI_Igatherv"                 ,
+  "MPI_Iscatter"                 , "MPI_Iscatterv"                ,
+  "MPI_Ialltoall"                , "MPI_Ialltoallv"               ,
+  "MPI_ALL_FUNCTIONS"            ,
   "Function_enter"               , "Function_exit"                ,
   NULL  /* sentinel */
 };

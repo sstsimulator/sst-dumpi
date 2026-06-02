@@ -1020,6 +1020,118 @@ extern "C" {
   } dumpi_reduce;
 
   /**
+   * Stored information about MPI_Ireduce (nonblocking reduce).
+   * Mirrors dumpi_reduce plus the request handle (cf. dumpi_isend).
+   */
+  typedef struct dumpi_ireduce {
+    /** Argument value before PMPI call */
+    int  count;
+    /** Argument value before PMPI call */
+    dumpi_datatype  datatype;
+    /** Argument value before PMPI call */
+    dumpi_op  op;
+    /** Argument value before PMPI call */
+    int  root;
+    /** Argument value before PMPI call */
+    dumpi_comm  comm;
+    /** Argument value after PMPI call */
+    dumpi_request  request;
+  } dumpi_ireduce;
+
+  /** MPI_Iallreduce = dumpi_allreduce + request */
+  typedef struct dumpi_iallreduce {
+    int  count;
+    dumpi_datatype  datatype;
+    dumpi_op  op;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_iallreduce;
+
+  /** MPI_Ibcast = dumpi_bcast + request */
+  typedef struct dumpi_ibcast {
+    int  count;
+    dumpi_datatype  datatype;
+    int  root;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_ibcast;
+
+  /** MPI_Igather = dumpi_gather + request */
+  typedef struct dumpi_igather {
+    int  commrank;
+    int  sendcount;
+    dumpi_datatype  sendtype;
+    int  recvcount;
+    dumpi_datatype  recvtype;
+    int  root;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_igather;
+
+  /** MPI_Igatherv = dumpi_gatherv + request */
+  typedef struct dumpi_igatherv {
+    int  commrank;
+    int  commsize;
+    int  sendcount;
+    dumpi_datatype  sendtype;
+    int * recvcounts;
+    int * displs;
+    dumpi_datatype  recvtype;
+    int  root;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_igatherv;
+
+  /** MPI_Iscatter = dumpi_scatter + request */
+  typedef struct dumpi_iscatter {
+    int  commrank;
+    int  sendcount;
+    dumpi_datatype  sendtype;
+    int  recvcount;
+    dumpi_datatype  recvtype;
+    int  root;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_iscatter;
+
+  /** MPI_Iscatterv = dumpi_scatterv + request */
+  typedef struct dumpi_iscatterv {
+    int  commrank;
+    int  commsize;
+    int * sendcounts;
+    int * displs;
+    dumpi_datatype  sendtype;
+    int  recvcount;
+    dumpi_datatype  recvtype;
+    int  root;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_iscatterv;
+
+  /** MPI_Ialltoall = dumpi_alltoall + request */
+  typedef struct dumpi_ialltoall {
+    int  sendcount;
+    dumpi_datatype  sendtype;
+    int  recvcount;
+    dumpi_datatype  recvtype;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_ialltoall;
+
+  /** MPI_Ialltoallv = dumpi_alltoallv + request */
+  typedef struct dumpi_ialltoallv {
+    int  commsize;
+    int * sendcounts;
+    int * senddispls;
+    dumpi_datatype  sendtype;
+    int * recvcounts;
+    int * recvdispls;
+    dumpi_datatype  recvtype;
+    dumpi_comm  comm;
+    dumpi_request  request;
+  } dumpi_ialltoallv;
+
+  /**
    * Hold the argument values for a op_create operation.
    */
   typedef struct dumpi_op_create {

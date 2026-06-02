@@ -389,6 +389,28 @@ extern "C" {
   /** Read a reduce record (excluding function id) at current position */
   int dumpi_read_reduce(dumpi_reduce *val, DUMPI_READARGS);
 
+  /** Write an ireduce record (including function id) at current position */
+  int dumpi_write_ireduce(const dumpi_ireduce *val, DUMPI_WRITEARGS);
+  /** Read an ireduce record (excluding function id) at current position */
+  int dumpi_read_ireduce(dumpi_ireduce *val, DUMPI_READARGS);
+
+  int dumpi_write_iallreduce(const dumpi_iallreduce *val, DUMPI_WRITEARGS);
+  int dumpi_read_iallreduce(dumpi_iallreduce *val, DUMPI_READARGS);
+  int dumpi_write_ibcast(const dumpi_ibcast *val, DUMPI_WRITEARGS);
+  int dumpi_read_ibcast(dumpi_ibcast *val, DUMPI_READARGS);
+  int dumpi_write_igather(const dumpi_igather *val, DUMPI_WRITEARGS);
+  int dumpi_read_igather(dumpi_igather *val, DUMPI_READARGS);
+  int dumpi_write_igatherv(const dumpi_igatherv *val, DUMPI_WRITEARGS);
+  int dumpi_read_igatherv(dumpi_igatherv *val, DUMPI_READARGS);
+  int dumpi_write_iscatter(const dumpi_iscatter *val, DUMPI_WRITEARGS);
+  int dumpi_read_iscatter(dumpi_iscatter *val, DUMPI_READARGS);
+  int dumpi_write_iscatterv(const dumpi_iscatterv *val, DUMPI_WRITEARGS);
+  int dumpi_read_iscatterv(dumpi_iscatterv *val, DUMPI_READARGS);
+  int dumpi_write_ialltoall(const dumpi_ialltoall *val, DUMPI_WRITEARGS);
+  int dumpi_read_ialltoall(dumpi_ialltoall *val, DUMPI_READARGS);
+  int dumpi_write_ialltoallv(const dumpi_ialltoallv *val, DUMPI_WRITEARGS);
+  int dumpi_read_ialltoallv(dumpi_ialltoallv *val, DUMPI_READARGS);
+
   /** Write a op_create record (including function id) at current position */
   int dumpi_write_op_create(const dumpi_op_create *val, DUMPI_WRITEARGS);
   /** Read a op_create record (excluding function id) at current position */
